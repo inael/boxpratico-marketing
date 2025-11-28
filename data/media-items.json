@@ -31,12 +31,12 @@
     "type": "video",
     "sourceUrl": "https://youtu.be/mqhcR6pgkrI?t=4",
     "durationSeconds": 10,
-    "isActive": true,
+    "isActive": false,
     "order": 0,
     "condominiumId": "1764353527994",
     "id": "1764358378949",
     "createdAt": "2025-11-28T19:32:58.949Z",
-    "updatedAt": "2025-11-28T19:32:58.949Z"
+    "updatedAt": "2025-11-28T21:52:18.214Z"
   },
   {
     "title": "Preços de prods",

@@ -265,7 +265,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex">
       <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="flex-1 flex flex-col">
@@ -285,74 +285,74 @@ export default function AdminPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0 }}
-                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-primary-100/50 hover:shadow-medium transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
-                      <BuildingOfficeIcon className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-primary-200 rounded-2xl flex items-center justify-center shadow-sm">
+                      <BuildingOfficeIcon className="w-7 h-7 text-primary-600" />
                     </div>
-                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium">
+                    <span className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full font-semibold">
                       Ativos
                     </span>
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900">{activeCondos.length}</h3>
-                  <p className="text-gray-600 text-sm mt-1">Condomínios Ativos</p>
+                  <h3 className="text-4xl font-bold bg-gradient-to-br from-primary-600 to-primary-700 bg-clip-text text-transparent">{activeCondos.length}</h3>
+                  <p className="text-slate-600 text-sm mt-2">Condomínios Ativos</p>
                 </motion.div>
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-secondary-100/50 hover:shadow-medium transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl flex items-center justify-center">
-                      <PhotoIcon className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-2xl flex items-center justify-center shadow-sm">
+                      <PhotoIcon className="w-7 h-7 text-secondary-600" />
                     </div>
-                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium">
+                    <span className="text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full font-semibold">
                       Total
                     </span>
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900">{activeMedia.length}</h3>
-                  <p className="text-gray-600 text-sm mt-1">Mídias Ativas</p>
+                  <h3 className="text-4xl font-bold bg-gradient-to-br from-secondary-600 to-secondary-700 bg-clip-text text-transparent">{activeMedia.length}</h3>
+                  <p className="text-slate-600 text-sm mt-2">Mídias Ativas</p>
                 </motion.div>
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-accent-100/50 hover:shadow-medium transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center">
-                      <XCircleIcon className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-accent-100 to-accent-200 rounded-2xl flex items-center justify-center shadow-sm">
+                      <XCircleIcon className="w-7 h-7 text-accent-600" />
                     </div>
-                    <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full font-medium">
+                    <span className="text-xs text-orange-700 bg-orange-50 px-3 py-1.5 rounded-full font-semibold">
                       Inativos
                     </span>
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900">{inactiveMedia.length}</h3>
-                  <p className="text-gray-600 text-sm mt-1">Mídias Inativas</p>
+                  <h3 className="text-4xl font-bold bg-gradient-to-br from-accent-600 to-accent-700 bg-clip-text text-transparent">{inactiveMedia.length}</h3>
+                  <p className="text-slate-600 text-sm mt-2">Mídias Inativas</p>
                 </motion.div>
 
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-indigo-100/50 hover:shadow-medium transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
-                      <TvIcon className="w-6 h-6 text-white" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center shadow-sm">
+                      <TvIcon className="w-7 h-7 text-indigo-600" />
                     </div>
-                    <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-full font-medium">
+                    <span className="text-xs text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full font-semibold">
                       Status
                     </span>
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900">
+                  <h3 className="text-4xl font-bold bg-gradient-to-br from-indigo-600 to-indigo-700 bg-clip-text text-transparent">
                     {previewWindow && !previewWindow.closed ? '1' : '0'}
                   </h3>
-                  <p className="text-gray-600 text-sm mt-1">Preview Aberto</p>
+                  <p className="text-slate-600 text-sm mt-2">Preview Aberto</p>
                 </motion.div>
               </div>
 
