@@ -18,7 +18,7 @@ export default function VideoSlide({ item, onVideoEnd }: VideoSlideProps) {
   }, []);
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-black">
+    <div className="w-full h-full flex items-center justify-center bg-black relative">
       <video
         ref={videoRef}
         src={item.sourceUrl}
@@ -27,11 +27,14 @@ export default function VideoSlide({ item, onVideoEnd }: VideoSlideProps) {
         muted
         playsInline
       />
-      {item.title && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8">
-          <h2 className="text-white text-4xl font-bold">{item.title}</h2>
+      
+      {(item.title || item.description) && (
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-8 lg:p-12">
+          {item.title && (
+            <h2 className="text-white text-3xl lg:text-4xl font-bold mb-2">{item.title}</h2>
+          )}
           {item.description && (
-            <p className="text-white/90 text-2xl mt-2">{item.description}</p>
+            <p className="text-white/90 text-xl lg:text-2xl">{item.description}</p>
           )}
         </div>
       )}
