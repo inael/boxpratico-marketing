@@ -186,6 +186,21 @@ export default function AdminPage() {
     loadCondominiums();
   }
 
+  
+  function handleRefreshPreview() {
+    if (previewWindow && !previewWindow.closed) {
+      previewWindow.postMessage('refresh-player', '*');
+    }
+  }
+
+  function handleOpenPreview() {
+    if (selectedCondoData) {
+      const url = `/admin/${encodeURIComponent(selectedCondoData.slug)}/preview`;
+      const newWindow = window.open(url, 'preview', 'width=1920,height=1080');
+      setPreviewWindow(newWindow);
+    }
+  }
+
   const selectedCondoData = condominiums.find(c => c.id === selectedCondominium);
 
   if (!isAuthenticated) {
@@ -330,14 +345,24 @@ export default function AdminPage() {
 
         {selectedCondominium && selectedCondoData && (
           <div className="mt-8 text-center">
-            <a
-              href={`/admin/${selectedCondoData.slug}/preview`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700"
-            >
-              Ver como ficará na TV
-            </a>
+            <div className="flex gap-4 justify-center items-center">
+              <button
+                onClick={handleOpenPreview}
+                className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                Ver como ficará na TV
+              </button>
+              <button
+                onClick={handleRefreshPreview}
+                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                title="Forçar atualização do preview"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Atualizar Preview
+              </button>
+            </div>
           </div>
         )}
       </div>

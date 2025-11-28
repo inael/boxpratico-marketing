@@ -20,6 +20,7 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [showNews, setShowNews] = useState(false);
   const [currentNewsIndex, setCurrentNewsIndex] = useState(0);
+  const [loopCount, setLoopCount] = useState(0);
 
   useEffect(() => {
     async function fetchData() {
@@ -56,6 +57,12 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
     } else {
       setCurrentIndex((prev) => {
         const next = (prev + 1) % mediaItems.length;
+        
+        if (next === 0) {
+          setLoopCount((count) => count + 1);
+          window.location.reload();
+        }
+        
         if (next % 3 === 0 && newsItems.length > 0 && newsEnabled) {
           setShowNews(true);
         }
@@ -63,6 +70,17 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
       });
     }
   }, [showNews, mediaItems.length, newsItems.length, condominium?.showNews]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data === 'refresh-player') {
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     if (isLoading || mediaItems.length === 0) return;
