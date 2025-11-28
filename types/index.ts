@@ -27,6 +27,8 @@ export interface MediaItem {
 export interface NewsItem {
   title: string;
   link: string;
+  description?: string;
+  imageUrl?: string;
   source?: string;
   publishedAt?: string;
 }
