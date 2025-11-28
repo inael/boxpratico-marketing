@@ -4,6 +4,7 @@ export interface Condominium {
   slug: string;
   cnpj?: string;
   address?: string;
+  isActive?: boolean;
   showNews?: boolean;
   createdAt: string;
   updatedAt: string;

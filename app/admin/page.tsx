@@ -2,16 +2,34 @@
 
 import { useState, useEffect } from 'react';
 import { Condominium, MediaItem } from '@/types';
+import AdminHeader from '@/components/admin/AdminHeader';
+import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminFooter from '@/components/admin/AdminFooter';
+import {
+  BuildingOfficeIcon,
+  PhotoIcon,
+  EyeIcon,
+  PencilIcon,
+  TrashIcon,
+  PlusIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+  ArrowPathIcon,
+  TvIcon
+} from '@heroicons/react/24/outline';
+import { motion } from 'framer-motion';
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>('');
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [showCondoForm, setShowCondoForm] = useState(false);
   const [showMediaForm, setShowMediaForm] = useState(false);
   const [editingCondo, setEditingCondo] = useState<Condominium | null>(null);
+  const [previewWindow, setPreviewWindow] = useState<Window | null>(null);
 
   useEffect(() => {
     const auth = sessionStorage.getItem('admin_auth');
@@ -66,6 +84,7 @@ export default function AdminPage() {
       slug: formData.get('slug') as string,
       cnpj: formData.get('cnpj') as string,
       address: formData.get('address') as string,
+      isActive: true,
     };
 
     const res = await fetch('/api/condominiums', {
@@ -105,8 +124,6 @@ export default function AdminPage() {
   }
 
   async function handleDeleteCondominium(id: string) {
-    if (!confirm('Tem certeza que deseja excluir este condomínio?')) return;
-
     const res = await fetch(`/api/condominiums/${id}`, { method: 'DELETE' });
     if (res.ok) {
       loadCondominiums();
@@ -114,6 +131,15 @@ export default function AdminPage() {
         setSelectedCondominium('');
       }
     }
+  }
+
+  async function toggleCondominiumActive(condo: Condominium) {
+    await fetch(`/api/condominiums/${condo.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ isActive: !condo.isActive }),
+    });
+    loadCondominiums();
   }
 
   async function handleCreateMedia(e: React.FormEvent<HTMLFormElement>) {
@@ -159,8 +185,6 @@ export default function AdminPage() {
   }
 
   async function handleDeleteMedia(id: string) {
-    if (!confirm('Tem certeza que deseja excluir esta mídia?')) return;
-
     const res = await fetch(`/api/media-items/${id}`, { method: 'DELETE' });
     if (res.ok) {
       loadMediaItems();
@@ -176,7 +200,6 @@ export default function AdminPage() {
     loadMediaItems();
   }
 
-  
   async function toggleNews(condo: Condominium) {
     await fetch(`/api/condominiums/${condo.id}`, {
       method: 'PUT',
@@ -186,7 +209,6 @@ export default function AdminPage() {
     loadCondominiums();
   }
 
-  
   function handleRefreshPreview() {
     if (previewWindow && !previewWindow.closed) {
       previewWindow.postMessage('refresh-player', '*');
@@ -202,210 +224,484 @@ export default function AdminPage() {
   }
 
   const selectedCondoData = condominiums.find(c => c.id === selectedCondominium);
+  const activeCondos = condominiums.filter(c => c.isActive !== false);
+  const inactiveCondos = condominiums.filter(c => c.isActive === false);
+  const activeMedia = mediaItems.filter(m => m.isActive);
+  const inactiveMedia = mediaItems.filter(m => !m.isActive);
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
-        <form onSubmit={handleLogin} className="bg-white p-8 rounded-lg shadow-md w-96">
-          <h1 className="text-2xl font-bold mb-6">Admin Login</h1>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Digite a senha"
-            className="w-full px-4 py-2 border rounded mb-4"
-          />
-          <button
-            type="submit"
-            className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
-          >
-            Entrar
-          </button>
-        </form>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white p-8 rounded-2xl shadow-xl w-96"
+        >
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-gradient-to-br from-primary-500 to-secondary-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <span className="text-white font-bold text-2xl">BP</span>
+            </div>
+            <h1 className="text-2xl font-display font-bold text-gray-900">Admin Login</h1>
+            <p className="text-gray-600 mt-2">BoxPrático Marketing</p>
+          </div>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Digite a senha"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+            />
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-primary-500 to-secondary-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+            >
+              Entrar
+            </button>
+          </form>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold">Painel Administrativo</h1>
-            <div className="flex items-center gap-4">
-              <select
-                value={selectedCondominium}
-                onChange={(e) => setSelectedCondominium(e.target.value)}
-                className="px-4 py-2 border rounded"
-              >
-                <option value="">Selecione um condomínio</option>
-                {condominiums.map((condo) => (
-                  <option key={condo.id} value={condo.id}>
-                    {condo.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={() => setShowCondoForm(true)}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-              >
-                Novo Condomínio
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex">
+      <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-xl font-bold mb-4">Condomínios</h2>
-            <div className="space-y-2">
-              {condominiums.map((condo) => (
-                <div key={condo.id} className="flex items-center justify-between p-3 border rounded">
-                  <div className="flex-1">
-                    <div className="font-semibold">{condo.name}</div>
-                    <div className="text-sm text-gray-600">{condo.slug}</div>
-                    <div className="mt-2">
+      <div className="flex-1 flex flex-col">
+        <AdminHeader />
+
+        <main className="flex-1 p-8 overflow-auto">
+          {/* Dashboard Tab */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-3xl font-display font-bold text-gray-900">Dashboard</h2>
+                <p className="text-gray-600 mt-1">Visão geral do sistema</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0 }}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center">
+                      <BuildingOfficeIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full font-medium">
+                      Ativos
+                    </span>
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900">{activeCondos.length}</h3>
+                  <p className="text-gray-600 text-sm mt-1">Condomínios Ativos</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-secondary-500 to-secondary-600 rounded-xl flex items-center justify-center">
+                      <PhotoIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full font-medium">
+                      Total
+                    </span>
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900">{activeMedia.length}</h3>
+                  <p className="text-gray-600 text-sm mt-1">Mídias Ativas</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-accent-500 to-accent-600 rounded-xl flex items-center justify-center">
+                      <XCircleIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-full font-medium">
+                      Inativos
+                    </span>
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900">{inactiveMedia.length}</h3>
+                  <p className="text-gray-600 text-sm mt-1">Mídias Inativas</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+                      <TvIcon className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-full font-medium">
+                      Status
+                    </span>
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900">
+                    {previewWindow && !previewWindow.closed ? '1' : '0'}
+                  </h3>
+                  <p className="text-gray-600 text-sm mt-1">Preview Aberto</p>
+                </motion.div>
+              </div>
+
+              {selectedCondominium && selectedCondoData && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
+                >
+                  <h3 className="text-xl font-display font-bold text-gray-900 mb-4">Ações Rápidas</h3>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={handleOpenPreview}
+                      className="flex items-center gap-2 bg-gradient-to-r from-primary-500 to-secondary-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all font-semibold"
+                    >
+                      <EyeIcon className="w-5 h-5" />
+                      Ver Preview na TV
+                    </button>
+                    <button
+                      onClick={handleRefreshPreview}
+                      className="flex items-center gap-2 bg-white border-2 border-primary-500 text-primary-600 px-6 py-3 rounded-lg hover:bg-primary-50 transition-all font-semibold"
+                    >
+                      <ArrowPathIcon className="w-5 h-5" />
+                      Atualizar Preview
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          )}
+
+          {/* Condomínios Tab */}
+          {activeTab === 'condominiums' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-gray-900">Condomínios</h2>
+                  <p className="text-gray-600 mt-1">Gerencie todos os condomínios cadastrados</p>
+                </div>
+                <button
+                  onClick={() => setShowCondoForm(true)}
+                  className="flex items-center gap-2 bg-gradient-to-r from-primary-500 to-secondary-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold"
+                >
+                  <PlusIcon className="w-5 h-5" />
+                  Novo Condomínio
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {condominiums.map((condo, index) => (
+                  <motion.div
+                    key={condo.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-display font-bold text-gray-900">{condo.name}</h3>
+                        <p className="text-sm text-gray-500 mt-1">{condo.slug}</p>
+                        {condo.cnpj && (
+                          <p className="text-xs text-gray-400 mt-1">CNPJ: {condo.cnpj}</p>
+                        )}
+                      </div>
+                      <div className={`w-3 h-3 rounded-full ${condo.isActive !== false ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                    </div>
+
+                    <div className="space-y-2 mb-4">
                       <button
                         onClick={() => toggleNews(condo)}
-                        className={`text-xs px-3 py-1 rounded-full ${
+                        className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-all ${
                           condo.showNews !== false
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-600'
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
                         Notícias: {condo.showNews !== false ? 'Ativadas' : 'Desativadas'}
                       </button>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setEditingCondo(condo)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCondominium(condo.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      Excluir
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Mídias</h2>
-              {selectedCondominium && (
-                <button
-                  onClick={() => setShowMediaForm(true)}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  Nova Mídia
-                </button>
-              )}
-            </div>
-            {!selectedCondominium ? (
-              <p className="text-gray-500">Selecione um condomínio</p>
-            ) : (
-              <div className="space-y-2">
-                {mediaItems.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 border rounded">
-                    <div>
-                      <div className="font-semibold">{item.title}</div>
-                      <div className="text-sm text-gray-600">
-                        {item.type} - {item.isActive ? 'Ativo' : 'Inativo'}
-                      </div>
+                      <button
+                        onClick={() => setSelectedCondominium(condo.id)}
+                        className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-all ${
+                          selectedCondominium === condo.id
+                            ? 'bg-primary-100 text-primary-800'
+                            : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {selectedCondominium === condo.id ? 'Selecionado' : 'Selecionar'}
+                      </button>
                     </div>
+
                     <div className="flex gap-2">
                       <button
-                        onClick={() => toggleMediaActive(item)}
-                        className={item.isActive ? 'text-orange-600' : 'text-green-600'}
+                        onClick={() => toggleCondominiumActive(condo)}
+                        className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                          condo.isActive !== false
+                            ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                            : 'bg-green-50 text-green-600 hover:bg-green-100'
+                        }`}
+                        title={condo.isActive !== false ? 'Desativar' : 'Ativar'}
                       >
-                        {item.isActive ? 'Desativar' : 'Ativar'}
+                        {condo.isActive !== false ? (
+                          <XCircleIcon className="w-4 h-4" />
+                        ) : (
+                          <CheckCircleIcon className="w-4 h-4" />
+                        )}
                       </button>
+
                       <button
-                        onClick={() => handleDeleteMedia(item.id)}
-                        className="text-red-600 hover:text-red-800"
+                        onClick={() => setEditingCondo(condo)}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all text-sm font-medium"
+                        title="Editar"
                       >
-                        Excluir
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (confirm('Tem certeza que deseja excluir este condomínio?')) {
+                            handleDeleteCondominium(condo.id);
+                          }
+                        }}
+                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all text-sm font-medium"
+                        title="Excluir"
+                      >
+                        <TrashIcon className="w-4 h-4" />
                       </button>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
-            )}
-          </div>
-        </div>
 
-        {selectedCondominium && selectedCondoData && (
-          <div className="mt-8 text-center">
-            <div className="flex gap-4 justify-center items-center">
-              <button
-                onClick={handleOpenPreview}
-                className="inline-block bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition-colors"
-              >
-                Ver como ficará na TV
-              </button>
-              <button
-                onClick={handleRefreshPreview}
-                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                title="Forçar atualização do preview"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Atualizar Preview
-              </button>
+              {condominiums.length === 0 && (
+                <div className="text-center py-12">
+                  <BuildingOfficeIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Nenhum condomínio cadastrado ainda</p>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
+
+          {/* Mídias Tab */}
+          {activeTab === 'media' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-3xl font-display font-bold text-gray-900">Mídias</h2>
+                  <p className="text-gray-600 mt-1">Gerencie o conteúdo exibido nas TVs</p>
+                </div>
+                {selectedCondominium && (
+                  <button
+                    onClick={() => setShowMediaForm(true)}
+                    className="flex items-center gap-2 bg-gradient-to-r from-primary-500 to-secondary-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold"
+                  >
+                    <PlusIcon className="w-5 h-5" />
+                    Nova Mídia
+                  </button>
+                )}
+              </div>
+
+              {!selectedCondominium ? (
+                <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
+                  <BuildingOfficeIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">Selecione um condomínio na aba Condomínios</p>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Condomínio Selecionado
+                    </label>
+                    <select
+                      value={selectedCondominium}
+                      onChange={(e) => setSelectedCondominium(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-medium"
+                    >
+                      {condominiums.map((condo) => (
+                        <option key={condo.id} value={condo.id}>
+                          {condo.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {mediaItems.map((item, index) => (
+                      <motion.div
+                        key={item.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-display font-bold text-gray-900">{item.title}</h3>
+                            {item.description && (
+                              <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
+                            )}
+                          </div>
+                          <div className={`w-3 h-3 rounded-full ${item.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                        </div>
+
+                        <div className="flex items-center gap-2 mb-4">
+                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-medium">
+                            {item.type.toUpperCase()}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {item.durationSeconds}s
+                          </span>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => toggleMediaActive(item)}
+                            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              item.isActive
+                                ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
+                                : 'bg-green-50 text-green-600 hover:bg-green-100'
+                            }`}
+                          >
+                            {item.isActive ? (
+                              <>
+                                <XCircleIcon className="w-4 h-4" />
+                                Desativar
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircleIcon className="w-4 h-4" />
+                                Ativar
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (confirm('Tem certeza que deseja excluir esta mídia?')) {
+                                handleDeleteMedia(item.id);
+                              }
+                            }}
+                            className="px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {mediaItems.length === 0 && (
+                    <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
+                      <PhotoIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">Nenhuma mídia cadastrada para este condomínio</p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Analytics Tab (Placeholder) */}
+          {activeTab === 'analytics' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-3xl font-display font-bold text-gray-900">Analytics</h2>
+                <p className="text-gray-600 mt-1">Estatísticas e métricas do sistema</p>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-100 text-center">
+                <PhotoIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Analytics em desenvolvimento</p>
+              </div>
+            </div>
+          )}
+
+          {/* Settings Tab (Placeholder) */}
+          {activeTab === 'settings' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-3xl font-display font-bold text-gray-900">Configurações</h2>
+                <p className="text-gray-600 mt-1">Ajuste as configurações do sistema</p>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm p-12 border border-gray-100 text-center">
+                <PhotoIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">Configurações em desenvolvimento</p>
+              </div>
+            </div>
+          )}
+        </main>
+
+        <AdminFooter />
       </div>
 
+      {/* Condominium Form Modal */}
       {(showCondoForm || editingCondo) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full"
+          >
+            <h2 className="text-2xl font-display font-bold text-gray-900 mb-6">
               {editingCondo ? 'Editar Condomínio' : 'Novo Condomínio'}
             </h2>
             <form onSubmit={editingCondo ? handleUpdateCondominium : handleCreateCondominium}>
               <div className="space-y-4">
-                <input
-                  name="name"
-                  defaultValue={editingCondo?.name}
-                  placeholder="Nome"
-                  className="w-full px-4 py-2 border rounded"
-                  required
-                />
-                <input
-                  name="slug"
-                  defaultValue={editingCondo?.slug}
-                  placeholder="Slug (ex: meu-condominio)"
-                  className="w-full px-4 py-2 border rounded"
-                  required
-                />
-                <input
-                  name="cnpj"
-                  defaultValue={editingCondo?.cnpj}
-                  placeholder="CNPJ (opcional)"
-                  className="w-full px-4 py-2 border rounded"
-                />
-                <input
-                  name="address"
-                  defaultValue={editingCondo?.address}
-                  placeholder="Endereço (opcional)"
-                  className="w-full px-4 py-2 border rounded"
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Nome</label>
+                  <input
+                    name="name"
+                    defaultValue={editingCondo?.name}
+                    placeholder="Nome do condomínio"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Slug</label>
+                  <input
+                    name="slug"
+                    defaultValue={editingCondo?.slug}
+                    placeholder="meu-condominio"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">CNPJ (opcional)</label>
+                  <input
+                    name="cnpj"
+                    defaultValue={editingCondo?.cnpj}
+                    placeholder="00.000.000/0000-00"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Endereço (opcional)</label>
+                  <input
+                    name="address"
+                    defaultValue={editingCondo?.address}
+                    placeholder="Rua, número, bairro"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
               </div>
-              <div className="flex gap-2 mt-6">
+              <div className="flex gap-3 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700"
+                  className="flex-1 bg-gradient-to-r from-primary-500 to-secondary-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                 >
                   Salvar
                 </button>
@@ -415,82 +711,106 @@ export default function AdminPage() {
                     setShowCondoForm(false);
                     setEditingCondo(null);
                   }}
-                  className="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400"
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all"
                 >
                   Cancelar
                 </button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
 
+      {/* Media Form Modal */}
       {showMediaForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full my-8">
-            <h2 className="text-xl font-bold mb-4">Nova Mídia</h2>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 overflow-y-auto z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-md w-full my-8"
+          >
+            <h2 className="text-2xl font-display font-bold text-gray-900 mb-6">Nova Mídia</h2>
             <form onSubmit={handleCreateMedia}>
               <div className="space-y-4">
-                <input
-                  name="title"
-                  placeholder="Título"
-                  className="w-full px-4 py-2 border rounded"
-                  required
-                />
-                <textarea
-                  name="description"
-                  placeholder="Descrição (opcional)"
-                  className="w-full px-4 py-2 border rounded"
-                  rows={3}
-                />
-                <select name="type" className="w-full px-4 py-2 border rounded" required>
-                  <option value="">Selecione o tipo</option>
-                  <option value="image">Imagem</option>
-                  <option value="video">Vídeo</option>
-                  <option value="youtube">YouTube</option>
-                  <option value="pdf">PDF</option>
-                </select>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Upload de arquivo</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Título</label>
+                  <input
+                    name="title"
+                    placeholder="Título da mídia"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Descrição (opcional)</label>
+                  <textarea
+                    name="description"
+                    placeholder="Descrição da mídia"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Tipo</label>
+                  <select
+                    name="type"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                    required
+                  >
+                    <option value="">Selecione o tipo</option>
+                    <option value="image">Imagem</option>
+                    <option value="video">Vídeo</option>
+                    <option value="youtube">YouTube</option>
+                    <option value="pdf">PDF</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Upload de arquivo</label>
                   <input
                     type="file"
                     name="file"
                     accept="image/*,video/*,.pdf"
-                    className="w-full px-4 py-2 border rounded"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
                   />
                   <p className="text-xs text-gray-500 mt-1">
                     Ou preencha a URL abaixo para YouTube ou arquivos externos
                   </p>
                 </div>
-                <input
-                  name="sourceUrl"
-                  placeholder="URL (para YouTube ou arquivos externos)"
-                  className="w-full px-4 py-2 border rounded"
-                />
-                <input
-                  name="durationSeconds"
-                  type="number"
-                  placeholder="Duração em segundos (padrão: 10)"
-                  className="w-full px-4 py-2 border rounded"
-                />
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">URL (opcional)</label>
+                  <input
+                    name="sourceUrl"
+                    placeholder="https://..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Duração (segundos)</label>
+                  <input
+                    name="durationSeconds"
+                    type="number"
+                    placeholder="10"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  />
+                </div>
               </div>
-              <div className="flex gap-2 mt-6">
+              <div className="flex gap-3 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+                  className="flex-1 bg-gradient-to-r from-primary-500 to-secondary-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                 >
                   Criar
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowMediaForm(false)}
-                  className="flex-1 bg-gray-300 py-2 rounded hover:bg-gray-400"
+                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all"
                 >
                   Cancelar
                 </button>
               </div>
             </form>
-          </div>
+          </motion.div>
         </div>
       )}
     </div>

@@ -37,5 +37,18 @@
     "id": "1764358378949",
     "createdAt": "2025-11-28T19:32:58.949Z",
     "updatedAt": "2025-11-28T19:32:58.949Z"
+  },
+  {
+    "title": "Preços de prods",
+    "description": "",
+    "type": "youtube",
+    "sourceUrl": "https://www.youtube.com/watch?v=mqhcR6pgkrI",
+    "durationSeconds": 10,
+    "isActive": true,
+    "order": 1,
+    "condominiumId": "1764353527994",
+    "id": "1764363286009",
+    "createdAt": "2025-11-28T20:54:46.009Z",
+    "updatedAt": "2025-11-28T20:54:46.009Z"
   }
 ]
