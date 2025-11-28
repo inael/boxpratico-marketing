@@ -176,6 +176,16 @@ export default function AdminPage() {
     loadMediaItems();
   }
 
+  
+  async function toggleNews(condo: Condominium) {
+    await fetch(`/api/condominiums/${condo.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ showNews: !condo.showNews }),
+    });
+    loadCondominiums();
+  }
+
   const selectedCondoData = condominiums.find(c => c.id === selectedCondominium);
 
   if (!isAuthenticated) {
@@ -238,9 +248,21 @@ export default function AdminPage() {
             <div className="space-y-2">
               {condominiums.map((condo) => (
                 <div key={condo.id} className="flex items-center justify-between p-3 border rounded">
-                  <div>
+                  <div className="flex-1">
                     <div className="font-semibold">{condo.name}</div>
                     <div className="text-sm text-gray-600">{condo.slug}</div>
+                    <div className="mt-2">
+                      <button
+                        onClick={() => toggleNews(condo)}
+                        className={`text-xs px-3 py-1 rounded-full ${
+                          condo.showNews !== false
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        Notícias: {condo.showNews !== false ? 'Ativadas' : 'Desativadas'}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex gap-2">
                     <button

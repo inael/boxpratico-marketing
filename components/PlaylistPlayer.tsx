@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { MediaItem, NewsItem } from '@/types';
+import { MediaItem, NewsItem, Condominium } from '@/types';
 import ImageSlide from './slides/ImageSlide';
 import VideoSlide from './slides/VideoSlide';
 import YoutubeSlide from './slides/YoutubeSlide';
@@ -13,6 +13,7 @@ interface PlaylistPlayerProps {
 }
 
 export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
+  const [condominium, setCondominium] = useState<Condominium | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -23,14 +24,17 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [mediaRes, newsRes] = await Promise.all([
+        const [condoRes, mediaRes, newsRes] = await Promise.all([
+          fetch(`/api/condominiums/${condominiumId}`),
           fetch(`/api/media-items?condominiumId=${condominiumId}`),
           fetch('/api/news'),
         ]);
 
+        const condoData = await condoRes.json();
         const media = await mediaRes.json();
         const news = await newsRes.json();
 
+        setCondominium(condoData);
         setMediaItems(media);
         setNewsItems(news);
         setIsLoading(false);
@@ -44,30 +48,31 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
   }, [condominiumId]);
 
   const nextSlide = useCallback(() => {
+    const newsEnabled = condominium?.showNews !== false;
+    
     if (showNews) {
       setCurrentNewsIndex((prev) => (prev + 1) % newsItems.length);
       setShowNews(false);
     } else {
       setCurrentIndex((prev) => {
         const next = (prev + 1) % mediaItems.length;
-        // Show news every 3 media items
-        if (next % 3 === 0 && newsItems.length > 0) {
+        if (next % 3 === 0 && newsItems.length > 0 && newsEnabled) {
           setShowNews(true);
         }
         return next;
       });
     }
-  }, [showNews, mediaItems.length, newsItems.length]);
+  }, [showNews, mediaItems.length, newsItems.length, condominium?.showNews]);
 
   useEffect(() => {
     if (isLoading || mediaItems.length === 0) return;
 
     const currentItem = showNews ? null : mediaItems[currentIndex];
     const duration = currentItem?.type === 'video' 
-      ? null // Video handles its own timing
+      ? null
       : currentItem?.durationSeconds 
         ? currentItem.durationSeconds * 1000 
-        : 10000; // Default 10 seconds
+        : 10000;
 
     if (duration && !showNews) {
       const timer = setTimeout(nextSlide, duration);
@@ -75,7 +80,7 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
     }
 
     if (showNews) {
-      const timer = setTimeout(nextSlide, 15000); // 15 seconds for news
+      const timer = setTimeout(nextSlide, 15000);
       return () => clearTimeout(timer);
     }
   }, [currentIndex, isLoading, mediaItems, showNews, nextSlide]);
@@ -98,7 +103,9 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
     );
   }
 
-  if (showNews && newsItems.length > 0) {
+  const newsEnabled = condominium?.showNews !== false;
+
+  if (showNews && newsItems.length > 0 && newsEnabled) {
     return <NewsSlide news={newsItems[currentNewsIndex]} />;
   }
 
