@@ -5,10 +5,17 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const condominiumId = searchParams.get('condominiumId');
+    const campaignId = searchParams.get('campaignId');
 
     if (condominiumId) {
       const mediaItems = getMediaItemsByCondominiumId(condominiumId);
       return NextResponse.json(mediaItems);
+    }
+
+    if (campaignId) {
+      const allMediaItems = getMediaItems();
+      const filteredMedia = allMediaItems.filter(m => m.campaignId === campaignId);
+      return NextResponse.json(filteredMedia);
     }
 
     const mediaItems = getMediaItems();

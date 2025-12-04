@@ -11,25 +11,32 @@ const parser = new Parser({
 export async function GET() {
   try {
     const feed = await parser.parseURL('https://www.gazetadopovo.com.br/feed/rss/brasil.xml');
-    
+
     const newsItems: NewsItem[] = feed.items.slice(0, 10).map((item: any) => {
       let imageUrl = '';
-      
-      if (item.image && item.image.url) {
-        imageUrl = item.image.url;
-      } else if (item.enclosure && item.enclosure.url) {
+
+      // Try different image sources
+      if (item.enclosure && item.enclosure.url) {
         imageUrl = item.enclosure.url;
+      } else if (item.image && typeof item.image === 'string') {
+        imageUrl = item.image;
+      } else if (item.image && item.image.url) {
+        imageUrl = item.image.url;
+      } else if (item['media:content'] && item['media:content']['$'] && item['media:content']['$'].url) {
+        imageUrl = item['media:content']['$'].url;
+      } else if (item['media:thumbnail'] && item['media:thumbnail']['$'] && item['media:thumbnail']['$'].url) {
+        imageUrl = item['media:thumbnail']['$'].url;
       }
 
       let description = item.contentSnippet || item.description || '';
-      
+
       description = description.replace(/<[^>]*>/g, '').trim();
 
       return {
         title: item.title || 'Untitled',
         link: item.link || '#',
         description: description.substring(0, 200),
-        imageUrl,
+        imageUrl: imageUrl || '',
         source: 'Gazeta do Povo',
         publishedAt: item.pubDate || new Date().toISOString(),
       };

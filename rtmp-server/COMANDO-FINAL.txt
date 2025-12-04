@@ -1,0 +1,224 @@
+════════════════════════════════════════════════════════════════════
+  COMANDO FINAL PARA EXECUTAR NA VPS (CORRIGIDO)
+════════════════════════════════════════════════════════════════════
+
+PASSO 1: Conectar na VPS
+─────────────────────────────────────────────────────────────────────
+
+ssh root@72.61.135.214
+
+Senha: M@t3m@t1c@10
+
+
+PASSO 2: Copiar e colar ESTE COMANDO COMPLETO
+─────────────────────────────────────────────────────────────────────
+
+bash << 'SCRIPT_END'
+set -e
+
+# Detectar Docker Compose
+if docker compose version &> /dev/null; then
+    DC="docker compose"
+elif docker-compose version &> /dev/null; then
+    DC="docker-compose"
+else
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    DC="docker-compose"
+fi
+
+# Backup
+cp docker-compose.yml docker-compose.yml.backup-$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+
+# Criar docker-compose.yml
+cat > docker-compose.yml << 'COMPOSE_END'
+version: "3.7"
+
+services:
+  traefik:
+    image: "traefik"
+    restart: always
+    command:
+      - "--api=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.mytlschallenge.acme.tlschallenge=true"
+      - "--certificatesresolvers.mytlschallenge.acme.email=\${SSL_EMAIL}"
+      - "--certificatesresolvers.mytlschallenge.acme.storage=/letsencrypt/acme.json"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - traefik_data:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    ports:
+      - "127.0.0.1:5678:5678"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.n8n.rule=Host(\`\${SUBDOMAIN}.\${DOMAIN_NAME}\`)
+      - traefik.http.routers.n8n.tls=true
+      - traefik.http.routers.n8n.entrypoints=web,websecure
+      - traefik.http.routers.n8n.tls.certresolver=mytlschallenge
+      - traefik.http.middlewares.n8n.headers.SSLRedirect=true
+      - traefik.http.middlewares.n8n.headers.STSSeconds=315360000
+      - traefik.http.middlewares.n8n.headers.browserXSSFilter=true
+      - traefik.http.middlewares.n8n.headers.contentTypeNosniff=true
+      - traefik.http.middlewares.n8n.headers.forceSTSHeader=true
+      - traefik.http.middlewares.n8n.headers.SSLHost=\${DOMAIN_NAME}
+      - traefik.http.middlewares.n8n.headers.STSIncludeSubdomains=true
+      - traefik.http.middlewares.n8n.headers.STSPreload=true
+      - traefik.http.routers.n8n.middlewares=n8n@docker
+    environment:
+      - N8N_HOST=\${SUBDOMAIN}.\${DOMAIN_NAME}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://\${SUBDOMAIN}.\${DOMAIN_NAME}/
+      - GENERIC_TIMEZONE=\${GENERIC_TIMEZONE}
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - /local-files:/files
+
+  nginx-rtmp:
+    image: tiangolo/nginx-rtmp
+    container_name: rtmp-server
+    restart: unless-stopped
+    ports:
+      - "1935:1935"
+      - "8080:80"
+    volumes:
+      - ./nginx-rtmp/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx-rtmp/hls:/tmp/hls
+
+volumes:
+  traefik_data:
+    external: true
+  n8n_data:
+    external: true
+COMPOSE_END
+
+# Criar configuração Nginx
+mkdir -p nginx-rtmp/hls
+cat > nginx-rtmp/nginx.conf << 'NGINX_END'
+worker_processes auto;
+rtmp_auto_push on;
+events {}
+
+rtmp {
+    server {
+        listen 1935;
+        listen [::]:1935 ipv6only=on;
+
+        application live {
+            live on;
+            record off;
+            hls on;
+            hls_path /tmp/hls;
+            hls_fragment 3;
+            hls_playlist_length 60;
+            allow publish all;
+            allow play all;
+        }
+    }
+}
+
+http {
+    sendfile off;
+    tcp_nopush on;
+    directio 512;
+    default_type application/octet-stream;
+
+    server {
+        listen 80;
+
+        location / {
+            add_header Cache-Control no-cache;
+            add_header 'Access-Control-Allow-Origin' '*' always;
+            add_header 'Access-Control-Expose-Headers' 'Content-Length';
+
+            types {
+                application/dash+xml mpd;
+                application/vnd.apple.mpegurl m3u8;
+                video/mp2t ts;
+            }
+
+            root /tmp;
+        }
+
+        location /health {
+            access_log off;
+            return 200 "healthy\n";
+            add_header Content-Type text/plain;
+        }
+
+        location /stat {
+            rtmp_stat all;
+        }
+    }
+}
+NGINX_END
+
+# Configurar permissões
+chmod -R 777 nginx-rtmp/hls
+
+# Subir containers
+echo "🚀 Iniciando containers..."
+$DC up -d
+
+# Aguardar
+sleep 10
+
+# Verificar
+echo ""
+echo "════════════════════════════════════════════════════════════"
+echo "  ✅ INSTALAÇÃO CONCLUÍDA!"
+echo "════════════════════════════════════════════════════════════"
+echo ""
+$DC ps
+echo ""
+docker logs rtmp-server --tail=20
+echo ""
+curl -s http://localhost:8080/health
+echo ""
+echo "📹 URLs:"
+echo "   RTMP: rtmp://72.61.135.214:1935/live/NOME-DA-CAMERA"
+echo "   HLS:  http://72.61.135.214:8080/hls/NOME-DA-CAMERA.m3u8"
+echo "   Health: http://72.61.135.214:8080/health"
+echo ""
+SCRIPT_END
+
+
+PASSO 3: Testar
+─────────────────────────────────────────────────────────────────────
+
+Abra no navegador:
+http://72.61.135.214:8080/health
+
+Deve mostrar: healthy
+
+
+════════════════════════════════════════════════════════════════════
+  EXPLICAÇÃO DA CORREÇÃO
+════════════════════════════════════════════════════════════════════
+
+O erro "found unknown escape character" acontecia porque as variáveis
+do Docker Compose (como ${SSL_EMAIL}) estavam sendo interpretadas
+pelo bash durante a criação do arquivo.
+
+A solução foi usar heredoc com aspas simples ('COMPOSE_END') para que
+o bash não tente expandir as variáveis, e escapar os $ com \$ para
+que apareçam literalmente no arquivo YAML.
+
+Agora o docker-compose.yml será criado corretamente com as variáveis
+preservadas para o Docker Compose expandir em tempo de execução.
+
+════════════════════════════════════════════════════════════════════

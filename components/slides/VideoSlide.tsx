@@ -12,10 +12,35 @@ export default function VideoSlide({ item, onVideoEnd }: VideoSlideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.play();
+    const video = videoRef.current;
+    if (!video) return;
+
+    const playFullVideo = item.playFullVideo ?? true;
+    const startTime = item.startTimeSeconds ?? 0;
+    const endTime = item.endTimeSeconds ?? 0;
+
+    // Set start time
+    if (!playFullVideo && startTime > 0) {
+      video.currentTime = startTime;
     }
-  }, []);
+
+    // Monitor playback for end time
+    const handleTimeUpdate = () => {
+      if (!playFullVideo && endTime > startTime && video.currentTime >= endTime) {
+        video.pause();
+        if (onVideoEnd) {
+          onVideoEnd();
+        }
+      }
+    };
+
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.play();
+
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+    };
+  }, [item.playFullVideo, item.startTimeSeconds, item.endTimeSeconds, onVideoEnd]);
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-black relative">
@@ -27,17 +52,6 @@ export default function VideoSlide({ item, onVideoEnd }: VideoSlideProps) {
         muted
         playsInline
       />
-      
-      {(item.title || item.description) && (
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-8 lg:p-12">
-          {item.title && (
-            <h2 className="text-white text-3xl lg:text-4xl font-bold mb-2">{item.title}</h2>
-          )}
-          {item.description && (
-            <p className="text-white/90 text-xl lg:text-2xl">{item.description}</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

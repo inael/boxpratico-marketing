@@ -4,13 +4,16 @@ export interface Condominium {
   slug: string;
   cnpj?: string;
   address?: string;
+  state?: string;
+  city?: string;
+  photoUrl?: string;
   isActive?: boolean;
   showNews?: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-export type MediaType = 'image' | 'video' | 'youtube' | 'pdf' | 'news';
+export type MediaType = 'image' | 'video' | 'youtube' | 'pdf' | 'news' | 'rtmp';
 
 export interface MediaItem {
   id: string;
@@ -18,10 +21,29 @@ export interface MediaItem {
   description?: string;
   type: MediaType;
   sourceUrl: string;
+  thumbnailUrl?: string;
   durationSeconds?: number;
+  playFullVideo?: boolean;
+  startTimeSeconds?: number;
+  endTimeSeconds?: number;
   isActive: boolean;
   order: number;
   condominiumId: string;
+  campaignId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Campaign {
+  id: string;
+  condominiumId: string;
+  name: string;
+  startDate?: string;
+  endDate?: string;
+  isActive: boolean;
+  showNews?: boolean;
+  newsEveryNMedia?: number;
+  newsDurationSeconds?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -34,3 +56,15 @@ export interface NewsItem {
   source?: string;
   publishedAt?: string;
 }
+
+export interface AnalyticsView {
+  id: string;
+  condominiumId: string;
+  condominiumName: string;
+  campaignId?: string;
+  campaignName?: string;
+  ipAddress: string;
+  viewDurationSeconds: number;
+  viewedAt: string;
+}
+

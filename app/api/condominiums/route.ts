@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCondominiums, createCondominium } from '@/lib/db';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const searchParams = request.nextUrl.searchParams;
+    const slug = searchParams.get('slug');
+
     const condominiums = getCondominiums();
+
+    // Filter by slug if provided
+    if (slug) {
+      const filtered = condominiums.filter(c => c.slug === slug);
+      return NextResponse.json(filtered);
+    }
+
     return NextResponse.json(condominiums);
   } catch (error) {
     return NextResponse.json(

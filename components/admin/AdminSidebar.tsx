@@ -1,12 +1,13 @@
 'use client';
 
-import { 
-  HomeIcon, 
-  BuildingOfficeIcon, 
-  PhotoIcon, 
+import {
+  HomeIcon,
+  BuildingOfficeIcon,
+  PhotoIcon,
   ChartBarIcon,
   CogIcon,
-  ArrowRightOnRectangleIcon
+  ArrowRightOnRectangleIcon,
+  MegaphoneIcon
 } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 
@@ -20,6 +21,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
     { id: 'condominiums', label: 'Condomínios', icon: BuildingOfficeIcon },
     { id: 'media', label: 'Mídias', icon: PhotoIcon },
+    { id: 'campaigns', label: 'Campanhas', icon: MegaphoneIcon },
     { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
     { id: 'settings', label: 'Configurações', icon: CogIcon },
   ];
@@ -37,7 +39,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
               onClick={() => onTabChange(item.id)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                 isActive
-                  ? 'bg-gradient-to-r from-primary-500 to-secondary-600 text-white shadow-lg shadow-primary-500/30'
+                  ? 'bg-gradient-to-r from-indigo-600 to-pink-600 text-white shadow-lg shadow-indigo-500/30'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >

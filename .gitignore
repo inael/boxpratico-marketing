@@ -36,3 +36,7 @@ next-env.d.ts
 
 # uploads
 /public/uploads
+
+# rtmp server
+/rtmp-server/nginx-rtmp/hls/
+/rtmp-server/nginx-rtmp/recordings/

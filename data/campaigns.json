@@ -1,0 +1,14 @@
+[
+  {
+    "id": "1764793811320",
+    "condominiumId": "1764793469171",
+    "name": "Natal Matisse",
+    "startDate": "2025-12-03",
+    "endDate": "2025-12-10",
+    "isActive": true,
+    "newsEveryNMedia": 1,
+    "newsDurationSeconds": 10,
+    "createdAt": "2025-12-03T20:30:11.320Z",
+    "updatedAt": "2025-12-04T14:10:14.488Z"
+  }
+]
