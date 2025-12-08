@@ -15,7 +15,7 @@ import {
   ArrowDownIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';
-import { Campaign, Condominium, MediaItem } from '@/types';
+import { Campaign, Condominium, MediaItem, Monitor } from '@/types';
 
 interface CampaignsTabProps {
   condominiums: Condominium[];
@@ -24,6 +24,7 @@ interface CampaignsTabProps {
 export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
+  const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
@@ -46,6 +47,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
 
   const [formData, setFormData] = useState({
     name: '',
+    monitorId: '',
     startDate: getDefaultDates().startDate,
     endDate: getDefaultDates().endDate,
     isActive: true,
@@ -68,6 +70,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
     if (selectedCondominium) {
       fetchCampaigns();
       fetchMediaItems();
+      fetchMonitors();
     }
   }, [selectedCondominium]);
 
@@ -106,6 +109,16 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       setAvailableMediaItems(data.filter((m: MediaItem) => m.isActive));
     } catch (error) {
       console.error('Failed to fetch media items:', error);
+    }
+  };
+
+  const fetchMonitors = async () => {
+    try {
+      const response = await fetch(`/api/monitors?condominiumId=${selectedCondominium}`);
+      const data = await response.json();
+      setMonitors(data.filter((m: Monitor) => m.isActive));
+    } catch (error) {
+      console.error('Failed to fetch monitors:', error);
     }
   };
 
@@ -295,6 +308,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
     setEditingCampaign(campaign);
     setFormData({
       name: campaign.name,
+      monitorId: campaign.monitorId || '',
       startDate: campaign.startDate || '',
       endDate: campaign.endDate || '',
       isActive: campaign.isActive,
@@ -325,6 +339,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
     const defaultDates = getDefaultDates();
     setFormData({
       name: '',
+      monitorId: '',
       startDate: defaultDates.startDate,
       endDate: defaultDates.endDate,
       isActive: true,
@@ -525,18 +540,43 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                 {editingCampaign ? 'Editar Campanha' : 'Nova Campanha'}
               </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Nome da Campanha *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
-                    placeholder="Ex: Campanha Natal 2024"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Nome da Campanha *
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
+                      placeholder="Ex: Campanha Natal 2024"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Monitor *
+                    </label>
+                    <select
+                      value={formData.monitorId}
+                      onChange={(e) => setFormData({ ...formData, monitorId: e.target.value })}
+                      required
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
+                    >
+                      <option value="">Selecione um monitor</option>
+                      {monitors.map((monitor) => (
+                        <option key={monitor.id} value={monitor.id}>
+                          {monitor.name} {monitor.location ? `(${monitor.location})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {monitors.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Nenhum monitor cadastrado. Cadastre um na aba Monitores.
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -750,6 +790,16 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                 </div>
 
                 <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Monitor:</span>
+                    {campaign.monitorId ? (
+                      <span className="font-semibold text-indigo-600">
+                        {monitors.find(m => m.id === campaign.monitorId)?.name || 'N/A'}
+                      </span>
+                    ) : (
+                      <span className="font-semibold text-amber-600">Não associado</span>
+                    )}
+                  </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Notícias a cada:</span>
                     <span className="font-semibold text-gray-900">{campaign.newsEveryNMedia || 'N/A'} mídias</span>

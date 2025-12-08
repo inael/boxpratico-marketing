@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMediaItemById, updateMediaItem, deleteMediaItem } from '@/lib/db';
+import { getMediaItemById, updateMediaItem, deleteMediaItem } from '@/lib/database';
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const mediaItem = getMediaItemById(id);
+    const mediaItem = await getMediaItemById(id);
 
     if (!mediaItem) {
       return NextResponse.json(
@@ -18,6 +18,7 @@ export async function GET(
 
     return NextResponse.json(mediaItem);
   } catch (error) {
+    console.error('Failed to fetch media item:', error);
     return NextResponse.json(
       { error: 'Failed to fetch media item' },
       { status: 500 }
@@ -33,7 +34,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const mediaItem = updateMediaItem(id, body);
+    const mediaItem = await updateMediaItem(id, body);
 
     if (!mediaItem) {
       return NextResponse.json(
@@ -44,6 +45,7 @@ export async function PUT(
 
     return NextResponse.json(mediaItem);
   } catch (error) {
+    console.error('Failed to update media item:', error);
     return NextResponse.json(
       { error: 'Failed to update media item' },
       { status: 500 }
@@ -57,7 +59,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const success = deleteMediaItem(id);
+    const success = await deleteMediaItem(id);
 
     if (!success) {
       return NextResponse.json(
@@ -68,6 +70,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Failed to delete media item:', error);
     return NextResponse.json(
       { error: 'Failed to delete media item' },
       { status: 500 }

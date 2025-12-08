@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCondominiumById, updateCondominium, deleteCondominium } from '@/lib/db';
+import { getCondominiumById, updateCondominium, deleteCondominium } from '@/lib/database';
 
 export async function GET(
   request: NextRequest,
@@ -7,7 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    const condominium = getCondominiumById(id);
+    const condominium = await getCondominiumById(id);
 
     if (!condominium) {
       return NextResponse.json(
@@ -18,6 +18,7 @@ export async function GET(
 
     return NextResponse.json(condominium);
   } catch (error) {
+    console.error('Failed to fetch condominium:', error);
     return NextResponse.json(
       { error: 'Failed to fetch condominium' },
       { status: 500 }
@@ -33,7 +34,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    const condominium = updateCondominium(id, body);
+    const condominium = await updateCondominium(id, body);
 
     if (!condominium) {
       return NextResponse.json(
@@ -44,6 +45,7 @@ export async function PUT(
 
     return NextResponse.json(condominium);
   } catch (error) {
+    console.error('Failed to update condominium:', error);
     return NextResponse.json(
       { error: 'Failed to update condominium' },
       { status: 500 }
@@ -57,7 +59,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const success = deleteCondominium(id);
+    const success = await deleteCondominium(id);
 
     if (!success) {
       return NextResponse.json(
@@ -68,6 +70,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    console.error('Failed to delete condominium:', error);
     return NextResponse.json(
       { error: 'Failed to delete condominium' },
       { status: 500 }

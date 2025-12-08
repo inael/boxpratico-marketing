@@ -7,6 +7,7 @@ import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminFooter from '@/components/admin/AdminFooter';
 import CampaignsTab from '@/components/admin/CampaignsTab';
 import SettingsTab from '@/components/admin/SettingsTab';
+import MonitorsTab from '@/components/admin/MonitorsTab';
 import { brazilianStates, citiesByState } from '@/lib/brazilian-cities';
 import {
   BuildingOfficeIcon,
@@ -1022,6 +1023,11 @@ export default function AdminPage() {
                 </>
               )}
             </div>
+          )}
+
+          {/* Monitors Tab */}
+          {activeTab === 'monitors' && (
+            <MonitorsTab condominiums={condominiums} />
           )}
 
           {/* Campaigns Tab */}

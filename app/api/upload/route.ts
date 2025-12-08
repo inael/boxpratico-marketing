@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import path from 'path';
+import { uploadFile } from '@/lib/storage';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,20 +13,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const result = await uploadFile(file, { folder: 'media' });
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const filename = `${timestamp}-${sanitizedName}`;
-    const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
-
-    await writeFile(filepath, buffer);
-
-    const url = `/uploads/${filename}`;
-
-    return NextResponse.json({ url }, { status: 201 });
+    return NextResponse.json({
+      url: result.url,
+      hash: result.hash,
+      isDuplicate: result.isDuplicate,
+    }, { status: 201 });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json(

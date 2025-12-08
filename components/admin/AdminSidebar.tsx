@@ -7,7 +7,8 @@ import {
   ChartBarIcon,
   CogIcon,
   ArrowRightOnRectangleIcon,
-  MegaphoneIcon
+  MegaphoneIcon,
+  TvIcon
 } from '@heroicons/react/24/outline';
 import { useState } from 'react';
 
@@ -20,6 +21,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
     { id: 'condominiums', label: 'Condomínios', icon: BuildingOfficeIcon },
+    { id: 'monitors', label: 'Monitores', icon: TvIcon },
     { id: 'media', label: 'Mídias', icon: PhotoIcon },
     { id: 'campaigns', label: 'Campanhas', icon: MegaphoneIcon },
     { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },

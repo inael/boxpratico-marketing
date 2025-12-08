@@ -10,7 +10,7 @@
     "condominiumId": "1764793469171",
     "id": "1764793534399",
     "createdAt": "2025-12-03T20:25:34.399Z",
-    "updatedAt": "2025-12-04T14:10:14.565Z",
+    "updatedAt": "2025-12-08T15:01:00.411Z",
     "campaignId": "1764793811320"
   },
   {
@@ -20,11 +20,11 @@
     "sourceUrl": "/uploads/1764793604546-heineken.png",
     "durationSeconds": 5,
     "isActive": true,
-    "order": 0,
+    "order": 1,
     "condominiumId": "1764793469171",
     "id": "1764793604564",
     "createdAt": "2025-12-03T20:26:44.564Z",
-    "updatedAt": "2025-12-04T14:10:14.627Z",
+    "updatedAt": "2025-12-08T15:01:00.426Z",
     "campaignId": "1764793811320"
   },
   {
@@ -34,11 +34,11 @@
     "sourceUrl": "rtmp://localhost/live/matematica10",
     "durationSeconds": 50,
     "isActive": false,
-    "order": 0,
+    "order": 2,
     "condominiumId": "1764793469171",
     "id": "1764806241124",
     "createdAt": "2025-12-03T23:57:21.124Z",
-    "updatedAt": "2025-12-04T14:10:14.512Z",
+    "updatedAt": "2025-12-08T15:01:00.443Z",
     "campaignId": "1764793811320"
   },
   {
@@ -52,6 +52,8 @@
     "condominiumId": "1764793469171",
     "id": "1764857353612",
     "createdAt": "2025-12-04T14:09:13.612Z",
-    "updatedAt": "2025-12-04T14:09:13.612Z"
+    "updatedAt": "2025-12-08T15:04:58.428Z",
+    "playFullVideo": true,
+    "campaignId": "1764793811320"
   }
 ]

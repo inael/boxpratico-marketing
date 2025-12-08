@@ -40,3 +40,4 @@ next-env.d.ts
 # rtmp server
 /rtmp-server/nginx-rtmp/hls/
 /rtmp-server/nginx-rtmp/recordings/
+.claude/

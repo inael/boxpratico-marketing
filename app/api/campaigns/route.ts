@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { Campaign } from '@/types';
-
-const campaignsFilePath = path.join(process.cwd(), 'data', 'campaigns.json');
+import { getCampaigns, getCampaignsByCondominiumId, createCampaign } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const condominiumId = searchParams.get('condominiumId');
 
-    const data = await fs.readFile(campaignsFilePath, 'utf-8');
-    let campaigns: Campaign[] = JSON.parse(data);
-
+    let campaigns;
     if (condominiumId) {
-      campaigns = campaigns.filter(c => c.condominiumId === condominiumId);
+      campaigns = await getCampaignsByCondominiumId(condominiumId);
+    } else {
+      campaigns = await getCampaigns();
     }
 
     return NextResponse.json(campaigns);
@@ -27,38 +23,26 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { condominiumId, name, startDate, endDate, isActive, newsEveryNMedia, newsDurationSeconds } = body;
+    const { condominiumId, name, monitorId, startDate, endDate, isActive, showNews, newsEveryNMedia, newsDurationSeconds } = body;
 
     // Validate minimum news duration
     const validNewsDuration = newsDurationSeconds !== undefined && newsDurationSeconds !== null
       ? Math.max(5, newsDurationSeconds)
       : undefined;
 
-    const newCampaign: Campaign = {
-      id: Date.now().toString(),
+    const campaign = await createCampaign({
       condominiumId,
       name,
+      monitorId,
       startDate,
       endDate,
       isActive: isActive ?? false,
+      showNews,
       newsEveryNMedia,
       newsDurationSeconds: validNewsDuration,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    });
 
-    let campaigns: Campaign[] = [];
-    try {
-      const data = await fs.readFile(campaignsFilePath, 'utf-8');
-      campaigns = JSON.parse(data);
-    } catch {
-      campaigns = [];
-    }
-
-    campaigns.push(newCampaign);
-    await fs.writeFile(campaignsFilePath, JSON.stringify(campaigns, null, 2));
-
-    return NextResponse.json(newCampaign, { status: 201 });
+    return NextResponse.json(campaign, { status: 201 });
   } catch (error) {
     console.error('Failed to create campaign:', error);
     return NextResponse.json(

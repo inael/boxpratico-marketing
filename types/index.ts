@@ -37,6 +37,7 @@ export interface MediaItem {
 export interface Campaign {
   id: string;
   condominiumId: string;
+  monitorId?: string;
   name: string;
   startDate?: string;
   endDate?: string;
@@ -66,5 +67,18 @@ export interface AnalyticsView {
   ipAddress: string;
   viewDurationSeconds: number;
   viewedAt: string;
+}
+
+export interface Monitor {
+  id: string;
+  name: string;
+  slug: string;
+  location: string;
+  condominiumId: string;
+  isActive: boolean;
+  lastHeartbeat?: string;
+  isOnline?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 

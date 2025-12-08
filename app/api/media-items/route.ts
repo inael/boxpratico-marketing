@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMediaItems, createMediaItem, getMediaItemsByCondominiumId } from '@/lib/db';
+import { getMediaItems, createMediaItem, getMediaItemsByCondominiumId, getMediaItemsByCampaignId } from '@/lib/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,19 +8,19 @@ export async function GET(request: NextRequest) {
     const campaignId = searchParams.get('campaignId');
 
     if (condominiumId) {
-      const mediaItems = getMediaItemsByCondominiumId(condominiumId);
+      const mediaItems = await getMediaItemsByCondominiumId(condominiumId);
       return NextResponse.json(mediaItems);
     }
 
     if (campaignId) {
-      const allMediaItems = getMediaItems();
-      const filteredMedia = allMediaItems.filter(m => m.campaignId === campaignId);
-      return NextResponse.json(filteredMedia);
+      const mediaItems = await getMediaItemsByCampaignId(campaignId);
+      return NextResponse.json(mediaItems);
     }
 
-    const mediaItems = getMediaItems();
+    const mediaItems = await getMediaItems();
     return NextResponse.json(mediaItems);
   } catch (error) {
+    console.error('Failed to fetch media items:', error);
     return NextResponse.json(
       { error: 'Failed to fetch media items' },
       { status: 500 }
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, type, sourceUrl, durationSeconds, isActive, order, condominiumId } = body;
+    const { title, description, type, sourceUrl, durationSeconds, isActive, order, condominiumId, campaignId } = body;
 
     if (!title || !type || !sourceUrl || !condominiumId) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const mediaItem = createMediaItem({
+    const mediaItem = await createMediaItem({
       title,
       description,
       type,
@@ -49,10 +49,12 @@ export async function POST(request: NextRequest) {
       isActive: isActive ?? true,
       order: order ?? 0,
       condominiumId,
+      campaignId,
     });
 
     return NextResponse.json(mediaItem, { status: 201 });
   } catch (error) {
+    console.error('Failed to create media item:', error);
     return NextResponse.json(
       { error: 'Failed to create media item' },
       { status: 500 }
