@@ -4,26 +4,49 @@ import path from 'path';
 
 const settingsFilePath = path.join(process.cwd(), 'data', 'settings.json');
 
+const defaultSettings = {
+  rss: {
+    url: 'https://www.gazetadopovo.com.br/feed/rss/brasil.xml',
+    imageTag: 'enclosure.url',
+    titleTag: 'title',
+    descriptionTag: 'description'
+  },
+  auth: {
+    username: 'admin',
+    password: 'admin123'
+  },
+  whatsapp: {
+    notificationsEnabled: true
+  }
+};
+
+// Export function to get settings from other modules
+export async function getSettingsData() {
+  try {
+    const data = await fs.readFile(settingsFilePath, 'utf-8');
+    const settings = JSON.parse(data);
+    return {
+      ...defaultSettings,
+      ...settings,
+      whatsapp: { ...defaultSettings.whatsapp, ...settings.whatsapp }
+    };
+  } catch {
+    return defaultSettings;
+  }
+}
+
 export async function GET() {
   try {
     const data = await fs.readFile(settingsFilePath, 'utf-8');
     const settings = JSON.parse(data);
-    return NextResponse.json(settings);
+    // Merge with defaults to ensure all fields exist
+    return NextResponse.json({
+      ...defaultSettings,
+      ...settings,
+      whatsapp: { ...defaultSettings.whatsapp, ...settings.whatsapp }
+    });
   } catch (error) {
     console.error('Failed to read settings:', error);
-    // Return default settings if file doesn't exist
-    const defaultSettings = {
-      rss: {
-        url: 'https://www.gazetadopovo.com.br/feed/rss/brasil.xml',
-        imageTag: 'enclosure.url',
-        titleTag: 'title',
-        descriptionTag: 'description'
-      },
-      auth: {
-        username: 'admin',
-        password: 'admin123'
-      }
-    };
     return NextResponse.json(defaultSettings);
   }
 }

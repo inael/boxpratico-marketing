@@ -17,6 +17,31 @@ import {
 } from '@heroicons/react/24/outline';
 import { Campaign, Condominium, MediaItem, Monitor } from '@/types';
 
+// Helper to send WhatsApp notifications
+async function sendWhatsAppNotification(
+  type: string,
+  condominiumName: string,
+  condominiumPhone?: string,
+  entityName?: string,
+  details?: string
+) {
+  try {
+    await fetch('/api/whatsapp/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        condominiumName,
+        condominiumPhone,
+        entityName,
+        details,
+      }),
+    });
+  } catch (error) {
+    console.error('Failed to send WhatsApp notification:', error);
+  }
+}
+
 interface CampaignsTabProps {
   condominiums: Condominium[];
 }
@@ -278,6 +303,21 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
             });
           }
 
+          // Send WhatsApp notification for new campaign
+          const selectedCondo = condominiums.find(c => c.id === selectedCondominium);
+          if (selectedCondo?.whatsappPhone) {
+            const details = formData.startDate && formData.endDate
+              ? `Período: ${formData.startDate} a ${formData.endDate}`
+              : '';
+            sendWhatsAppNotification(
+              'campaign_created',
+              selectedCondo.name,
+              selectedCondo.whatsappPhone,
+              formData.name,
+              details
+            );
+          }
+
           await fetchCampaigns();
           resetForm();
         }
@@ -422,7 +462,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
             {hasOtherCampaigns && (
               <button
                 onClick={() => setShowCopyModal(true)}
-                className="flex items-center gap-2 bg-white border-2 border-indigo-600 text-indigo-600 px-6 py-3 rounded-xl hover:bg-indigo-50 transition-all font-semibold"
+                className="flex items-center gap-2 bg-white border-2 border-[#D97706] text-[#D97706] px-6 py-3 rounded-xl hover:bg-[#FFFBEB] transition-all font-semibold"
               >
                 <DocumentDuplicateIcon className="w-5 h-5" />
                 Copiar de Outro Condomínio
@@ -430,7 +470,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
             )}
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-pink-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md"
+              className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md"
             >
               <PlusIcon className="w-5 h-5" />
               Nova Campanha
@@ -490,7 +530,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                   <select
                     value={copySourceCondominium}
                     onChange={(e) => setCopySourceCondominium(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-medium bg-white text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none font-medium bg-white text-gray-900"
                   >
                     <option value="">Selecione um condomínio</option>
                     {condominiums
@@ -511,7 +551,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                     type="button"
                     onClick={handleCopyCampaigns}
                     disabled={!copySourceCondominium}
-                    className="flex-1 bg-gradient-to-r from-indigo-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Copiar Campanhas
                   </button>
@@ -750,7 +790,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-indigo-500 to-pink-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                    className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
                     {editingCampaign ? 'Atualizar' : 'Criar'} Campanha
                   </button>
@@ -793,7 +833,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Monitor:</span>
                     {campaign.monitorId ? (
-                      <span className="font-semibold text-indigo-600">
+                      <span className="font-semibold text-[#D97706]">
                         {monitors.find(m => m.id === campaign.monitorId)?.name || 'N/A'}
                       </span>
                     ) : (

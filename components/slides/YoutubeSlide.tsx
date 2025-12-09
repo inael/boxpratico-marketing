@@ -38,6 +38,19 @@ export default function YoutubeSlide({ item, onTimeUpdate }: YoutubeSlideProps) 
 
   const duration = item.durationSeconds || 10;
   const [timeLeft, setTimeLeft] = useState(duration);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+
+  // Keep ref updated
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+  }, [onTimeUpdate]);
+
+  // Notify parent of time updates
+  useEffect(() => {
+    if (onTimeUpdateRef.current) {
+      onTimeUpdateRef.current(timeLeft);
+    }
+  }, [timeLeft]);
 
   useEffect(() => {
     // Force play after a small delay to ensure iframe is loaded
@@ -57,9 +70,6 @@ export default function YoutubeSlide({ item, onTimeUpdate }: YoutubeSlideProps) 
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         const newTime = prev <= 1 ? 0 : prev - 1;
-        if (onTimeUpdate) {
-          onTimeUpdate(newTime);
-        }
         if (newTime === 0) {
           clearInterval(interval);
         }
@@ -68,7 +78,7 @@ export default function YoutubeSlide({ item, onTimeUpdate }: YoutubeSlideProps) 
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [duration, item, onTimeUpdate]);
+  }, [duration, item]);
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-black relative">

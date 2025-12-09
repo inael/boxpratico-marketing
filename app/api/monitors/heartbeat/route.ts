@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Update online status based on last heartbeat (offline if > 30 seconds)
     const now = new Date();
-    const OFFLINE_THRESHOLD = 30 * 1000; // 30 seconds
+    const OFFLINE_THRESHOLD = 30 * 1000; // 30 seconds (heartbeat every 15s + margin)
 
     const updatedMonitors = await Promise.all(
       monitors.map(async (monitor) => {

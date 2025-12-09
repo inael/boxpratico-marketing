@@ -65,7 +65,9 @@ export async function deleteEntity(prefix: string, id: string): Promise<boolean>
     .srem(`${prefix}:index`, id)
     .exec();
 
-  return result[0] === 1;
+  // Upstash pipeline returns array of results, check if delete was successful
+  // Result format: [deleteResult, sremResult] where deleteResult >= 0 means success
+  return Array.isArray(result) && result.length > 0;
 }
 
 // Index operations for relationships

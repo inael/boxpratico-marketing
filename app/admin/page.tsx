@@ -8,6 +8,7 @@ import AdminFooter from '@/components/admin/AdminFooter';
 import CampaignsTab from '@/components/admin/CampaignsTab';
 import SettingsTab from '@/components/admin/SettingsTab';
 import MonitorsTab from '@/components/admin/MonitorsTab';
+import OnboardingWizard from '@/components/admin/OnboardingWizard';
 import { brazilianStates, citiesByState } from '@/lib/brazilian-cities';
 import {
   BuildingOfficeIcon,
@@ -20,9 +21,35 @@ import {
   PlusIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+
+// Helper to send WhatsApp notifications
+async function sendWhatsAppNotification(
+  type: string,
+  condominiumName: string,
+  condominiumPhone?: string,
+  entityName?: string,
+  details?: string
+) {
+  try {
+    await fetch('/api/whatsapp/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        condominiumName,
+        condominiumPhone,
+        entityName,
+        details,
+      }),
+    });
+  } catch (error) {
+    console.error('Failed to send WhatsApp notification:', error);
+  }
+}
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,6 +75,9 @@ export default function AdminPage() {
   const [endTimeSeconds, setEndTimeSeconds] = useState<number>(0);
   const [selectedCampaignForPreview, setSelectedCampaignForPreview] = useState<string>('');
   const [analyticsData, setAnalyticsData] = useState<AnalyticsView[]>([]);
+  const [hasUploadedFile, setHasUploadedFile] = useState<boolean>(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
+  const [monitors, setMonitors] = useState<{ id: string }[]>([]);
 
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
@@ -59,6 +89,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAuthenticated) {
       loadCondominiums();
+      loadMonitors();
     }
   }, [isAuthenticated]);
 
@@ -68,6 +99,13 @@ export default function AdminPage() {
       loadCampaigns();
     }
   }, [selectedCondominium]);
+
+  // Show onboarding wizard on first visit (when no condominiums exist)
+  useEffect(() => {
+    if (isAuthenticated && condominiums.length === 0 && !localStorage.getItem('onboarding_dismissed')) {
+      setShowOnboarding(true);
+    }
+  }, [isAuthenticated, condominiums]);
 
   useEffect(() => {
     if (selectedState) {
@@ -139,6 +177,14 @@ export default function AdminPage() {
     setCampaigns(data);
   }
 
+  async function loadMonitors() {
+    const res = await fetch('/api/monitors');
+    if (res.ok) {
+      const data = await res.json();
+      setMonitors(data);
+    }
+  }
+
   function sanitizeSlug(slug: string): string {
     return slug
       .toLowerCase()
@@ -192,6 +238,7 @@ export default function AdminPage() {
       address: formData.get('address') as string,
       state: formData.get('state') as string,
       city: formData.get('city') as string,
+      whatsappPhone: formData.get('whatsappPhone') as string,
       photoUrl: photoUrl || undefined,
       isActive: true,
     };
@@ -203,6 +250,15 @@ export default function AdminPage() {
     });
 
     if (res.ok) {
+      // Send WhatsApp notification for new condominium
+      if (data.whatsappPhone) {
+        sendWhatsAppNotification(
+          'condominium_created',
+          data.name,
+          data.whatsappPhone
+        );
+      }
+
       setShowCondoForm(false);
       setSelectedState('');
       setCondoName('');
@@ -239,6 +295,7 @@ export default function AdminPage() {
       address: formData.get('address') as string,
       state: formData.get('state') as string,
       city: formData.get('city') as string,
+      whatsappPhone: formData.get('whatsappPhone') as string,
       photoUrl: photoUrl || undefined,
     };
 
@@ -346,6 +403,7 @@ export default function AdminPage() {
         alert(`✅ Câmera cadastrada com sucesso!\n\n📹 Configure sua câmera IMIX com:\n${rtmpUrl}\n\n🎬 URL HLS (já configurada no player):\n${hlsUrl}`);
         setShowMediaForm(false);
         setMediaType('');
+        setHasUploadedFile(false);
         loadMediaItems();
       }
       return;
@@ -377,6 +435,7 @@ export default function AdminPage() {
       if (res.ok) {
         setShowMediaForm(false);
         setMediaType('');
+        setHasUploadedFile(false);
         loadMediaItems();
       }
       return;
@@ -428,6 +487,7 @@ export default function AdminPage() {
     if (successCount > 0) {
       setShowMediaForm(false);
       setMediaType('');
+      setHasUploadedFile(false);
       loadMediaItems();
       alert(`${successCount} mídia(s) criada(s) com sucesso!`);
     }
@@ -481,6 +541,7 @@ export default function AdminPage() {
       setShowMediaForm(false);
       setEditingMedia(null);
       setMediaType('');
+      setHasUploadedFile(false);
       loadMediaItems();
     }
   }
@@ -523,17 +584,35 @@ export default function AdminPage() {
   const inactiveCampaigns = campaigns.filter(c => !c.isActive).length;
   const totalCampaigns = campaigns.length;
 
+  // Onboarding wizard helpers
+  const isFirstTime = condominiums.length === 0 && mediaItems.length === 0 && campaigns.length === 0;
+  const completedSteps = {
+    hasCondominium: condominiums.length > 0,
+    hasMonitor: monitors.length > 0,
+    hasMedia: mediaItems.length > 0,
+    hasCampaign: campaigns.length > 0,
+  };
+
+  function handleCloseOnboarding() {
+    setShowOnboarding(false);
+    localStorage.setItem('onboarding_dismissed', 'true');
+  }
+
+  function handleNavigateFromWizard(tab: string) {
+    setActiveTab(tab);
+  }
+
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-8 rounded-2xl shadow-xl w-96"
+          className="bg-white p-8 rounded-2xl shadow-xl w-96 border border-gray-100"
         >
           <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="text-white font-bold text-2xl">BP</span>
+            <div className="w-16 h-16 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <span className="text-black font-bold text-2xl">BP</span>
             </div>
             <h1 className="text-2xl font-display font-bold text-gray-900">Admin Login</h1>
             <p className="text-gray-600 mt-2">BoxPrático Marketing</p>
@@ -545,7 +624,7 @@ export default function AdminPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Digite a senha"
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white text-gray-900 placeholder-gray-400"
+                className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] outline-none bg-white text-gray-900 placeholder-gray-400 transition-all"
               />
               <button
                 type="button"
@@ -561,7 +640,7 @@ export default function AdminPage() {
             </div>
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-indigo-600 to-pink-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg hover:from-indigo-700 hover:to-pink-700 transition-all shadow-md"
+              className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all shadow-md transform hover:scale-[1.02]"
             >
               Entrar
             </button>
@@ -572,39 +651,78 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
       <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="flex-1 flex flex-col">
         <AdminHeader />
 
-        <main className="flex-1 p-8 overflow-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
-              <div>
-                <h2 className="text-3xl font-display font-bold text-gray-900">Dashboard</h2>
-                <p className="text-gray-600 mt-1">Visão geral do sistema</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Dashboard</h2>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Visão geral do sistema</p>
+                </div>
+                <button
+                  onClick={() => setShowOnboarding(true)}
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-5 py-2.5 rounded-xl hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all font-semibold text-sm transform hover:scale-105 w-full sm:w-auto"
+                >
+                  <SparklesIcon className="w-5 h-5" />
+                  <span className="hidden xs:inline">Criar Campanha Fácil</span>
+                  <span className="xs:hidden">Nova Campanha</span>
+                </button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Welcome Card for First Time Users */}
+              {isFirstTime && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-gradient-to-r from-[#F59E0B] to-[#D97706] rounded-2xl p-4 sm:p-6 lg:p-8 text-white relative overflow-hidden"
+                >
+                  <div className="absolute top-0 right-0 w-32 sm:w-64 h-32 sm:h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+                  <div className="absolute bottom-0 left-0 w-16 sm:w-32 h-16 sm:h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+                  <div className="relative z-10">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-4">
+                      <SparklesIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+                      <h3 className="text-xl sm:text-2xl font-display font-bold">Bem-vindo ao BoxPrático Marketing!</h3>
+                    </div>
+                    <p className="text-white/90 mb-6 max-w-2xl">
+                      Parece que você está começando agora. Siga nosso guia passo a passo para criar sua primeira campanha
+                      e começar a exibir conteúdo nas TVs do seu condomínio.
+                    </p>
+                    <button
+                      onClick={() => setShowOnboarding(true)}
+                      className="bg-white text-[#D97706] px-6 py-3 rounded-xl font-semibold hover:bg-white/90 transition-all flex items-center gap-2 shadow-lg"
+                    >
+                      <SparklesIcon className="w-5 h-5" />
+                      Começar Agora
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+
+              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
                 <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0 }}
                   onClick={() => setActiveTab('condominiums')}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-indigo-100/50 hover:shadow-medium transition-shadow text-left cursor-pointer"
+                  className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-soft p-3 sm:p-6 border border-[#FEF3C7] hover:shadow-medium transition-shadow text-left cursor-pointer"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center shadow-sm">
-                      <BuildingOfficeIcon className="w-7 h-7 text-indigo-600" />
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-[#FEF3C7] to-[#FDE68A] rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm">
+                      <BuildingOfficeIcon className="w-5 h-5 sm:w-7 sm:h-7 text-[#D97706]" />
                     </div>
-                    <span className="text-xs text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full font-semibold">
+                    <span className="text-[10px] sm:text-xs text-emerald-700 bg-emerald-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold">
                       Ativos
                     </span>
                   </div>
-                  <h3 className="text-4xl font-bold bg-gradient-to-br from-indigo-600 to-indigo-700 bg-clip-text text-transparent">{activeCondos.length}</h3>
-                  <p className="text-slate-600 text-sm mt-2">Condomínios Ativos</p>
+                  <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">{activeCondos.length}</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Condomínios</p>
                 </motion.button>
 
                 <motion.button
@@ -612,18 +730,18 @@ export default function AdminPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
                   onClick={() => setActiveTab('media')}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-pink-100/50 hover:shadow-medium transition-shadow text-left cursor-pointer"
+                  className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-soft p-3 sm:p-6 border border-[#FEF3C7] hover:shadow-medium transition-shadow text-left cursor-pointer"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-pink-100 to-pink-200 rounded-2xl flex items-center justify-center shadow-sm">
-                      <PhotoIcon className="w-7 h-7 text-pink-600" />
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/30 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm">
+                      <PhotoIcon className="w-5 h-5 sm:w-7 sm:h-7 text-[#F59E0B]" />
                     </div>
-                    <span className="text-xs text-blue-700 bg-blue-50 px-3 py-1.5 rounded-full font-semibold">
+                    <span className="text-[10px] sm:text-xs text-blue-700 bg-blue-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold">
                       Total
                     </span>
                   </div>
-                  <h3 className="text-4xl font-bold bg-gradient-to-br from-pink-600 to-pink-700 bg-clip-text text-transparent">{activeMedia.length}</h3>
-                  <p className="text-slate-600 text-sm mt-2">Mídias Ativas</p>
+                  <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">{activeMedia.length}</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Mídias</p>
                 </motion.button>
 
                 <motion.div
@@ -649,17 +767,17 @@ export default function AdminPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                   onClick={() => setActiveTab('analytics')}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-indigo-100/50 hover:shadow-medium transition-shadow text-left cursor-pointer"
+                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-[#FEF3C7] hover:shadow-medium transition-shadow text-left cursor-pointer"
                 >
                   <div className="flex items-center justify-between mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-2xl flex items-center justify-center shadow-sm">
-                      <TvIcon className="w-7 h-7 text-indigo-600" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-[#FEF3C7] to-[#FDE68A] rounded-2xl flex items-center justify-center shadow-sm">
+                      <TvIcon className="w-7 h-7 text-[#D97706]" />
                     </div>
                     <span className="text-xs text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full font-semibold">
                       Status
                     </span>
                   </div>
-                  <h3 className="text-4xl font-bold bg-gradient-to-br from-indigo-600 to-indigo-700 bg-clip-text text-transparent">
+                  <h3 className="text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">
                     {previewWindow && !previewWindow.closed ? '1' : '0'}
                   </h3>
                   <p className="text-slate-600 text-sm mt-2">Preview Aberto</p>
@@ -709,7 +827,7 @@ export default function AdminPage() {
                       <select
                         value={selectedCampaignForPreview}
                         onChange={(e) => setSelectedCampaignForPreview(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                       >
                         <option value="">Todas as mídias ativas (sem filtro de campanha)</option>
                         {campaigns
@@ -726,14 +844,14 @@ export default function AdminPage() {
                   <div className="flex gap-4">
                     <button
                       onClick={handleOpenPreview}
-                      className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-pink-600 text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all font-semibold"
+                      className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all font-semibold"
                     >
                       <EyeIcon className="w-5 h-5" />
                       Ver Preview na TV
                     </button>
                     <button
                       onClick={handleRefreshPreview}
-                      className="flex items-center gap-2 bg-white border-2 border-indigo-500 text-indigo-600 px-6 py-3 rounded-lg hover:bg-indigo-50 transition-all font-semibold"
+                      className="flex items-center gap-2 bg-white border-2 border-[#F59E0B] text-[#D97706] px-6 py-3 rounded-lg hover:bg-[#FEF3C7] transition-all font-semibold"
                     >
                       <ArrowPathIcon className="w-5 h-5" />
                       Atualizar Preview
@@ -754,7 +872,7 @@ export default function AdminPage() {
                 </div>
                 <button
                   onClick={() => setShowCondoForm(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-pink-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold"
+                  className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold"
                 >
                   <PlusIcon className="w-5 h-5" />
                   Novo Condomínio
@@ -780,8 +898,8 @@ export default function AdminPage() {
                               className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-gradient-to-br from-indigo-100 to-pink-100 rounded-lg flex items-center justify-center">
-                              <BuildingOfficeIcon className="w-8 h-8 text-indigo-600" />
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20 rounded-lg flex items-center justify-center">
+                              <BuildingOfficeIcon className="w-8 h-8 text-[#D97706]" />
                             </div>
                           )}
                         </div>
@@ -812,7 +930,7 @@ export default function AdminPage() {
                         onClick={() => setSelectedCondominium(condo.id)}
                         className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-all ${
                           selectedCondominium === condo.id
-                            ? 'bg-indigo-100 text-indigo-800'
+                            ? 'bg-[#FEF3C7] text-[#92400E]'
                             : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                         }`}
                       >
@@ -891,7 +1009,7 @@ export default function AdminPage() {
                 {selectedCondominium && (
                   <button
                     onClick={() => setShowMediaForm(true)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-pink-600 text-white px-6 py-3 rounded-xl hover:shadow-lg hover:from-indigo-700 hover:to-pink-700 transition-all font-semibold shadow-md"
+                    className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-[#F59E0B]/30 transition-all font-semibold shadow-md"
                   >
                     <PlusIcon className="w-5 h-5" />
                     Nova Mídia
@@ -917,7 +1035,7 @@ export default function AdminPage() {
                     <select
                       value={selectedCondominium}
                       onChange={(e) => setSelectedCondominium(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-medium"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none font-medium"
                     >
                       {condominiums.map((condo) => (
                         <option key={condo.id} value={condo.id}>
@@ -963,7 +1081,7 @@ export default function AdminPage() {
                           </div>
                           {item.campaignId && (
                             <div className="flex items-center gap-1">
-                              <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-medium">
+                              <span className="text-xs bg-[#FFFBEB] text-[#B45309] px-2 py-1 rounded font-medium">
                                 📢 {campaigns.find(c => c.id === item.campaignId)?.name || 'Campanha não encontrada'}
                               </span>
                             </div>
@@ -1046,7 +1164,7 @@ export default function AdminPage() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gradient-to-r from-indigo-50 to-pink-50 border-b border-gray-200">
+                    <thead className="bg-gradient-to-r from-[#FFFBEB] to-[#FEF3C7] border-b border-gray-200">
                       <tr>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Condomínio</th>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Campanha</th>
@@ -1125,7 +1243,7 @@ export default function AdminPage() {
                     value={condoName}
                     onChange={(e) => setCondoName(e.target.value)}
                     placeholder="Nome do condomínio"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                     required
                   />
                 </div>
@@ -1147,7 +1265,7 @@ export default function AdminPage() {
                     name="cnpj"
                     defaultValue={editingCondo?.cnpj}
                     placeholder="00.000.000/0000-00"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                   />
                 </div>
                 <div>
@@ -1156,7 +1274,7 @@ export default function AdminPage() {
                     name="address"
                     defaultValue={editingCondo?.address}
                     placeholder="Rua, número, bairro"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                   />
                 </div>
                 <div>
@@ -1165,7 +1283,7 @@ export default function AdminPage() {
                     name="state"
                     value={selectedState}
                     onChange={(e) => setSelectedState(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                   >
                     <option value="">Selecione o estado</option>
                     {brazilianStates.map(state => (
@@ -1181,7 +1299,7 @@ export default function AdminPage() {
                     name="city"
                     defaultValue={editingCondo?.city}
                     disabled={!selectedState}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
                   >
                     <option value="">
                       {selectedState ? 'Selecione a cidade' : 'Selecione o estado primeiro'}
@@ -1194,12 +1312,24 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">WhatsApp para Notificações (opcional)</label>
+                  <input
+                    name="whatsappPhone"
+                    defaultValue={editingCondo?.whatsappPhone}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Receba notificações sobre campanhas, monitores e mídias
+                  </p>
+                </div>
+                <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1">Foto do Condomínio (opcional)</label>
                   <input
                     type="file"
                     name="photo"
                     accept="image/*"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#FFFBEB] file:text-[#B45309] hover:file:bg-[#FEF3C7]"
                   />
                   {editingCondo?.photoUrl && (
                     <div className="mt-2">
@@ -1216,7 +1346,7 @@ export default function AdminPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-indigo-500 to-pink-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                 >
                   Salvar
                 </button>
@@ -1258,7 +1388,7 @@ export default function AdminPage() {
                     name="type"
                     value={mediaType}
                     onChange={(e) => setMediaType(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                     required
                   >
                     <option value="">Selecione o tipo</option>
@@ -1275,7 +1405,7 @@ export default function AdminPage() {
                     name="title"
                     defaultValue={editingMedia?.title || (mediaType === 'rtmp' ? 'Sorria, você está sendo filmado' : '')}
                     placeholder={mediaType === 'rtmp' ? 'Sorria, você está sendo filmado' : 'Título da mídia'}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                   />
                 </div>
                 <div>
@@ -1284,7 +1414,7 @@ export default function AdminPage() {
                     name="description"
                     defaultValue={editingMedia?.description || (mediaType === 'rtmp' ? 'Ambiente monitorado. Lembre-se: furtar é crime segundo o artigo 155 do Código Penal, com pena de reclusão de um a quatro anos e multa.' : '')}
                     placeholder={mediaType === 'rtmp' ? 'Ambiente monitorado...' : 'Descrição da mídia'}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                     rows={3}
                   />
                 </div>
@@ -1293,7 +1423,7 @@ export default function AdminPage() {
                   <select
                     name="campaignId"
                     defaultValue={editingMedia?.campaignId || ''}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                   >
                     <option value="">Sem campanha</option>
                     {campaigns.map(campaign => (
@@ -1311,11 +1441,12 @@ export default function AdminPage() {
                       name="file"
                       accept="image/*,video/*,.pdf"
                       multiple
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white text-gray-900"
+                      onChange={(e) => setHasUploadedFile(e.target.files !== null && e.target.files.length > 0)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white text-gray-900"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      {mediaType === 'image' || mediaType === 'video' || mediaType === 'pdf'
-                        ? 'Você pode selecionar múltiplos arquivos. Ou preencha a URL abaixo para arquivos externos.'
+                      {hasUploadedFile
+                        ? 'Arquivo(s) selecionado(s). O campo URL abaixo será ignorado.'
                         : 'Você pode selecionar múltiplos arquivos. Ou preencha a URL abaixo para arquivos externos.'}
                     </p>
                   </div>
@@ -1327,8 +1458,16 @@ export default function AdminPage() {
                       name="sourceUrl"
                       defaultValue={editingMedia?.sourceUrl}
                       placeholder="https://..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                      disabled={hasUploadedFile && !editingMedia}
+                      className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900 ${
+                        hasUploadedFile && !editingMedia ? 'bg-gray-100 cursor-not-allowed opacity-60' : ''
+                      }`}
                     />
+                    {hasUploadedFile && !editingMedia && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Campo desabilitado porque um arquivo foi selecionado para upload.
+                      </p>
+                    )}
                   </div>
                 )}
                 {mediaType === 'rtmp' && !editingMedia && (
@@ -1404,7 +1543,7 @@ export default function AdminPage() {
                         id="playFullVideo"
                         checked={showFullVideo}
                         onChange={(e) => setShowFullVideo(e.target.checked)}
-                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        className="w-4 h-4 text-[#D97706] border-gray-300 rounded focus:ring-[#F59E0B]"
                       />
                       <label htmlFor="playFullVideo" className="text-sm font-semibold text-gray-700">
                         Exibir vídeo completo
@@ -1422,7 +1561,7 @@ export default function AdminPage() {
                             value={startTimeSeconds}
                             onChange={(e) => setStartTimeSeconds(parseInt(e.target.value) || 0)}
                             placeholder="0"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                           />
                         </div>
                         <div>
@@ -1434,7 +1573,7 @@ export default function AdminPage() {
                             value={endTimeSeconds}
                             onChange={(e) => setEndTimeSeconds(parseInt(e.target.value) || 0)}
                             placeholder="30"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                           />
                         </div>
                       </div>
@@ -1459,7 +1598,7 @@ export default function AdminPage() {
                       type="number"
                       defaultValue={editingMedia?.durationSeconds}
                       placeholder="10"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                     />
                   </div>
                 )}
@@ -1467,7 +1606,7 @@ export default function AdminPage() {
               <div className="flex gap-3 mt-6">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-indigo-500 to-pink-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                 >
                   {editingMedia ? 'Atualizar' : 'Criar'}
                 </button>
@@ -1477,6 +1616,7 @@ export default function AdminPage() {
                     setShowMediaForm(false);
                     setEditingMedia(null);
                     setMediaType('');
+                    setHasUploadedFile(false);
                   }}
                   className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all"
                 >
@@ -1486,6 +1626,15 @@ export default function AdminPage() {
             </form>
           </motion.div>
         </div>
+      )}
+
+      {/* Onboarding Wizard */}
+      {showOnboarding && (
+        <OnboardingWizard
+          onClose={handleCloseOnboarding}
+          onNavigate={handleNavigateFromWizard}
+          completedSteps={completedSteps}
+        />
       )}
     </div>
   );

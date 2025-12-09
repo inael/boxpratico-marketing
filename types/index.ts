@@ -7,6 +7,7 @@ export interface Condominium {
   state?: string;
   city?: string;
   photoUrl?: string;
+  whatsappPhone?: string;
   isActive?: boolean;
   showNews?: boolean;
   createdAt: string;

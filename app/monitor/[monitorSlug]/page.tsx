@@ -1,19 +1,6 @@
 import { notFound } from 'next/navigation';
 import MonitorPlayer from '@/components/MonitorPlayer';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { Monitor } from '@/types';
-
-async function getMonitorBySlug(slug: string): Promise<Monitor | null> {
-  try {
-    const filePath = path.join(process.cwd(), 'data', 'monitors.json');
-    const data = await fs.readFile(filePath, 'utf-8');
-    const monitors: Monitor[] = JSON.parse(data);
-    return monitors.find(m => m.slug === slug) || null;
-  } catch {
-    return null;
-  }
-}
+import { getMonitorBySlug } from '@/lib/database';
 
 export default async function MonitorPage({
   params,
@@ -29,10 +16,18 @@ export default async function MonitorPage({
 
   if (!monitor.isActive) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-black">
-        <div className="text-white text-4xl text-center">
-          <p>Monitor desativado</p>
-          <p className="text-xl mt-4 text-gray-400">{monitor.name}</p>
+      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 to-black">
+        <div className="text-center p-8">
+          <div className="w-20 h-20 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h1 className="text-white text-3xl font-bold mb-2">Monitor Desativado</h1>
+          <p className="text-gray-400 text-lg">{monitor.name}</p>
+          {monitor.location && (
+            <p className="text-gray-500 mt-2">{monitor.location}</p>
+          )}
         </div>
       </div>
     );

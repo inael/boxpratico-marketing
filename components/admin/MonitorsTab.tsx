@@ -15,6 +15,31 @@ import {
 } from '@heroicons/react/24/outline';
 import { Monitor, Condominium, Campaign } from '@/types';
 
+// Helper to send WhatsApp notifications
+async function sendWhatsAppNotification(
+  type: string,
+  condominiumName: string,
+  condominiumPhone?: string,
+  entityName?: string,
+  details?: string
+) {
+  try {
+    await fetch('/api/whatsapp/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type,
+        condominiumName,
+        condominiumPhone,
+        entityName,
+        details,
+      }),
+    });
+  } catch (error) {
+    console.error('Failed to send WhatsApp notification:', error);
+  }
+}
+
 interface MonitorsTabProps {
   condominiums: Condominium[];
 }
@@ -29,6 +54,8 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
   const [monitorSlug, setMonitorSlug] = useState('');
   const [monitorLocation, setMonitorLocation] = useState('');
   const [copiedSlug, setCopiedSlug] = useState<string | null>(null);
+  const [lastStatusCheck, setLastStatusCheck] = useState<Date | null>(null);
+  const [nextUpdateCountdown, setNextUpdateCountdown] = useState(10);
 
   useEffect(() => {
     if (condominiums.length > 0 && !selectedCondominium) {
@@ -47,11 +74,26 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
   useEffect(() => {
     if (!selectedCondominium) return;
 
+    // Reset countdown and fetch immediately when condominium changes
+    setNextUpdateCountdown(10);
+
     const interval = setInterval(() => {
       fetchMonitorsStatus();
+      setNextUpdateCountdown(10);
     }, 10000);
 
     return () => clearInterval(interval);
+  }, [selectedCondominium]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!selectedCondominium) return;
+
+    const countdownInterval = setInterval(() => {
+      setNextUpdateCountdown(prev => (prev > 0 ? prev - 1 : 10));
+    }, 1000);
+
+    return () => clearInterval(countdownInterval);
   }, [selectedCondominium]);
 
   useEffect(() => {
@@ -85,8 +127,32 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
   const fetchMonitorsStatus = async () => {
     try {
       const response = await fetch(`/api/monitors/heartbeat?condominiumId=${selectedCondominium}`);
-      const data = await response.json();
-      setMonitors(data);
+      const data: Monitor[] = await response.json();
+
+      // Update only the status fields without reordering
+      setMonitors(prevMonitors => {
+        if (prevMonitors.length === 0) return data;
+
+        // Create a map of new data for quick lookup
+        const newDataMap = new Map(data.map(m => [m.id, m]));
+
+        // Update existing monitors preserving order, add new ones at the end
+        const updated = prevMonitors.map(m => {
+          const newData = newDataMap.get(m.id);
+          if (newData) {
+            return { ...m, isOnline: newData.isOnline, lastHeartbeat: newData.lastHeartbeat };
+          }
+          return m;
+        });
+
+        // Add any new monitors that weren't in prevMonitors
+        const existingIds = new Set(prevMonitors.map(m => m.id));
+        const newMonitors = data.filter(m => !existingIds.has(m.id));
+
+        return [...updated, ...newMonitors];
+      });
+
+      setLastStatusCheck(new Date());
     } catch (error) {
       console.error('Failed to fetch monitors status:', error);
     }
@@ -147,6 +213,17 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
         });
 
         if (response.ok) {
+          // Send WhatsApp notification for new monitor
+          const selectedCondo = condominiums.find(c => c.id === selectedCondominium);
+          if (selectedCondo?.whatsappPhone) {
+            sendWhatsAppNotification(
+              'monitor_created',
+              selectedCondo.name,
+              selectedCondo.whatsappPhone,
+              monitorName
+            );
+          }
+
           await fetchMonitors();
           resetForm();
         } else {
@@ -237,11 +314,20 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
         <div>
           <h2 className="text-3xl font-display font-bold text-gray-900">Monitores</h2>
           <p className="text-gray-600 mt-1">Cadastre os monitores/TVs de cada local</p>
+          <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+              Atualização automática
+            </span>
+            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-mono font-medium text-gray-600">
+              {nextUpdateCountdown}s
+            </span>
+          </p>
         </div>
         {selectedCondominium && !showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-pink-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md"
+            className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md"
           >
             <PlusIcon className="w-5 h-5" />
             Novo Monitor
@@ -331,7 +417,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-indigo-500 to-pink-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                    className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
                     {editingMonitor ? 'Atualizar' : 'Criar'} Monitor
                   </button>
@@ -348,16 +434,13 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredMonitors.map((monitor, index) => {
+            {filteredMonitors.map((monitor) => {
               const monitorCampaigns = getMonitorCampaigns(monitor.id);
               const activeCampaign = monitorCampaigns.find(c => c.isActive);
 
               return (
-                <motion.div
+                <div
                   key={monitor.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
                   className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -365,9 +448,9 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                         monitor.isOnline
                           ? 'bg-gradient-to-br from-green-100 to-emerald-100'
-                          : 'bg-gradient-to-br from-indigo-100 to-pink-100'
+                          : 'bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20'
                       }`}>
-                        <TvIcon className={`w-6 h-6 ${monitor.isOnline ? 'text-green-600' : 'text-indigo-600'}`} />
+                        <TvIcon className={`w-6 h-6 ${monitor.isOnline ? 'text-green-600' : 'text-[#D97706]'}`} />
                       </div>
                       <div className="flex-1">
                         <h3 className="text-lg font-display font-bold text-gray-900">{monitor.name}</h3>
@@ -470,7 +553,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                       <TrashIcon className="w-4 h-4" />
                     </button>
                   </div>
-                </motion.div>
+                </div>
               );
             })}
           </div>

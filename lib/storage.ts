@@ -59,6 +59,7 @@ export async function uploadFile(
     const blob = await put(filename, buffer, {
       access: 'public',
       contentType: file.type,
+      token: BLOB_TOKEN,
     });
 
     url = blob.url;
@@ -94,7 +95,7 @@ export async function uploadFile(
 // Delete file from storage
 export async function deleteFile(url: string): Promise<void> {
   if (isBlobConfigured() && url.includes('blob.vercel-storage.com')) {
-    await del(url);
+    await del(url, { token: BLOB_TOKEN });
   } else if (url.startsWith('/uploads/')) {
     // Local file deletion
     const filepath = path.join(process.cwd(), 'public', url);

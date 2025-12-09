@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import { MediaItem } from '@/types';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 interface ImageSlideProps {
   item: MediaItem;
@@ -13,6 +13,19 @@ interface ImageSlideProps {
 export default function ImageSlide({ item, onTimeUpdate }: ImageSlideProps) {
   const duration = item.durationSeconds || 10;
   const [timeLeft, setTimeLeft] = useState(duration);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+
+  // Keep ref updated
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+  }, [onTimeUpdate]);
+
+  // Notify parent of time updates
+  useEffect(() => {
+    if (onTimeUpdateRef.current) {
+      onTimeUpdateRef.current(timeLeft);
+    }
+  }, [timeLeft]);
 
   useEffect(() => {
     setTimeLeft(duration);
@@ -20,9 +33,6 @@ export default function ImageSlide({ item, onTimeUpdate }: ImageSlideProps) {
     const interval = setInterval(() => {
       setTimeLeft((prev) => {
         const newTime = prev <= 1 ? 0 : prev - 1;
-        if (onTimeUpdate) {
-          onTimeUpdate(newTime);
-        }
         if (newTime === 0) {
           clearInterval(interval);
         }
@@ -31,7 +41,7 @@ export default function ImageSlide({ item, onTimeUpdate }: ImageSlideProps) {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [duration, item, onTimeUpdate]);
+  }, [duration, item]);
 
   return (
     <div className="w-full h-full flex items-center justify-center bg-black relative">
