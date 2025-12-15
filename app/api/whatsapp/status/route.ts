@@ -6,7 +6,7 @@ export async function GET() {
     return NextResponse.json({
       configured: false,
       status: 'not_configured',
-      message: 'WhatsApp não configurado. Configure WPP_SECRET_KEY no ambiente.',
+      message: 'WhatsApp não configurado. Configure EVOLUTION_API_KEY no ambiente.',
     });
   }
 

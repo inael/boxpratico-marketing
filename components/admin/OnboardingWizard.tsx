@@ -8,7 +8,6 @@ import {
   PhotoIcon,
   MegaphoneIcon,
   PlayIcon,
-  CheckCircleIcon,
   ArrowRightIcon,
   ArrowLeftIcon,
   XMarkIcon,
@@ -18,12 +17,6 @@ import {
 interface OnboardingWizardProps {
   onClose: () => void;
   onNavigate: (tab: string) => void;
-  completedSteps: {
-    hasCondominium: boolean;
-    hasMonitor: boolean;
-    hasMedia: boolean;
-    hasCampaign: boolean;
-  };
 }
 
 const steps = [
@@ -97,25 +90,8 @@ const steps = [
   },
 ];
 
-export default function OnboardingWizard({ onClose, onNavigate, completedSteps }: OnboardingWizardProps) {
+export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
-
-  const getStepStatus = (stepId: number) => {
-    switch (stepId) {
-      case 1:
-        return completedSteps.hasCondominium;
-      case 2:
-        return completedSteps.hasMonitor;
-      case 3:
-        return completedSteps.hasMedia;
-      case 4:
-        return completedSteps.hasCampaign;
-      case 5:
-        return completedSteps.hasCondominium && completedSteps.hasMedia;
-      default:
-        return false;
-    }
-  };
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -137,7 +113,6 @@ export default function OnboardingWizard({ onClose, onNavigate, completedSteps }
 
   const step = steps[currentStep];
   const StepIcon = step.icon;
-  const isCompleted = getStepStatus(step.id);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -157,41 +132,47 @@ export default function OnboardingWizard({ onClose, onNavigate, completedSteps }
           </button>
           <div className="flex items-center gap-3 mb-2">
             <SparklesIcon className="w-8 h-8" />
-            <h2 className="text-2xl font-display font-bold">Guia de Início Rápido</h2>
+            <h2 className="text-2xl font-display font-bold">Criar Nova Campanha</h2>
           </div>
           <p className="text-white/80">
-            Siga os passos abaixo para criar sua primeira campanha
+            Siga os 5 passos abaixo para configurar sua campanha
           </p>
+          {/* Step Counter */}
+          <div className="mt-3 flex items-center gap-2">
+            <span className="bg-white/20 px-3 py-1 rounded-full text-sm font-semibold">
+              Passo {step.id} de {steps.length}
+            </span>
+          </div>
         </div>
 
         {/* Step Indicators */}
         <div className="flex items-center justify-center gap-2 py-4 bg-gray-50 border-b">
           {steps.map((s, index) => {
-            const completed = getStepStatus(s.id);
             const isCurrent = index === currentStep;
+            const isPast = index < currentStep;
             return (
               <button
                 key={s.id}
                 onClick={() => setCurrentStep(index)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
                   isCurrent
-                    ? 'bg-[#FEF3C7] text-[#B45309]'
-                    : completed
-                    ? 'bg-green-50 text-green-700'
+                    ? 'bg-[#FEF3C7] text-[#B45309] ring-2 ring-[#F59E0B]'
+                    : isPast
+                    ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
               >
-                {completed ? (
-                  <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                ) : (
-                  <span
-                    className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                      isCurrent ? 'bg-[#F59E0B] text-white' : 'bg-gray-300 text-gray-600'
-                    }`}
-                  >
-                    {s.id}
-                  </span>
-                )}
+                <span
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                    isCurrent
+                      ? 'bg-[#F59E0B] text-white'
+                      : isPast
+                      ? 'bg-gray-400 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                  }`}
+                >
+                  {s.id}
+                </span>
                 <span className="hidden sm:inline text-sm font-medium">
                   {s.title.split(' ')[0]}
                 </span>
@@ -211,28 +192,13 @@ export default function OnboardingWizard({ onClose, onNavigate, completedSteps }
             className="p-6"
           >
             <div className="flex items-start gap-4 mb-6">
-              <div
-                className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
-                  isCompleted
-                    ? 'bg-green-100'
-                    : 'bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20'
-                }`}
-              >
-                {isCompleted ? (
-                  <CheckCircleIcon className="w-8 h-8 text-green-600" />
-                ) : (
-                  <StepIcon className="w-8 h-8 text-[#D97706]" />
-                )}
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20 relative">
+                <StepIcon className="w-8 h-8 text-[#D97706]" />
+                <span className="absolute -top-2 -right-2 w-7 h-7 bg-[#F59E0B] text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">
+                  {step.id}
+                </span>
               </div>
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm text-gray-500">Passo {step.id} de {steps.length}</span>
-                  {isCompleted && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
-                      Concluído
-                    </span>
-                  )}
-                </div>
                 <h3 className="text-xl font-display font-bold text-gray-900">{step.title}</h3>
                 <p className="text-gray-600 mt-1">{step.description}</p>
               </div>

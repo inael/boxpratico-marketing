@@ -30,7 +30,10 @@ interface WhatsAppStatus {
   status?: string;
   state?: string;
   message?: string;
-  qrcode?: string;
+  qrcode?: {
+    base64?: string;
+    code?: string;
+  } | string;
 }
 
 export default function SettingsTab() {
@@ -65,15 +68,20 @@ export default function SettingsTab() {
   }, []);
 
   // Auto refresh QR code every 15 seconds when waiting for scan
+  // Evolution API uses 'qrcode' status, WPPConnect uses 'QRCODE'
   useEffect(() => {
-    if (whatsappStatus?.status === 'QRCODE' || whatsappStatus?.state === 'QRCODE') {
+    const needsQR = whatsappStatus?.status === 'QRCODE' ||
+                    whatsappStatus?.state === 'QRCODE' ||
+                    whatsappStatus?.status === 'qrcode' ||
+                    whatsappStatus?.status === 'disconnected';
+    if (needsQR && qrCode) {
       const interval = setInterval(() => {
         fetchQRCode();
         fetchWhatsAppStatus();
       }, 15000);
       return () => clearInterval(interval);
     }
-  }, [whatsappStatus]);
+  }, [whatsappStatus, qrCode]);
 
   async function fetchSettings() {
     try {
@@ -97,9 +105,14 @@ export default function SettingsTab() {
       setWhatsappStatus(data);
 
       // If QR code status, fetch QR
-      if (data.status === 'QRCODE' || data.state === 'QRCODE') {
+      // Evolution API uses 'qrcode' or 'disconnected', WPPConnect uses 'QRCODE'
+      const needsQR = data.status === 'QRCODE' ||
+                      data.state === 'QRCODE' ||
+                      data.status === 'qrcode' ||
+                      data.status === 'disconnected';
+      if (needsQR) {
         fetchQRCode();
-      } else {
+      } else if (data.status === 'connected') {
         setQrCode(null);
       }
     } catch (error) {
@@ -112,8 +125,15 @@ export default function SettingsTab() {
     try {
       const res = await fetch('/api/whatsapp/qrcode');
       const data = await res.json();
+      // Handle both Evolution API format (qrcode.base64) and WPPConnect format (qrcode as string)
       if (data.qrcode) {
-        setQrCode(data.qrcode);
+        if (typeof data.qrcode === 'object' && data.qrcode.base64) {
+          // Evolution API format - base64 already includes data:image prefix
+          setQrCode(data.qrcode.base64);
+        } else if (typeof data.qrcode === 'string') {
+          // WPPConnect format
+          setQrCode(data.qrcode);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch QR code:', error);
@@ -128,8 +148,13 @@ export default function SettingsTab() {
       const res = await fetch('/api/whatsapp/start', { method: 'POST' });
       const data = await res.json();
 
+      // Handle both Evolution API format and WPPConnect format
       if (data.qrcode) {
-        setQrCode(data.qrcode);
+        if (typeof data.qrcode === 'object' && data.qrcode.base64) {
+          setQrCode(data.qrcode.base64);
+        } else if (typeof data.qrcode === 'string') {
+          setQrCode(data.qrcode);
+        }
       }
 
       // Refresh status after starting
@@ -212,10 +237,13 @@ export default function SettingsTab() {
 
   const getStatusColor = () => {
     if (!whatsappStatus?.configured) return 'bg-gray-100 text-gray-600';
-    if (whatsappStatus.state === 'CONNECTED' || whatsappStatus.status === 'CONNECTED') {
+    // Evolution API uses lowercase states: 'connected', 'disconnected', 'connecting'
+    // WPPConnect uses uppercase: 'CONNECTED', 'QRCODE'
+    const state = whatsappStatus.state?.toLowerCase() || whatsappStatus.status?.toLowerCase() || '';
+    if (state === 'connected' || state === 'open') {
       return 'bg-green-100 text-green-700';
     }
-    if (whatsappStatus.state === 'QRCODE' || whatsappStatus.status === 'QRCODE') {
+    if (state === 'qrcode' || state === 'connecting') {
       return 'bg-yellow-100 text-yellow-700';
     }
     return 'bg-red-100 text-red-700';
@@ -223,19 +251,33 @@ export default function SettingsTab() {
 
   const getStatusText = () => {
     if (!whatsappStatus?.configured) return 'Não Configurado';
-    if (whatsappStatus.state === 'CONNECTED' || whatsappStatus.status === 'CONNECTED') {
+    const state = whatsappStatus.state?.toLowerCase() || whatsappStatus.status?.toLowerCase() || '';
+    if (state === 'connected' || state === 'open') {
       return 'Conectado';
     }
-    if (whatsappStatus.state === 'QRCODE' || whatsappStatus.status === 'QRCODE') {
+    if (state === 'qrcode') {
       return 'Aguardando QR Code';
     }
-    if (whatsappStatus.state === 'STARTING' || whatsappStatus.status === 'STARTING') {
-      return 'Iniciando...';
+    if (state === 'connecting' || state === 'starting') {
+      return 'Conectando...';
+    }
+    if (state === 'disconnected' || state === 'close') {
+      return 'Desconectado';
     }
     return whatsappStatus.state || whatsappStatus.status || 'Desconectado';
   };
 
-  const isConnected = whatsappStatus?.state === 'CONNECTED' || whatsappStatus?.status === 'CONNECTED';
+  // Check for connected state (Evolution API uses 'connected'/'open', WPPConnect uses 'CONNECTED')
+  const isConnected = (() => {
+    const state = whatsappStatus?.state?.toLowerCase() || whatsappStatus?.status?.toLowerCase() || '';
+    return state === 'connected' || state === 'open';
+  })();
+
+  // Check if QR code should be shown
+  const showQRCode = (() => {
+    const state = whatsappStatus?.state?.toLowerCase() || whatsappStatus?.status?.toLowerCase() || '';
+    return (state === 'qrcode' || state === 'disconnected' || state === 'close') && qrCode;
+  })();
 
   if (loading) {
     return (
@@ -300,14 +342,14 @@ export default function SettingsTab() {
           {!whatsappStatus?.configured ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-sm text-yellow-800">
-                <strong>WPP_SECRET_KEY</strong> não configurada no ambiente.
+                <strong>EVOLUTION_API_KEY</strong> não configurada no ambiente.
                 Configure a variável para habilitar o WhatsApp.
               </p>
             </div>
           ) : (
             <div className="space-y-4">
               {/* QR Code Area */}
-              {(whatsappStatus.state === 'QRCODE' || whatsappStatus.status === 'QRCODE') && qrCode && (
+              {showQRCode && (
                 <div className="flex flex-col items-center p-6 bg-gray-50 rounded-xl">
                   <p className="text-sm text-gray-600 mb-4">
                     Escaneie o QR Code com seu WhatsApp

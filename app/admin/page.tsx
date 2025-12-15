@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Condominium, MediaItem, Campaign, AnalyticsView } from '@/types';
+import { Condominium, MediaItem, Campaign, AnalyticsView, Monitor } from '@/types';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminFooter from '@/components/admin/AdminFooter';
@@ -23,6 +23,9 @@ import {
   XCircleIcon,
   ArrowPathIcon,
   SparklesIcon,
+  ChevronDownIcon,
+  SignalIcon,
+  MegaphoneIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -77,7 +80,8 @@ export default function AdminPage() {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsView[]>([]);
   const [hasUploadedFile, setHasUploadedFile] = useState<boolean>(false);
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
-  const [monitors, setMonitors] = useState<{ id: string }[]>([]);
+  const [monitors, setMonitors] = useState<Monitor[]>([]);
+  const [monitorDropdownOpen, setMonitorDropdownOpen] = useState<string | null>(null);
 
   useEffect(() => {
     const auth = localStorage.getItem('admin_auth');
@@ -114,6 +118,15 @@ export default function AdminPage() {
       setAvailableCities([]);
     }
   }, [selectedState]);
+
+  // Close monitor dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setMonitorDropdownOpen(null);
+    if (monitorDropdownOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [monitorDropdownOpen]);
 
   useEffect(() => {
     if (editingCondo) {
@@ -178,7 +191,7 @@ export default function AdminPage() {
   }
 
   async function loadMonitors() {
-    const res = await fetch('/api/monitors');
+    const res = await fetch('/api/monitors/heartbeat');
     if (res.ok) {
       const data = await res.json();
       setMonitors(data);
@@ -586,12 +599,6 @@ export default function AdminPage() {
 
   // Onboarding wizard helpers
   const isFirstTime = condominiums.length === 0 && mediaItems.length === 0 && campaigns.length === 0;
-  const completedSteps = {
-    hasCondominium: condominiums.length > 0,
-    hasMonitor: monitors.length > 0,
-    hasMedia: mediaItems.length > 0,
-    hasCampaign: campaigns.length > 0,
-  };
 
   function handleCloseOnboarding() {
     setShowOnboarding(false);
@@ -737,128 +744,118 @@ export default function AdminPage() {
                       <PhotoIcon className="w-5 h-5 sm:w-7 sm:h-7 text-[#F59E0B]" />
                     </div>
                     <span className="text-[10px] sm:text-xs text-blue-700 bg-blue-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold">
-                      Total
+                      Ativas
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">{activeMedia.length}</h3>
                   <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Mídias</p>
                 </motion.button>
 
-                <motion.div
+                <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-accent-100/50 hover:shadow-medium transition-shadow"
+                  onClick={() => setActiveTab('monitors')}
+                  className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-soft p-3 sm:p-6 border border-[#FEF3C7] hover:shadow-medium transition-shadow text-left cursor-pointer"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-accent-100 to-accent-200 rounded-2xl flex items-center justify-center shadow-sm">
-                      <XCircleIcon className="w-7 h-7 text-accent-600" />
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm">
+                      <TvIcon className="w-5 h-5 sm:w-7 sm:h-7 text-emerald-600" />
                     </div>
-                    <span className="text-xs text-orange-700 bg-orange-50 px-3 py-1.5 rounded-full font-semibold">
-                      Inativos
+                    <span className="text-[10px] sm:text-xs text-emerald-700 bg-emerald-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold">
+                      Online
                     </span>
                   </div>
-                  <h3 className="text-4xl font-bold bg-gradient-to-br from-accent-600 to-accent-700 bg-clip-text text-transparent">{inactiveMedia.length}</h3>
-                  <p className="text-slate-600 text-sm mt-2">Mídias Inativas</p>
-                </motion.div>
+                  <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
+                    {monitors.filter(m => m.isOnline).length}
+                  </h3>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Players Online</p>
+                </motion.button>
 
                 <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
-                  onClick={() => setActiveTab('analytics')}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-soft p-6 border border-[#FEF3C7] hover:shadow-medium transition-shadow text-left cursor-pointer"
+                  onClick={() => setActiveTab('campaigns')}
+                  className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-soft p-3 sm:p-6 border border-[#FEF3C7] hover:shadow-medium transition-shadow text-left cursor-pointer"
                 >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-14 h-14 bg-gradient-to-br from-[#FEF3C7] to-[#FDE68A] rounded-2xl flex items-center justify-center shadow-sm">
-                      <TvIcon className="w-7 h-7 text-[#D97706]" />
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm">
+                      <MegaphoneIcon className="w-5 h-5 sm:w-7 sm:h-7 text-purple-600" />
                     </div>
-                    <span className="text-xs text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full font-semibold">
-                      Status
+                    <span className="text-[10px] sm:text-xs text-purple-700 bg-purple-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold">
+                      Ativas
                     </span>
                   </div>
-                  <h3 className="text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">
-                    {previewWindow && !previewWindow.closed ? '1' : '0'}
-                  </h3>
-                  <p className="text-slate-600 text-sm mt-2">Preview Aberto</p>
+                  <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-purple-500 to-purple-600 bg-clip-text text-transparent">{activeCampaigns}</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Campanhas</p>
                 </motion.button>
               </div>
 
-              {/* Media Statistics */}
-              <div className="bg-white rounded-2xl shadow-soft p-6 border border-gray-100">
-                <h3 className="text-lg font-display font-bold text-gray-900 mb-4">Campanhas Ativas</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                      <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+              {/* Mídias por Tipo */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-white rounded-2xl shadow-soft p-6 border border-gray-100"
+              >
+                <h3 className="text-lg font-display font-bold text-gray-900 mb-4">Mídias por Tipo</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-50">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <PhotoIcon className="w-5 h-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-3xl font-bold text-green-600">{activeCampaigns}</p>
-                      <p className="text-sm text-green-700">Ativas</p>
+                      <p className="text-2xl font-bold text-blue-600">{mediaItems.filter(m => m.type === 'image').length}</p>
+                      <p className="text-xs text-blue-700">Imagens</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-gray-50">
-                    <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-purple-50">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                       </svg>
                     </div>
                     <div>
-                      <p className="text-3xl font-bold text-gray-600">{inactiveCampaigns}</p>
-                      <p className="text-sm text-gray-700">Inativas</p>
+                      <p className="text-2xl font-bold text-purple-600">{mediaItems.filter(m => m.type === 'video').length}</p>
+                      <p className="text-xs text-purple-700">Vídeos</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50">
+                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-red-600">{mediaItems.filter(m => m.type === 'youtube').length}</p>
+                      <p className="text-xs text-red-700">YouTube</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-orange-50">
+                    <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-orange-600">{mediaItems.filter(m => m.type === 'pdf').length}</p>
+                      <p className="text-xs text-orange-700">PDFs</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-emerald-600">{mediaItems.filter(m => m.type === 'rtmp').length}</p>
+                      <p className="text-xs text-emerald-700">Câmeras</p>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {selectedCondominium && selectedCondoData && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-                >
-                  <h3 className="text-xl font-display font-bold text-gray-900 mb-4">Ações Rápidas</h3>
-
-                  {campaigns.filter(c => c.condominiumId === selectedCondominium).length > 1 && (
-                    <div className="mb-4">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Selecionar Campanha para Preview</label>
-                      <select
-                        value={selectedCampaignForPreview}
-                        onChange={(e) => setSelectedCampaignForPreview(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                      >
-                        <option value="">Todas as mídias ativas (sem filtro de campanha)</option>
-                        {campaigns
-                          .filter(c => c.condominiumId === selectedCondominium)
-                          .map(campaign => (
-                            <option key={campaign.id} value={campaign.id}>
-                              {campaign.name} {campaign.isActive ? '✓' : '(inativa)'}
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-                  )}
-
-                  <div className="flex gap-4">
-                    <button
-                      onClick={handleOpenPreview}
-                      className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-lg hover:shadow-lg transition-all font-semibold"
-                    >
-                      <EyeIcon className="w-5 h-5" />
-                      Ver Preview na TV
-                    </button>
-                    <button
-                      onClick={handleRefreshPreview}
-                      className="flex items-center gap-2 bg-white border-2 border-[#F59E0B] text-[#D97706] px-6 py-3 rounded-lg hover:bg-[#FEF3C7] transition-all font-semibold"
-                    >
-                      <ArrowPathIcon className="w-5 h-5" />
-                      Atualizar Preview
-                    </button>
-                  </div>
-                </motion.div>
-              )}
+              </motion.div>
             </div>
           )}
 
@@ -917,6 +914,7 @@ export default function AdminPage() {
                     <div className="space-y-2 mb-4">
                       <button
                         onClick={() => toggleNews(condo)}
+                        title={condo.showNews !== false ? 'Clique para desativar exibição de notícias' : 'Clique para ativar exibição de notícias'}
                         className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-all ${
                           condo.showNews !== false
                             ? 'bg-green-100 text-green-800 hover:bg-green-200'
@@ -928,6 +926,7 @@ export default function AdminPage() {
 
                       <button
                         onClick={() => setSelectedCondominium(condo.id)}
+                        title="Selecionar este condomínio para gerenciar mídias e campanhas"
                         className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-all ${
                           selectedCondominium === condo.id
                             ? 'bg-[#FEF3C7] text-[#92400E]'
@@ -939,16 +938,6 @@ export default function AdminPage() {
                     </div>
 
                     <div className="flex gap-2">
-                      <a
-                        href={`/player/${condo.slug}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all text-sm font-medium"
-                        title="Ver campanha ativa"
-                      >
-                        <TvIcon className="w-4 h-4" />
-                      </a>
-
                       <button
                         onClick={() => toggleCondominiumActive(condo)}
                         className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -956,7 +945,7 @@ export default function AdminPage() {
                             ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                             : 'bg-green-50 text-green-600 hover:bg-green-100'
                         }`}
-                        title={condo.isActive !== false ? 'Desativar' : 'Ativar'}
+                        title={condo.isActive !== false ? 'Desativar este condomínio' : 'Ativar este condomínio'}
                       >
                         {condo.isActive !== false ? (
                           <XCircleIcon className="w-4 h-4" />
@@ -968,22 +957,111 @@ export default function AdminPage() {
                       <button
                         onClick={() => setEditingCondo(condo)}
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all text-sm font-medium"
-                        title="Editar"
+                        title="Editar dados do condomínio"
                       >
                         <PencilIcon className="w-4 h-4" />
                       </button>
 
                       <button
                         onClick={() => {
-                          if (confirm('Tem certeza que deseja excluir este condomínio?')) {
+                          const condoMonitors = monitors.filter(m => m.condominiumId === condo.id).length;
+                          const condoCampaigns = campaigns.filter(c => c.condominiumId === condo.id).length;
+                          const condoMedias = mediaItems.filter(m => m.condominiumId === condo.id).length;
+
+                          const message = `ATENÇÃO: Ao excluir o condomínio "${condo.name}", serão deletados permanentemente:\n\n` +
+                            `• ${condoMonitors} monitor${condoMonitors !== 1 ? 'es' : ''}\n` +
+                            `• ${condoCampaigns} campanha${condoCampaigns !== 1 ? 's' : ''}\n` +
+                            `• ${condoMedias} mídia${condoMedias !== 1 ? 's' : ''}\n\n` +
+                            `Esta ação não pode ser desfeita. Deseja continuar?`;
+
+                          if (confirm(message)) {
                             handleDeleteCondominium(condo.id);
                           }
                         }}
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all text-sm font-medium"
-                        title="Excluir"
+                        title="Excluir condomínio e todos os dados relacionados"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
+                    </div>
+
+                    {/* Monitor Dropdown Section */}
+                    <div className="mt-4 pt-4 border-t border-gray-100">
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setMonitorDropdownOpen(monitorDropdownOpen === condo.id ? null : condo.id);
+                          }}
+                          title="Ver monitores/TVs deste condomínio"
+                          className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-all text-sm font-medium"
+                        >
+                          <div className="flex items-center gap-2">
+                            <TvIcon className="w-5 h-5" />
+                            <span>Monitores ({monitors.filter(m => m.condominiumId === condo.id).length})</span>
+                          </div>
+                          <ChevronDownIcon className={`w-4 h-4 transition-transform ${monitorDropdownOpen === condo.id ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {monitorDropdownOpen === condo.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute z-20 mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden"
+                          >
+                            {monitors.filter(m => m.condominiumId === condo.id).length > 0 ? (
+                              <div className="max-h-64 overflow-y-auto">
+                                {monitors
+                                  .filter(m => m.condominiumId === condo.id)
+                                  .map(monitor => (
+                                    <a
+                                      key={monitor.id}
+                                      href={`/monitor/${monitor.slug}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex items-center gap-3 px-4 py-3 hover:bg-purple-50 transition-colors border-b border-gray-100 last:border-b-0"
+                                    >
+                                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        <TvIcon className="w-5 h-5 text-purple-600" />
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="font-medium text-gray-900 truncate">{monitor.name}</p>
+                                        {monitor.location && (
+                                          <p className="text-xs text-gray-500 truncate">{monitor.location}</p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                        {monitor.isOnline ? (
+                                          <span className="flex items-center gap-1 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                            <SignalIcon className="w-3 h-3" />
+                                            Online
+                                          </span>
+                                        ) : (
+                                          <span className="flex items-center gap-1 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                            Offline
+                                          </span>
+                                        )}
+                                      </div>
+                                    </a>
+                                  ))}
+                              </div>
+                            ) : (
+                              <div className="p-4 text-center">
+                                <TvIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500 mb-2">Nenhum monitor cadastrado</p>
+                                <button
+                                  onClick={() => {
+                                    setMonitorDropdownOpen(null);
+                                    setActiveTab('monitors');
+                                  }}
+                                  className="text-xs text-purple-600 hover:text-purple-700 font-medium"
+                                >
+                                  Cadastrar Monitor →
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </motion.div>
                 ))}
@@ -1633,7 +1711,6 @@ export default function AdminPage() {
         <OnboardingWizard
           onClose={handleCloseOnboarding}
           onNavigate={handleNavigateFromWizard}
-          completedSteps={completedSteps}
         />
       )}
     </div>

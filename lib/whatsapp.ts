@@ -1,15 +1,22 @@
-// WPPConnect integration library
-const WPP_API_URL = process.env.WPP_API_URL || 'https://whatsapp.toolpad.cloud';
-const WPP_SECRET_KEY = process.env.WPP_SECRET_KEY;
-const WPP_SESSION = process.env.WPP_SESSION || 'boxpratico';
+// Evolution API integration library
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY;
+const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || 'boxpratico';
 
-interface WppResponse {
+interface EvolutionResponse {
   status: string;
   message?: string;
-  qrcode?: string;
-  urlcode?: string;
-  session?: string;
+  qrcode?: {
+    base64?: string;
+    code?: string;
+  };
+  instance?: {
+    instanceName?: string;
+    state?: string;
+    status?: string;
+  };
   state?: string;
+  error?: string;
 }
 
 interface SendMessageParams {
@@ -36,81 +43,132 @@ export function formatPhoneNumber(phone: string): string {
   return cleaned;
 }
 
-// Get session token
-async function getToken(): Promise<string | null> {
-  if (!WPP_SECRET_KEY) {
-    console.error('WPP_SECRET_KEY not configured');
-    return null;
+// Helper to make API requests to Evolution API
+async function evolutionFetch(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const url = `${EVOLUTION_API_URL}${endpoint}`;
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': EVOLUTION_API_KEY || '',
+      ...options.headers,
+    },
+  });
+}
+
+// Create instance if it doesn't exist
+async function createInstance(): Promise<EvolutionResponse> {
+  if (!EVOLUTION_API_KEY) {
+    return { status: 'error', message: 'EVOLUTION_API_KEY não configurada' };
   }
 
   try {
-    const response = await fetch(`${WPP_API_URL}/api/${WPP_SESSION}/${WPP_SECRET_KEY}/generate-token`, {
+    const response = await evolutionFetch('/instance/create', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        instanceName: EVOLUTION_INSTANCE,
+        qrcode: true,
+        integration: 'WHATSAPP-BAILEYS',
+      }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      console.error('Failed to generate token:', response.status);
-      return null;
+      // Instance might already exist
+      if (data.error?.includes('already') || data.message?.includes('already')) {
+        return { status: 'exists', message: 'Instância já existe' };
+      }
+      return { status: 'error', message: data.error || data.message || 'Erro ao criar instância' };
     }
 
-    const data = await response.json();
-    return data.token || null;
+    return { status: 'success', ...data };
   } catch (error) {
-    console.error('Error generating token:', error);
-    return null;
+    console.error('Error creating instance:', error);
+    return { status: 'error', message: 'Erro ao criar instância' };
   }
 }
 
-// Start session and get QR code
-export async function startSession(): Promise<WppResponse> {
-  if (!WPP_SECRET_KEY) {
-    return { status: 'error', message: 'WPP_SECRET_KEY não configurada' };
+// Start session and get QR code (connect instance)
+export async function startSession(): Promise<EvolutionResponse> {
+  if (!EVOLUTION_API_KEY) {
+    return { status: 'error', message: 'EVOLUTION_API_KEY não configurada' };
   }
 
   try {
-    const token = await getToken();
-    if (!token) {
-      return { status: 'error', message: 'Falha ao gerar token' };
-    }
+    // First, try to create the instance (will return 'exists' if already created)
+    await createInstance();
 
-    const response = await fetch(`${WPP_API_URL}/api/${WPP_SESSION}/start-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+    // Then connect to get QR code
+    const response = await evolutionFetch(`/instance/connect/${EVOLUTION_INSTANCE}`, {
+      method: 'GET',
     });
 
     const data = await response.json();
-    return data;
+
+    if (!response.ok) {
+      return { status: 'error', message: data.error || data.message || 'Erro ao conectar instância' };
+    }
+
+    // Evolution API returns base64 QR code in different format
+    if (data.base64) {
+      return {
+        status: 'qrcode',
+        qrcode: {
+          base64: data.base64,
+          code: data.code,
+        },
+      };
+    }
+
+    return { status: 'success', ...data };
   } catch (error) {
     console.error('Error starting session:', error);
     return { status: 'error', message: 'Erro ao iniciar sessão' };
   }
 }
 
-// Get session status
-export async function getSessionStatus(): Promise<WppResponse> {
-  if (!WPP_SECRET_KEY) {
-    return { status: 'error', message: 'WPP_SECRET_KEY não configurada' };
+// Get session status (connection state)
+export async function getSessionStatus(): Promise<EvolutionResponse> {
+  if (!EVOLUTION_API_KEY) {
+    return { status: 'error', message: 'EVOLUTION_API_KEY não configurada' };
   }
 
   try {
-    const token = await getToken();
-    if (!token) {
-      return { status: 'error', message: 'Falha ao gerar token' };
-    }
-
-    const response = await fetch(`${WPP_API_URL}/api/${WPP_SESSION}/status-session`, {
+    const response = await evolutionFetch(`/instance/connectionState/${EVOLUTION_INSTANCE}`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
     });
 
     const data = await response.json();
-    return data;
+
+    if (!response.ok) {
+      // Instance might not exist yet
+      if (response.status === 404) {
+        return { status: 'disconnected', state: 'close', message: 'Instância não encontrada' };
+      }
+      return { status: 'error', message: data.error || data.message || 'Erro ao verificar status' };
+    }
+
+    // Map Evolution API states to our format
+    const state = data.instance?.state || data.state || 'close';
+
+    // Evolution API states: open, close, connecting
+    let mappedStatus = 'disconnected';
+    if (state === 'open') {
+      mappedStatus = 'connected';
+    } else if (state === 'connecting') {
+      mappedStatus = 'connecting';
+    }
+
+    return {
+      status: mappedStatus,
+      state: state,
+      instance: data.instance,
+    };
   } catch (error) {
     console.error('Error getting session status:', error);
     return { status: 'error', message: 'Erro ao verificar status' };
@@ -118,82 +176,87 @@ export async function getSessionStatus(): Promise<WppResponse> {
 }
 
 // Get QR code
-export async function getQRCode(): Promise<WppResponse> {
-  if (!WPP_SECRET_KEY) {
-    return { status: 'error', message: 'WPP_SECRET_KEY não configurada' };
+export async function getQRCode(): Promise<EvolutionResponse> {
+  if (!EVOLUTION_API_KEY) {
+    return { status: 'error', message: 'EVOLUTION_API_KEY não configurada' };
   }
 
   try {
-    const token = await getToken();
-    if (!token) {
-      return { status: 'error', message: 'Falha ao gerar token' };
-    }
-
-    const response = await fetch(`${WPP_API_URL}/api/${WPP_SESSION}/qrcode-session`, {
+    // Connect endpoint returns QR code
+    const response = await evolutionFetch(`/instance/connect/${EVOLUTION_INSTANCE}`, {
       method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
     });
 
     const data = await response.json();
-    return data;
+
+    if (!response.ok) {
+      return { status: 'error', message: data.error || data.message || 'Erro ao obter QR code' };
+    }
+
+    if (data.base64) {
+      return {
+        status: 'success',
+        qrcode: {
+          base64: data.base64,
+          code: data.code,
+        },
+      };
+    }
+
+    // If already connected, no QR code needed
+    if (data.instance?.state === 'open') {
+      return { status: 'connected', message: 'Já conectado' };
+    }
+
+    return { status: 'error', message: 'QR code não disponível' };
   } catch (error) {
     console.error('Error getting QR code:', error);
     return { status: 'error', message: 'Erro ao obter QR code' };
   }
 }
 
-// Close session
-export async function closeSession(): Promise<WppResponse> {
-  if (!WPP_SECRET_KEY) {
-    return { status: 'error', message: 'WPP_SECRET_KEY não configurada' };
+// Close session (just disconnect, keep instance)
+export async function closeSession(): Promise<EvolutionResponse> {
+  if (!EVOLUTION_API_KEY) {
+    return { status: 'error', message: 'EVOLUTION_API_KEY não configurada' };
   }
 
   try {
-    const token = await getToken();
-    if (!token) {
-      return { status: 'error', message: 'Falha ao gerar token' };
-    }
-
-    const response = await fetch(`${WPP_API_URL}/api/${WPP_SESSION}/close-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+    const response = await evolutionFetch(`/instance/logout/${EVOLUTION_INSTANCE}`, {
+      method: 'DELETE',
     });
 
     const data = await response.json();
-    return data;
+
+    if (!response.ok) {
+      return { status: 'error', message: data.error || data.message || 'Erro ao encerrar sessão' };
+    }
+
+    return { status: 'success', message: 'Sessão encerrada com sucesso' };
   } catch (error) {
     console.error('Error closing session:', error);
     return { status: 'error', message: 'Erro ao encerrar sessão' };
   }
 }
 
-// Logout session
-export async function logoutSession(): Promise<WppResponse> {
-  if (!WPP_SECRET_KEY) {
-    return { status: 'error', message: 'WPP_SECRET_KEY não configurada' };
+// Logout session (disconnect and clear session)
+export async function logoutSession(): Promise<EvolutionResponse> {
+  if (!EVOLUTION_API_KEY) {
+    return { status: 'error', message: 'EVOLUTION_API_KEY não configurada' };
   }
 
   try {
-    const token = await getToken();
-    if (!token) {
-      return { status: 'error', message: 'Falha ao gerar token' };
-    }
-
-    const response = await fetch(`${WPP_API_URL}/api/${WPP_SESSION}/logout-session`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
+    const response = await evolutionFetch(`/instance/logout/${EVOLUTION_INSTANCE}`, {
+      method: 'DELETE',
     });
 
     const data = await response.json();
-    return data;
+
+    if (!response.ok) {
+      return { status: 'error', message: data.error || data.message || 'Erro ao fazer logout' };
+    }
+
+    return { status: 'success', message: 'Logout realizado com sucesso' };
   } catch (error) {
     console.error('Error logging out:', error);
     return { status: 'error', message: 'Erro ao fazer logout' };
@@ -201,34 +264,43 @@ export async function logoutSession(): Promise<WppResponse> {
 }
 
 // Send message
-export async function sendMessage({ phone, message, isGroup = false }: SendMessageParams): Promise<WppResponse> {
-  if (!WPP_SECRET_KEY) {
-    return { status: 'error', message: 'WPP_SECRET_KEY não configurada' };
+export async function sendMessage({ phone, message, isGroup = false }: SendMessageParams): Promise<EvolutionResponse> {
+  if (!EVOLUTION_API_KEY) {
+    return { status: 'error', message: 'EVOLUTION_API_KEY não configurada' };
   }
 
   try {
-    const token = await getToken();
-    if (!token) {
-      return { status: 'error', message: 'Falha ao gerar token' };
-    }
-
     const formattedPhone = formatPhoneNumber(phone);
 
-    const response = await fetch(`${WPP_API_URL}/api/${WPP_SESSION}/send-message`, {
+    // Evolution API uses different format for phone numbers
+    // For individual: just the number
+    // For groups: need to use group endpoint
+    const endpoint = isGroup
+      ? `/message/sendText/${EVOLUTION_INSTANCE}`
+      : `/message/sendText/${EVOLUTION_INSTANCE}`;
+
+    const body = isGroup
+      ? {
+          number: formattedPhone,
+          text: message,
+        }
+      : {
+          number: formattedPhone,
+          text: message,
+        };
+
+    const response = await evolutionFetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        phone: formattedPhone,
-        message: message,
-        isGroup: isGroup,
-      }),
+      body: JSON.stringify(body),
     });
 
     const data = await response.json();
-    return data;
+
+    if (!response.ok) {
+      return { status: 'error', message: data.error || data.message || 'Erro ao enviar mensagem' };
+    }
+
+    return { status: 'success', message: 'Mensagem enviada com sucesso' };
   } catch (error) {
     console.error('Error sending message:', error);
     return { status: 'error', message: 'Erro ao enviar mensagem' };
@@ -237,7 +309,7 @@ export async function sendMessage({ phone, message, isGroup = false }: SendMessa
 
 // Check if WhatsApp is configured
 export function isWhatsAppConfigured(): boolean {
-  return !!WPP_SECRET_KEY;
+  return !!EVOLUTION_API_KEY;
 }
 
 // Notification types
@@ -309,7 +381,7 @@ export async function sendNotification(
   const message = buildNotificationMessage(type, data);
   const result = await sendMessage({ phone: data.condominiumPhone, message });
 
-  if (result.status === 'success' || result.status === 'PENDING') {
+  if (result.status === 'success') {
     return { success: true };
   }
 
