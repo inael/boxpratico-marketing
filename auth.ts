@@ -17,9 +17,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         try {
           // Make an internal API call to validate credentials
           // This avoids importing Node.js modules in the Edge Runtime
-          const baseUrl = process.env.AUTH_URL || process.env.VERCEL_URL
+          // In Vercel, use relative URL which works within the same deployment
+          const isVercel = process.env.VERCEL === '1';
+          const baseUrl = isVercel
             ? `https://${process.env.VERCEL_URL}`
-            : 'http://localhost:3000';
+            : (process.env.AUTH_URL || 'http://localhost:3000');
+
+          console.log('[Auth] Validating credentials, baseUrl:', baseUrl);
 
           const response = await fetch(`${baseUrl}/api/auth/validate`, {
             method: 'POST',
