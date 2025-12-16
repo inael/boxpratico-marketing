@@ -15,39 +15,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         try {
-          // Make an internal API call to validate credentials
-          // This avoids importing Node.js modules in the Edge Runtime
-          // In Vercel, use relative URL which works within the same deployment
-          const isVercel = process.env.VERCEL === '1';
-          const baseUrl = isVercel
-            ? `https://${process.env.VERCEL_URL}`
-            : (process.env.AUTH_URL || 'http://localhost:3000');
+          // Validate directly using environment variables
+          // This avoids the need for internal API calls which can fail in Edge Runtime
+          const validUsername = process.env.ADMIN_USERNAME || 'admin';
+          const validPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
-          console.log('[Auth] Validating credentials, baseUrl:', baseUrl);
+          console.log('[Auth] Validating credentials for:', credentials.username);
+          console.log('[Auth] Expected username:', validUsername);
 
-          const response = await fetch(`${baseUrl}/api/auth/validate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              username: credentials.username,
-              password: credentials.password,
-            }),
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            if (data.valid) {
-              return {
-                id: '1',
-                name: data.username,
-                email: `${data.username}@boxpratico.com`,
-              };
-            }
+          if (credentials.username === validUsername && credentials.password === validPassword) {
+            console.log('[Auth] Login successful');
+            return {
+              id: '1',
+              name: credentials.username as string,
+              email: `${credentials.username}@boxpratico.com`,
+            };
           }
 
+          console.log('[Auth] Login failed - credentials mismatch');
           return null;
         } catch (error) {
-          console.error('Auth error:', error);
+          console.error('[Auth] Error:', error);
           return null;
         }
       },
