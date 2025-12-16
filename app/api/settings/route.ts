@@ -6,29 +6,33 @@ import { isRedisConfigured, getEntity, setEntity } from '@/lib/redis';
 const settingsFilePath = path.join(process.cwd(), 'data', 'settings.json');
 const SETTINGS_KEY = 'app_settings';
 
-const defaultSettings = {
-  rss: {
-    url: 'https://www.gazetadopovo.com.br/feed/rss/brasil.xml',
-    imageTag: 'enclosure.url',
-    titleTag: 'title',
-    descriptionTag: 'description'
-  },
-  auth: {
-    username: 'admin',
-    password: 'admin123'
-  },
-  whatsapp: {
-    notificationsEnabled: true
-  },
-  evolution: {
-    apiUrl: '',
-    apiKey: '',
-    instanceName: ''
-  }
-};
+// Get default settings with environment variable fallbacks
+function getDefaultSettings() {
+  return {
+    rss: {
+      url: 'https://www.gazetadopovo.com.br/feed/rss/brasil.xml',
+      imageTag: 'enclosure.url',
+      titleTag: 'title',
+      descriptionTag: 'description'
+    },
+    auth: {
+      username: process.env.ADMIN_USERNAME || 'admin',
+      password: process.env.ADMIN_PASSWORD || 'admin123'
+    },
+    whatsapp: {
+      notificationsEnabled: true
+    },
+    evolution: {
+      apiUrl: '',
+      apiKey: '',
+      instanceName: ''
+    }
+  };
+}
 
 // Export function to get settings from other modules
 export async function getSettingsData() {
+  const defaultSettings = getDefaultSettings();
   try {
     if (isRedisConfigured()) {
       const settings = await getEntity<typeof defaultSettings>('settings', SETTINGS_KEY);
@@ -69,6 +73,7 @@ export async function getEvolutionConfig() {
 }
 
 export async function GET() {
+  const defaultSettings = getDefaultSettings();
   try {
     if (isRedisConfigured()) {
       const settings = await getEntity<typeof defaultSettings>('settings', SETTINGS_KEY);
@@ -99,6 +104,7 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  const defaultSettings = getDefaultSettings();
   try {
     const body = await request.json();
 
