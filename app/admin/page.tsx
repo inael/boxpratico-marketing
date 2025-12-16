@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { Condominium, MediaItem, Campaign, AnalyticsView, Monitor } from '@/types';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminSidebar from '@/components/admin/AdminSidebar';
@@ -13,19 +14,17 @@ import { brazilianStates, citiesByState } from '@/lib/brazilian-cities';
 import {
   BuildingOfficeIcon,
   PhotoIcon,
-  EyeIcon,
-  EyeSlashIcon,
   TvIcon,
   PencilIcon,
   TrashIcon,
   PlusIcon,
   CheckCircleIcon,
   XCircleIcon,
-  ArrowPathIcon,
   SparklesIcon,
   ChevronDownIcon,
   SignalIcon,
   MegaphoneIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 
@@ -55,9 +54,7 @@ async function sendWhatsAppNotification(
 }
 
 export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>('');
@@ -84,18 +81,11 @@ export default function AdminPage() {
   const [monitorDropdownOpen, setMonitorDropdownOpen] = useState<string | null>(null);
 
   useEffect(() => {
-    const auth = localStorage.getItem('admin_auth');
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
+    if (status === 'authenticated') {
       loadCondominiums();
       loadMonitors();
     }
-  }, [isAuthenticated]);
+  }, [status]);
 
   useEffect(() => {
     if (selectedCondominium) {
@@ -106,10 +96,10 @@ export default function AdminPage() {
 
   // Show onboarding wizard on first visit (when no condominiums exist)
   useEffect(() => {
-    if (isAuthenticated && condominiums.length === 0 && !localStorage.getItem('onboarding_dismissed')) {
+    if (status === 'authenticated' && condominiums.length === 0 && !localStorage.getItem('onboarding_dismissed')) {
       setShowOnboarding(true);
     }
-  }, [isAuthenticated, condominiums]);
+  }, [status, condominiums]);
 
   useEffect(() => {
     if (selectedState) {
@@ -158,15 +148,8 @@ export default function AdminPage() {
     }
   }, [editingMedia]);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    const adminPassword = 'admin123';
-    if (password === adminPassword) {
-      localStorage.setItem('admin_auth', 'true');
-      setIsAuthenticated(true);
-    } else {
-      alert('Senha incorreta');
-    }
+  async function handleLogoutClick() {
+    await signOut({ callbackUrl: '/login' });
   }
 
   async function loadCondominiums() {
@@ -609,49 +592,19 @@ export default function AdminPage() {
     setActiveTab(tab);
   }
 
-  if (!isAuthenticated) {
+  // Show loading while checking authentication
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white p-8 rounded-2xl shadow-xl w-96 border border-gray-100"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center"
         >
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <span className="text-black font-bold text-2xl">BP</span>
-            </div>
-            <h1 className="text-2xl font-display font-bold text-gray-900">Admin Login</h1>
-            <p className="text-gray-600 mt-2">BoxPrático Marketing</p>
+          <div className="w-16 h-16 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg animate-pulse">
+            <span className="text-black font-bold text-2xl">BP</span>
           </div>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Digite a senha"
-                className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] outline-none bg-white text-gray-900 placeholder-gray-400 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="w-5 h-5" />
-                ) : (
-                  <EyeIcon className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all shadow-md transform hover:scale-[1.02]"
-            >
-              Entrar
-            </button>
-          </form>
+          <p className="text-gray-600">Carregando...</p>
         </motion.div>
       </div>
     );

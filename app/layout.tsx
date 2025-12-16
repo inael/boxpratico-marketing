@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import SessionProvider from "@/components/providers/SessionProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BoxPrático Marketing",
-  description: "Sistema de marketing digital para condomínios",
+  title: "BoxPratico Marketing",
+  description: "Sistema de marketing digital para condominios",
 };
 
 export default function RootLayout({
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
