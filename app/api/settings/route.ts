@@ -37,9 +37,12 @@ export async function getSettingsData() {
     if (isRedisConfigured()) {
       const settings = await getEntity<typeof defaultSettings>('settings', SETTINGS_KEY);
       if (settings) {
+        // Environment variables for auth always take priority if set
+        const authFromEnv = process.env.ADMIN_USERNAME || process.env.ADMIN_PASSWORD;
         return {
           ...defaultSettings,
           ...settings,
+          auth: authFromEnv ? defaultSettings.auth : { ...defaultSettings.auth, ...settings.auth },
           whatsapp: { ...defaultSettings.whatsapp, ...settings.whatsapp },
           evolution: { ...defaultSettings.evolution, ...settings.evolution }
         };
@@ -49,9 +52,12 @@ export async function getSettingsData() {
 
     const data = await fs.readFile(settingsFilePath, 'utf-8');
     const settings = JSON.parse(data);
+    // Environment variables for auth always take priority if set
+    const authFromEnv = process.env.ADMIN_USERNAME || process.env.ADMIN_PASSWORD;
     return {
       ...defaultSettings,
       ...settings,
+      auth: authFromEnv ? defaultSettings.auth : { ...defaultSettings.auth, ...settings.auth },
       whatsapp: { ...defaultSettings.whatsapp, ...settings.whatsapp },
       evolution: { ...defaultSettings.evolution, ...settings.evolution }
     };
@@ -73,33 +79,13 @@ export async function getEvolutionConfig() {
 }
 
 export async function GET() {
-  const defaultSettings = getDefaultSettings();
   try {
-    if (isRedisConfigured()) {
-      const settings = await getEntity<typeof defaultSettings>('settings', SETTINGS_KEY);
-      if (settings) {
-        return NextResponse.json({
-          ...defaultSettings,
-          ...settings,
-          whatsapp: { ...defaultSettings.whatsapp, ...settings.whatsapp },
-          evolution: { ...defaultSettings.evolution, ...settings.evolution }
-        });
-      }
-      return NextResponse.json(defaultSettings);
-    }
-
-    const data = await fs.readFile(settingsFilePath, 'utf-8');
-    const settings = JSON.parse(data);
-    // Merge with defaults to ensure all fields exist
-    return NextResponse.json({
-      ...defaultSettings,
-      ...settings,
-      whatsapp: { ...defaultSettings.whatsapp, ...settings.whatsapp },
-      evolution: { ...defaultSettings.evolution, ...settings.evolution }
-    });
+    // Use getSettingsData to ensure consistent behavior
+    const settings = await getSettingsData();
+    return NextResponse.json(settings);
   } catch (error) {
     console.error('Failed to read settings:', error);
-    return NextResponse.json(defaultSettings);
+    return NextResponse.json(getDefaultSettings());
   }
 }
 
