@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
-import { getSessionStatus, isWhatsAppConfigured } from '@/lib/whatsapp';
+import { getSessionStatus, isWhatsAppConfiguredAsync } from '@/lib/whatsapp';
 
 export async function GET() {
-  if (!isWhatsAppConfigured()) {
+  const isConfigured = await isWhatsAppConfiguredAsync();
+
+  if (!isConfigured) {
     return NextResponse.json({
       configured: false,
       status: 'not_configured',
-      message: 'WhatsApp não configurado. Configure EVOLUTION_API_KEY no ambiente.',
+      message: 'WhatsApp não configurado. Configure nas Configurações ou defina EVOLUTION_API_KEY no ambiente.',
     });
   }
 

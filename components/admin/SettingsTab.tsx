@@ -7,6 +7,8 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   DevicePhoneMobileIcon,
+  QuestionMarkCircleIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline';
 
 interface Settings {
@@ -22,6 +24,11 @@ interface Settings {
   };
   whatsapp: {
     notificationsEnabled: boolean;
+  };
+  evolution: {
+    apiUrl: string;
+    apiKey: string;
+    instanceName: string;
   };
 }
 
@@ -50,6 +57,11 @@ export default function SettingsTab() {
     },
     whatsapp: {
       notificationsEnabled: true
+    },
+    evolution: {
+      apiUrl: '',
+      apiKey: '',
+      instanceName: ''
     }
   });
   const [loading, setLoading] = useState(true);
@@ -61,6 +73,7 @@ export default function SettingsTab() {
   const [whatsappLoading, setWhatsappLoading] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [refreshingQR, setRefreshingQR] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -89,7 +102,8 @@ export default function SettingsTab() {
       const data = await res.json();
       setSettings({
         ...data,
-        whatsapp: data.whatsapp || { notificationsEnabled: true }
+        whatsapp: data.whatsapp || { notificationsEnabled: true },
+        evolution: data.evolution || { apiUrl: '', apiKey: '', instanceName: '' }
       });
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -102,6 +116,25 @@ export default function SettingsTab() {
     try {
       const res = await fetch('/api/whatsapp/status');
       const data = await res.json();
+
+      // Only update status if we're not currently showing a valid QR code
+      // or if the new status is 'connected'
+      const currentState = whatsappStatus?.state?.toLowerCase() || whatsappStatus?.status?.toLowerCase() || '';
+      const newState = data.state?.toLowerCase() || data.status?.toLowerCase() || '';
+
+      // If connected, clear QR code and update status
+      if (newState === 'connected' || newState === 'open') {
+        setQrCode(null);
+        setWhatsappStatus(data);
+        return;
+      }
+
+      // If we have a QR code showing and status is connecting, keep showing QR
+      if (qrCode && currentState === 'qrcode' && newState === 'connecting') {
+        // Don't update status, keep showing QR code
+        return;
+      }
+
       setWhatsappStatus(data);
 
       // If QR code status, fetch QR
@@ -110,10 +143,8 @@ export default function SettingsTab() {
                       data.state === 'QRCODE' ||
                       data.status === 'qrcode' ||
                       data.status === 'disconnected';
-      if (needsQR) {
+      if (needsQR && !qrCode) {
         fetchQRCode();
-      } else if (data.status === 'connected') {
-        setQrCode(null);
       }
     } catch (error) {
       console.error('Failed to fetch WhatsApp status:', error);
@@ -152,15 +183,18 @@ export default function SettingsTab() {
       if (data.qrcode) {
         if (typeof data.qrcode === 'object' && data.qrcode.base64) {
           setQrCode(data.qrcode.base64);
+          // Set status to qrcode so the QR code is displayed
+          setWhatsappStatus(prev => ({ ...prev, configured: true, status: 'qrcode', state: 'qrcode' }));
         } else if (typeof data.qrcode === 'string') {
           setQrCode(data.qrcode);
+          setWhatsappStatus(prev => ({ ...prev, configured: true, status: 'qrcode', state: 'qrcode' }));
         }
+      } else {
+        // No QR code in response, refresh status
+        setTimeout(() => {
+          fetchWhatsAppStatus();
+        }, 2000);
       }
-
-      // Refresh status after starting
-      setTimeout(() => {
-        fetchWhatsAppStatus();
-      }, 2000);
     } catch (error) {
       console.error('Failed to start WhatsApp session:', error);
     } finally {
@@ -276,7 +310,8 @@ export default function SettingsTab() {
   // Check if QR code should be shown
   const showQRCode = (() => {
     const state = whatsappStatus?.state?.toLowerCase() || whatsappStatus?.status?.toLowerCase() || '';
-    return (state === 'qrcode' || state === 'disconnected' || state === 'close') && qrCode;
+    // Show QR code when we have one and status allows it
+    return (state === 'qrcode' || state === 'disconnected' || state === 'close' || state === 'connecting') && qrCode;
   })();
 
   if (loading) {
@@ -310,10 +345,223 @@ export default function SettingsTab() {
                 </p>
               </div>
             </div>
-            <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor()}`}>
-              {getStatusText()}
-            </span>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowInstructions(true)}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+              >
+                <QuestionMarkCircleIcon className="w-5 h-5" />
+                Como configurar?
+              </button>
+              <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor()}`}>
+                {getStatusText()}
+              </span>
+            </div>
           </div>
+
+          {/* Instructions Modal */}
+          {showInstructions && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              >
+                <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex items-center justify-between rounded-t-2xl">
+                  <h3 className="text-lg font-bold text-gray-900">
+                    Como Integrar o WhatsApp com Evolution API
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowInstructions(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <XMarkIcon className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                  {/* Step 1 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      1
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Acesse o Evolution Manager</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Abra o painel de gerenciamento da Evolution API:
+                      </p>
+                      <a
+                        href="https://whatsapp.toolpad.cloud/manager"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition-colors"
+                      >
+                        https://whatsapp.toolpad.cloud/manager
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Step 2 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      2
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Faça login com a API Key</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Na tela de login, insira a <strong>API Key Global</strong> da sua instância Evolution.
+                      </p>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                        <p className="text-xs text-yellow-800">
+                          <strong>Dica:</strong> A API Key é a mesma configurada no <code className="bg-yellow-100 px-1 rounded">AUTHENTICATION_API_KEY</code> do seu servidor Evolution.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      3
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Crie uma nova instância</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        No painel, clique em <strong>&quot;+ Nova Instância&quot;</strong> e preencha:
+                      </p>
+                      <ul className="text-sm text-gray-600 space-y-2 ml-4 list-disc">
+                        <li><strong>Name:</strong> <code className="bg-gray-100 px-1 rounded">boxpratico</code> (nome da instância)</li>
+                        <li><strong>Channel:</strong> Selecione <code className="bg-gray-100 px-1 rounded">WhatsApp Baileys</code></li>
+                        <li><strong>Token:</strong> <span className="text-red-600">*Obrigatório</span> - Crie você mesmo um token seguro (será a API Key desta instância)</li>
+                        <li><strong>Number:</strong> Deixe em branco (será vinculado ao escanear o QR Code)</li>
+                      </ul>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                        <p className="text-xs text-green-800">
+                          <strong>Exemplo de Token:</strong> <code className="bg-green-100 px-1 rounded">boxpratico-api-2024</code> ou qualquer texto seguro que você queira usar.
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-600 mt-2">
+                        Clique em <strong>&quot;Criar&quot;</strong> ou <strong>&quot;Create&quot;</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 4 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      4
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Anote o Token que você criou</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        O Token que você definiu no passo anterior será usado como <strong>API Key</strong> para configurar aqui no BoxPrático.
+                      </p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-xs text-blue-800">
+                          <strong>Importante:</strong> O Token da instância (que você criou) é diferente da API Key Global (usada para login no Manager).
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Step 5 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      5
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Configure aqui no BoxPrático</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Preencha os campos abaixo com as informações:
+                      </p>
+                      <ul className="text-sm text-gray-600 space-y-1 ml-4 list-disc">
+                        <li><strong>URL da API:</strong> <code className="bg-gray-100 px-1 rounded">https://whatsapp.toolpad.cloud</code></li>
+                        <li><strong>API Key:</strong> O Token que você criou (ex: <code className="bg-gray-100 px-1 rounded">boxpratico-api-2024</code>)</li>
+                        <li><strong>Nome da Instância:</strong> <code className="bg-gray-100 px-1 rounded">boxpratico</code> (mesmo nome usado no Manager)</li>
+                      </ul>
+                      <p className="text-sm text-gray-600 mt-2">
+                        Clique em <strong>&quot;Salvar Configurações&quot;</strong>.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 6 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      6
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Conecte o WhatsApp</h4>
+                      <p className="text-sm text-gray-600 mb-2">
+                        Clique no botão <strong>&quot;Conectar WhatsApp&quot;</strong> abaixo. Um QR Code será exibido.
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        No seu celular, abra o <strong>WhatsApp</strong> → <strong>Configurações</strong> → <strong>Dispositivos Conectados</strong> → <strong>Conectar Dispositivo</strong> e escaneie o QR Code.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Step 7 */}
+                  <div className="flex gap-4">
+                    <div className="flex-shrink-0 w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-green-700 font-bold text-sm">
+                      7
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-2">Pronto!</h4>
+                      <p className="text-sm text-gray-600">
+                        Após escanear, o status mudará para <span className="text-green-600 font-semibold">Conectado</span>.
+                        Você pode testar enviando uma mensagem de teste.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Links úteis */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mt-6">
+                    <h4 className="font-semibold text-blue-900 mb-2">Links Úteis</h4>
+                    <div className="space-y-2">
+                      <a
+                        href="https://whatsapp.toolpad.cloud/manager"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-900"
+                      >
+                        <span>Evolution Manager</span>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                      <a
+                        href="https://doc.evolution-api.com/v2/pt/get-started/introduction"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-900"
+                      >
+                        <span>Documentação Evolution API</span>
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 p-4 rounded-b-2xl">
+                  <button
+                    type="button"
+                    onClick={() => setShowInstructions(false)}
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    Entendi, vamos configurar!
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
 
           {/* Notifications Toggle */}
           <div className="mb-6 p-4 bg-gray-50 rounded-xl">
@@ -339,11 +587,119 @@ export default function SettingsTab() {
             </label>
           </div>
 
+          {/* Notifications Info */}
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <h4 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Tipos de Notificações Enviadas
+            </h4>
+            <p className="text-sm text-blue-800 mb-3">
+              As mensagens são enviadas para o <strong>número de WhatsApp cadastrado em cada condomínio</strong>.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+              <div className="flex items-start gap-2">
+                <span className="text-green-600">✅</span>
+                <span className="text-blue-800"><strong>Condomínio cadastrado</strong> - Confirmação de cadastro</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-blue-600">🎯</span>
+                <span className="text-blue-800"><strong>Campanha criada</strong> - Nova campanha ativa</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-yellow-600">📝</span>
+                <span className="text-blue-800"><strong>Campanha atualizada</strong> - Alterações na campanha</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-orange-600">⚠️</span>
+                <span className="text-blue-800"><strong>Campanha expirada</strong> - Fim do período</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-purple-600">📸</span>
+                <span className="text-blue-800"><strong>Mídia adicionada</strong> - Nova mídia no sistema</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-red-600">🗑️</span>
+                <span className="text-blue-800"><strong>Mídia removida</strong> - Mídia excluída</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-cyan-600">📺</span>
+                <span className="text-blue-800"><strong>Monitor cadastrado</strong> - Novo monitor</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-green-600">🟢</span>
+                <span className="text-blue-800"><strong>Monitor online</strong> - Funcionando</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <span className="text-red-600">🔴</span>
+                <span className="text-blue-800"><strong>Monitor offline</strong> - Sem resposta</span>
+              </div>
+            </div>
+            <p className="text-xs text-blue-600 mt-3">
+              💡 <strong>Dica:</strong> Certifique-se de cadastrar o número de WhatsApp ao criar cada condomínio para receber as notificações.
+            </p>
+          </div>
+
+          {/* Evolution API Configuration */}
+          <div className="mt-6 p-4 bg-gray-50 rounded-xl">
+            <h3 className="font-semibold text-gray-900 mb-3">Configuração da Evolution API</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Configure os campos abaixo para sobrescrever as variáveis de ambiente. Deixe em branco para usar os valores padrão.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL da API
+                </label>
+                <input
+                  type="url"
+                  value={settings.evolution?.apiUrl || ''}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    evolution: { ...settings.evolution, apiUrl: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900 text-sm"
+                  placeholder="https://whatsapp.toolpad.cloud"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  value={settings.evolution?.apiKey || ''}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    evolution: { ...settings.evolution, apiKey: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900 text-sm"
+                  placeholder="Sua API Key"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome da Instância
+                </label>
+                <input
+                  type="text"
+                  value={settings.evolution?.instanceName || ''}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    evolution: { ...settings.evolution, instanceName: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900 text-sm"
+                  placeholder="boxpratico"
+                />
+              </div>
+            </div>
+          </div>
+
           {!whatsappStatus?.configured ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <p className="text-sm text-yellow-800">
-                <strong>EVOLUTION_API_KEY</strong> não configurada no ambiente.
-                Configure a variável para habilitar o WhatsApp.
+                <strong>Evolution API</strong> não configurada. Configure acima ou defina EVOLUTION_API_KEY no ambiente.
               </p>
             </div>
           ) : (
@@ -356,7 +712,7 @@ export default function SettingsTab() {
                   </p>
                   <div className="relative bg-white p-4 rounded-xl shadow-sm">
                     <img
-                      src={qrCode}
+                      src={qrCode || undefined}
                       alt="WhatsApp QR Code"
                       className="w-64 h-64"
                     />
