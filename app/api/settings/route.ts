@@ -25,7 +25,8 @@ function getDefaultSettings() {
     evolution: {
       apiUrl: '',
       apiKey: '',
-      instanceName: ''
+      instanceName: '',
+      managerUrl: ''
     }
   };
 }
@@ -70,11 +71,14 @@ export async function getSettingsData() {
 export async function getEvolutionConfig() {
   const settings = await getSettingsData();
 
+  const apiUrl = settings.evolution?.apiUrl || process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+
   // Settings override environment variables if set
   return {
-    apiUrl: settings.evolution?.apiUrl || process.env.EVOLUTION_API_URL || 'http://localhost:8080',
+    apiUrl,
     apiKey: settings.evolution?.apiKey || process.env.EVOLUTION_API_KEY || '',
-    instanceName: settings.evolution?.instanceName || process.env.EVOLUTION_INSTANCE || 'boxpratico'
+    instanceName: settings.evolution?.instanceName || process.env.EVOLUTION_INSTANCE || 'boxpratico',
+    managerUrl: settings.evolution?.managerUrl || process.env.EVOLUTION_MANAGER_URL || `${apiUrl}/manager`
   };
 }
 
