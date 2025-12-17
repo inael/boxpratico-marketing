@@ -14,6 +14,10 @@ import {
   ArrowUpIcon,
   ArrowDownIcon,
   ClockIcon,
+  PhotoIcon,
+  FilmIcon,
+  DocumentIcon,
+  VideoCameraIcon,
 } from '@heroicons/react/24/outline';
 import { Campaign, Condominium, MediaItem, Monitor } from '@/types';
 
@@ -57,6 +61,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [availableMediaItems, setAvailableMediaItems] = useState<MediaItem[]>([]);
   const [campaignMediaItems, setCampaignMediaItems] = useState<MediaItem[]>([]);
+  const [campaignMediaMap, setCampaignMediaMap] = useState<Record<string, MediaItem[]>>({});
 
   // Function to get default dates
   const getDefaultDates = () => {
@@ -122,9 +127,39 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       const response = await fetch(`/api/campaigns?condominiumId=${selectedCondominium}`);
       const data = await response.json();
       setCampaigns(data);
+      // Fetch media for each campaign to display counts
+      fetchCampaignMediaForList(data);
     } catch (error) {
       console.error('Failed to fetch campaigns:', error);
     }
+  };
+
+  const fetchCampaignMediaForList = async (campaignsList: Campaign[]) => {
+    const mediaMap: Record<string, MediaItem[]> = {};
+    for (const campaign of campaignsList) {
+      try {
+        const response = await fetch(`/api/media-items?campaignId=${campaign.id}`);
+        const data = await response.json();
+        mediaMap[campaign.id] = data.filter((m: MediaItem) => m.isActive);
+      } catch (error) {
+        console.error(`Failed to fetch media for campaign ${campaign.id}:`, error);
+        mediaMap[campaign.id] = [];
+      }
+    }
+    setCampaignMediaMap(mediaMap);
+  };
+
+  // Get media count by type for a specific campaign
+  const getMediaCountByType = (campaignId: string) => {
+    const media = campaignMediaMap[campaignId] || [];
+    return {
+      image: media.filter(m => m.type === 'image').length,
+      video: media.filter(m => m.type === 'video').length,
+      youtube: media.filter(m => m.type === 'youtube').length,
+      pdf: media.filter(m => m.type === 'pdf').length,
+      rtmp: media.filter(m => m.type === 'rtmp').length,
+      total: media.length
+    };
   };
 
   const fetchMediaItems = async () => {
@@ -849,6 +884,53 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                     <span className="font-semibold text-gray-900">{campaign.newsDurationSeconds || 'N/A'}s</span>
                   </div>
                 </div>
+
+                {/* Media count by type */}
+                {(() => {
+                  const counts = getMediaCountByType(campaign.id);
+                  if (counts.total === 0) return null;
+                  return (
+                    <div className="mb-4 pt-3 border-t border-gray-100">
+                      <div className="flex items-center gap-3 flex-wrap text-xs">
+                        {counts.image > 0 && (
+                          <div className="flex items-center gap-1 text-blue-600" title="Imagens">
+                            <PhotoIcon className="w-4 h-4" />
+                            <span className="font-medium">{counts.image}</span>
+                          </div>
+                        )}
+                        {counts.video > 0 && (
+                          <div className="flex items-center gap-1 text-purple-600" title="Vídeos">
+                            <FilmIcon className="w-4 h-4" />
+                            <span className="font-medium">{counts.video}</span>
+                          </div>
+                        )}
+                        {counts.youtube > 0 && (
+                          <div className="flex items-center gap-1 text-red-600" title="YouTube">
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                            </svg>
+                            <span className="font-medium">{counts.youtube}</span>
+                          </div>
+                        )}
+                        {counts.pdf > 0 && (
+                          <div className="flex items-center gap-1 text-orange-600" title="PDFs">
+                            <DocumentIcon className="w-4 h-4" />
+                            <span className="font-medium">{counts.pdf}</span>
+                          </div>
+                        )}
+                        {counts.rtmp > 0 && (
+                          <div className="flex items-center gap-1 text-green-600" title="Câmeras RTMP">
+                            <VideoCameraIcon className="w-4 h-4" />
+                            <span className="font-medium">{counts.rtmp}</span>
+                          </div>
+                        )}
+                        <div className="ml-auto text-gray-500">
+                          = <span className="font-semibold">{counts.total}</span> {counts.total === 1 ? 'mídia' : 'mídias'}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div className="flex gap-2">
                   <button
