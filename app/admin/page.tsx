@@ -79,11 +79,13 @@ export default function AdminPage() {
   const [showOnboarding, setShowOnboarding] = useState<boolean>(false);
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [monitorDropdownOpen, setMonitorDropdownOpen] = useState<string | null>(null);
+  const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
     if (status === 'authenticated') {
       loadCondominiums();
       loadMonitors();
+      loadAllCampaigns();
     }
   }, [status]);
 
@@ -178,6 +180,14 @@ export default function AdminPage() {
     if (res.ok) {
       const data = await res.json();
       setMonitors(data);
+    }
+  }
+
+  async function loadAllCampaigns() {
+    const res = await fetch('/api/campaigns');
+    if (res.ok) {
+      const data = await res.json();
+      setAllCampaigns(data);
     }
   }
 
@@ -575,6 +585,32 @@ export default function AdminPage() {
   const activeMedia = mediaItems.filter(m => m.isActive);
   const inactiveMedia = mediaItems.filter(m => !m.isActive);
 
+  // Helper function to check if campaign is currently active (isActive flag + within date range)
+  function isCampaignCurrentlyActive(campaign: Campaign): boolean {
+    if (!campaign.isActive) return false;
+
+    const now = new Date();
+
+    // If startDate is set, check if current date is after it
+    if (campaign.startDate) {
+      const startDate = new Date(campaign.startDate);
+      if (now < startDate) return false;
+    }
+
+    // If endDate is set, check if current date is before it
+    if (campaign.endDate) {
+      const endDate = new Date(campaign.endDate);
+      if (now > endDate) return false;
+    }
+
+    return true;
+  }
+
+  // Get active campaigns for a specific condominium
+  function getActiveCondoCampaigns(condominiumId: string): Campaign[] {
+    return allCampaigns.filter(c => c.condominiumId === condominiumId && isCampaignCurrentlyActive(c));
+  }
+
   // Campaign statistics
   const activeCampaigns = campaigns.filter(c => c.isActive).length;
   const inactiveCampaigns = campaigns.filter(c => !c.isActive).length;
@@ -937,6 +973,33 @@ export default function AdminPage() {
                         <TrashIcon className="w-4 h-4" />
                       </button>
                     </div>
+
+                    {/* Campaign Status Indicator */}
+                    {(() => {
+                      const activeCondoCampaigns = getActiveCondoCampaigns(condo.id);
+                      const hasActiveCampaign = activeCondoCampaigns.length > 0;
+                      return (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium ${
+                            hasActiveCampaign
+                              ? 'bg-green-50 text-green-700'
+                              : 'bg-gray-50 text-gray-500'
+                          }`}>
+                            <MegaphoneIcon className="w-4 h-4" />
+                            {hasActiveCampaign ? (
+                              <span>
+                                {activeCondoCampaigns.length === 1
+                                  ? `Campanha ativa: ${activeCondoCampaigns[0].name}`
+                                  : `${activeCondoCampaigns.length} campanhas ativas`
+                                }
+                              </span>
+                            ) : (
+                              <span>Sem campanha ativa</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
 
                     {/* Monitor Dropdown Section */}
                     <div className="mt-4 pt-4 border-t border-gray-100">

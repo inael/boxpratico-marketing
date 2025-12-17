@@ -13,7 +13,7 @@ import {
   SignalIcon,
   SignalSlashIcon,
 } from '@heroicons/react/24/outline';
-import { Monitor, Condominium, Campaign } from '@/types';
+import { Monitor, Condominium, Campaign, MediaItem } from '@/types';
 
 // Helper to send WhatsApp notifications
 async function sendWhatsAppNotification(
@@ -47,6 +47,7 @@ interface MonitorsTabProps {
 export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
   const [editingMonitor, setEditingMonitor] = useState<Monitor | null>(null);
@@ -67,6 +68,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
     if (selectedCondominium) {
       fetchMonitors();
       fetchCampaigns();
+      fetchMediaItems();
     }
   }, [selectedCondominium]);
 
@@ -166,6 +168,21 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
     } catch (error) {
       console.error('Failed to fetch campaigns:', error);
     }
+  };
+
+  const fetchMediaItems = async () => {
+    try {
+      const response = await fetch(`/api/media-items?condominiumId=${selectedCondominium}`);
+      const data = await response.json();
+      setMediaItems(data);
+    } catch (error) {
+      console.error('Failed to fetch media items:', error);
+    }
+  };
+
+  // Get count of media items for a specific campaign
+  const getCampaignMediaCount = (campaignId: string): number => {
+    return mediaItems.filter(m => m.campaignId === campaignId && m.isActive).length;
   };
 
   function sanitizeSlug(slug: string): string {
@@ -492,6 +509,9 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                     {activeCampaign ? (
                       <div className="text-xs bg-green-50 text-green-700 px-3 py-2 rounded-lg">
                         <span className="font-semibold">Campanha ativa:</span> {activeCampaign.name}
+                        <span className="text-green-600 ml-1">
+                          ({getCampaignMediaCount(activeCampaign.id)} {getCampaignMediaCount(activeCampaign.id) === 1 ? 'mídia' : 'mídias'})
+                        </span>
                       </div>
                     ) : (
                       <div className="text-xs bg-yellow-50 text-yellow-700 px-3 py-2 rounded-lg">
