@@ -106,7 +106,7 @@ services:
       - "8080:80"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.rtmp.rule=Host(`stream.${DOMAIN_NAME}`)"
+      - "traefik.http.routers.rtmp.rule=Host(`stream.toolpad.cloud`)"
       - "traefik.http.routers.rtmp.entrypoints=websecure"
       - "traefik.http.routers.rtmp.tls=true"
       - "traefik.http.routers.rtmp.tls.certresolver=mytlschallenge"
