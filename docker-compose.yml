@@ -98,7 +98,9 @@ services:
       - evolution_postgres_data:/var/lib/postgresql/data
 
   nginx-rtmp:
-    image: alfg/nginx-rtmp:latest
+    build:
+      context: ./nginx-rtmp
+      dockerfile: Dockerfile
     container_name: nginx-rtmp
     restart: always
     ports:
@@ -114,65 +116,65 @@ services:
       - "traefik.http.middlewares.rtmp-cors.headers.accesscontrolallowheaders=*"
       - "traefik.http.middlewares.rtmp-cors.headers.accesscontrolalloworiginlist=*"
       - "traefik.http.routers.rtmp.middlewares=rtmp-cors"
-    volumes:
-      - ./nginx-rtmp/nginx.conf:/etc/nginx/nginx.conf:ro
 
-  chatwoot-postgres:
-    image: postgres:14
-    restart: always
-    environment:
-      POSTGRES_DB: chatwoot_production
-      POSTGRES_USER: chatwoot
-      POSTGRES_PASSWORD: ${CHATWOOT_DB_PASSWORD}
-    volumes:
-      - chatwoot_postgres:/var/lib/postgresql/data
+  # Chatwoot - Descomentado para uso futuro
+  # Para ativar, configure CHATWOOT_DB_PASSWORD e CHATWOOT_REDIS_PASSWORD no .env
+  # chatwoot-postgres:
+  #   image: postgres:14
+  #   restart: always
+  #   environment:
+  #     POSTGRES_DB: chatwoot_production
+  #     POSTGRES_USER: chatwoot
+  #     POSTGRES_PASSWORD: ${CHATWOOT_DB_PASSWORD}
+  #   volumes:
+  #     - chatwoot_postgres:/var/lib/postgresql/data
 
-  chatwoot-redis:
-    image: redis:6
-    restart: always
-    command: ["redis-server", "--requirepass", "${CHATWOOT_REDIS_PASSWORD}"]
-    volumes:
-      - chatwoot_redis:/data
+  # chatwoot-redis:
+  #   image: redis:6
+  #   restart: always
+  #   command: ["redis-server", "--requirepass", "${CHATWOOT_REDIS_PASSWORD}"]
+  #   volumes:
+  #     - chatwoot_redis:/data
 
-  chatwoot:
-    image: chatwoot/chatwoot:v3.0.0
-    restart: always
-    depends_on:
-      - chatwoot-postgres
-      - chatwoot-redis
-    env_file: .env
-    environment:
-      RAILS_ENV: production
-      POSTGRES_HOST: chatwoot-postgres
-      POSTGRES_DATABASE: chatwoot_production
-      POSTGRES_USERNAME: chatwoot
-      POSTGRES_PASSWORD: ${CHATWOOT_DB_PASSWORD}
-      REDIS_URL: redis://:${CHATWOOT_REDIS_PASSWORD}@chatwoot-redis:6379
-      FRONTEND_URL: https://chatwoot.${DOMAIN_NAME}
-      FORCE_SSL: "true"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.chatwoot.rule=Host(`chatwoot.${DOMAIN_NAME}`)"
-      - "traefik.http.routers.chatwoot.entrypoints=websecure"
-      - "traefik.http.routers.chatwoot.tls.certresolver=mytlschallenge"
-      - "traefik.http.services.chatwoot.loadbalancer.server.port=3000"
+  # chatwoot:
+  #   image: chatwoot/chatwoot:v3.0.0
+  #   restart: always
+  #   depends_on:
+  #     - chatwoot-postgres
+  #     - chatwoot-redis
+  #   env_file: .env
+  #   environment:
+  #     RAILS_ENV: production
+  #     POSTGRES_HOST: chatwoot-postgres
+  #     POSTGRES_DATABASE: chatwoot_production
+  #     POSTGRES_USERNAME: chatwoot
+  #     POSTGRES_PASSWORD: ${CHATWOOT_DB_PASSWORD}
+  #     REDIS_URL: redis://:${CHATWOOT_REDIS_PASSWORD}@chatwoot-redis:6379
+  #     FRONTEND_URL: https://chatwoot.${DOMAIN_NAME}
+  #     FORCE_SSL: "true"
+  #   labels:
+  #     - "traefik.enable=true"
+  #     - "traefik.http.routers.chatwoot.rule=Host(`chatwoot.${DOMAIN_NAME}`)"
+  #     - "traefik.http.routers.chatwoot.entrypoints=websecure"
+  #     - "traefik.http.routers.chatwoot.tls.certresolver=mytlschallenge"
+  #     - "traefik.http.services.chatwoot.loadbalancer.server.port=3000"
 
-  chatwoot-worker:
-    image: chatwoot/chatwoot:v3.0.0
-    restart: always
-    depends_on:
-      - chatwoot-postgres
-      - chatwoot-redis
-    env_file: .env
-    environment:
-      RAILS_ENV: production
-      POSTGRES_HOST: chatwoot-postgres
-      POSTGRES_DATABASE: chatwoot_production
-      POSTGRES_USERNAME: chatwoot
-      POSTGRES_PASSWORD: ${CHATWOOT_DB_PASSWORD}
-      REDIS_URL: redis://:${CHATWOOT_REDIS_PASSWORD}@chatwoot-redis:6379
-      FRONTEND_URL: https://chatwoot.${DOMAIN_NAME}
-    command: ["bundle", "exec", "sidekiq"]
+  # chatwoot-worker:
+  #   image: chatwoot/chatwoot:v3.0.0
+  #   restart: always
+  #   depends_on:
+  #     - chatwoot-postgres
+  #     - chatwoot-redis
+  #   env_file: .env
+  #   environment:
+  #     RAILS_ENV: production
+  #     POSTGRES_HOST: chatwoot-postgres
+  #     POSTGRES_DATABASE: chatwoot_production
+  #     POSTGRES_USERNAME: chatwoot
+  #     POSTGRES_PASSWORD: ${CHATWOOT_DB_PASSWORD}
+  #     REDIS_URL: redis://:${CHATWOOT_REDIS_PASSWORD}@chatwoot-redis:6379
+  #     FRONTEND_URL: https://chatwoot.${DOMAIN_NAME}
+  #   command: ["bundle", "exec", "sidekiq"]
 
 volumes:
   traefik_data:
@@ -180,5 +182,5 @@ volumes:
   evolution_instances:
   evolution_redis_data:
   evolution_postgres_data:
-  chatwoot_postgres:
-  chatwoot_redis:
+  # chatwoot_postgres:
+  # chatwoot_redis:
