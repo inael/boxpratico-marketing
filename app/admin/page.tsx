@@ -536,6 +536,33 @@ export default function AdminPage() {
 
     const formData = new FormData(e.currentTarget);
     const campaignId = formData.get('campaignId') as string;
+
+    // Handle thumbnail for RTMP type
+    let thumbnailUrl = editingMedia.thumbnailUrl;
+    if (editingMedia.type === 'rtmp') {
+      const removeThumbnail = formData.get('removeThumbnail') === 'on';
+      const thumbnailFile = formData.get('thumbnailFile') as File;
+
+      if (removeThumbnail) {
+        // User wants to remove thumbnail and use default
+        thumbnailUrl = '/camera-warning.svg';
+      } else if (thumbnailFile && thumbnailFile.size > 0) {
+        // User uploaded a new thumbnail
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', thumbnailFile);
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadResult = await uploadRes.json();
+          thumbnailUrl = uploadResult.url;
+        }
+      }
+    }
+
     const data = {
       title: formData.get('title') as string,
       description: formData.get('description') as string,
@@ -545,6 +572,7 @@ export default function AdminPage() {
       startTimeSeconds: showFullVideo ? undefined : startTimeSeconds,
       endTimeSeconds: showFullVideo ? undefined : endTimeSeconds,
       campaignId: campaignId || undefined,
+      thumbnailUrl,
     };
 
     const res = await fetch(`/api/media-items/${editingMedia.id}`, {
@@ -1158,6 +1186,42 @@ export default function AdminPage() {
                         transition={{ delay: index * 0.05 }}
                         className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
                       >
+                        {/* Thumbnail Preview */}
+                        <div className="relative w-full h-32 mb-4 rounded-lg overflow-hidden bg-gray-100">
+                          {item.type === 'image' ? (
+                            <img
+                              src={item.sourceUrl}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : item.type === 'youtube' ? (
+                            <img
+                              src={`https://img.youtube.com/vi/${item.sourceUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?\s]+)/)?.[1] || ''}/mqdefault.jpg`}
+                              alt={item.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : item.type === 'rtmp' ? (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <img
+                                src={item.thumbnailUrl || '/camera-warning.svg'}
+                                alt={item.title}
+                                className="max-w-full max-h-full object-contain"
+                              />
+                            </div>
+                          ) : item.type === 'video' ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-800">
+                              <svg className="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M8 5v14l11-7z" />
+                              </svg>
+                            </div>
+                          ) : null}
+                          <div className="absolute top-2 right-2">
+                            <span className={`px-2 py-1 rounded text-xs font-bold ${item.isActive ? 'bg-green-500 text-white' : 'bg-gray-400 text-white'}`}>
+                              {item.isActive ? 'Ativo' : 'Inativo'}
+                            </span>
+                          </div>
+                        </div>
+
                         <div className="flex items-start justify-between mb-3">
                           <div className="flex-1">
                             <h3 className="text-lg font-display font-bold text-gray-900">{item.title}</h3>
@@ -1181,7 +1245,6 @@ export default function AdminPage() {
                               </div>
                             )}
                           </div>
-                          <div className={`w-3 h-3 rounded-full ${item.isActive ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                         </div>
 
                         <div className="space-y-2 mb-4">
@@ -1662,12 +1725,36 @@ export default function AdminPage() {
                         {editingMedia.sourceUrl}
                       </p>
                     </div>
-                    {editingMedia.thumbnailUrl && (
-                      <div>
-                        <label className="block text-sm font-semibold text-blue-900 mb-2">Imagem de Aviso atual:</label>
-                        <img src={editingMedia.thumbnailUrl} alt="Preview" className="h-20 rounded border border-blue-300" />
-                      </div>
-                    )}
+                    <div>
+                      <label className="block text-sm font-semibold text-blue-900 mb-2">Imagem de Aviso:</label>
+                      {editingMedia.thumbnailUrl && editingMedia.thumbnailUrl !== '/camera-warning.svg' ? (
+                        <div className="space-y-2">
+                          <img src={editingMedia.thumbnailUrl} alt="Preview" className="h-20 rounded border border-blue-300" />
+                          <p className="text-xs text-gray-500">Imagem atual</p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500 mb-2">Usando imagem padrão</p>
+                      )}
+                      <input
+                        type="file"
+                        name="thumbnailFile"
+                        accept="image/*"
+                        className="w-full mt-2 px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-gray-900"
+                      />
+                      <p className="text-xs text-blue-600 mt-1">
+                        Selecione uma nova imagem para substituir a atual
+                      </p>
+                      {editingMedia.thumbnailUrl && editingMedia.thumbnailUrl !== '/camera-warning.svg' && (
+                        <label className="flex items-center gap-2 mt-2 text-sm text-gray-700 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            name="removeThumbnail"
+                            className="w-4 h-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                          />
+                          Remover imagem e usar padrão
+                        </label>
+                      )}
+                    </div>
                   </div>
                 )}
                 {/* Video Controls - only show for video and youtube types */}
