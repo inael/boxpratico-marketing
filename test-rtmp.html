@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste RTMP/HLS</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #1a1a1a;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    video {
+      width: 100%;
+      background: black;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 10px;
+      padding: 10px;
+      background: #333;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Teste de Stream HLS/RTMP</h1>
+
+    <input type="text" id="url" value="http://72.61.135.214:8080/hls/sala.m3u8" placeholder="URL do stream HLS (.m3u8)">
+    <button onclick="loadStream()">Carregar Stream</button>
+
+    <video id="video" controls autoplay muted></video>
+
+    <div id="status">Status: Aguardando...</div>
+  </div>
+
+  <script>
+    const video = document.getElementById('video');
+    const statusEl = document.getElementById('status');
+    let hls = null;
+
+    function loadStream() {
+      const url = document.getElementById('url').value;
+
+      if (hls) {
+        hls.destroy();
+      }
+
+      statusEl.textContent = 'Status: Carregando...';
+
+      if (Hls.isSupported()) {
+        hls = new Hls({
+          debug: false,
+          enableWorker: true,
+          lowLatencyMode: true,
+        });
+
+        hls.loadSource(url);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          statusEl.textContent = 'Status: Stream carregado! Reproduzindo...';
+          video.play();
+        });
+
+        hls.on(Hls.Events.ERROR, (event, data) => {
+          statusEl.textContent = `Status: Erro - ${data.type}: ${data.details}`;
+          console.error('HLS Error:', data);
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        // Safari nativo
+        video.src = url;
+        video.addEventListener('loadedmetadata', () => {
+          statusEl.textContent = 'Status: Stream carregado (Safari nativo)!';
+          video.play();
+        });
+      } else {
+        statusEl.textContent = 'Status: Navegador não suporta HLS';
+      }
+    }
+
+    // Carregar automaticamente ao abrir
+    loadStream();
+  </script>
+</body>
+</html>

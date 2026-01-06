@@ -359,10 +359,20 @@ export default function AdminPage() {
         return;
       }
 
-      const streamKey = rtmpKey.trim();
+      const streamKey = rtmpKey.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
+      // Check if camera with same stream key already exists
+      const hlsUrlToCheck = `http://72.61.135.214:8080/hls/${streamKey}.m3u8`;
+      const existingCamera = mediaItems.find(
+        m => m.type === 'rtmp' && m.sourceUrl === hlsUrlToCheck
+      );
+      if (existingCamera) {
+        alert(`❌ Já existe uma câmera cadastrada com o nome "${streamKey}".\n\nEscolha um nome diferente para sua câmera.`);
+        return;
+      }
 
       // Generate HLS URL for playback: http://72.61.135.214:8080/hls/stream-key.m3u8
-      const hlsUrl = `http://72.61.135.214:8080/hls/${streamKey}.m3u8`;
+      const hlsUrl = hlsUrlToCheck;
 
       // RTMP URL for camera configuration
       const rtmpUrl = `rtmp://72.61.135.214:1935/live/${streamKey}`;
