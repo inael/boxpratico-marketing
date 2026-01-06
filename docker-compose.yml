@@ -115,8 +115,6 @@ services:
       - "traefik.http.middlewares.rtmp-cors.headers.accesscontrolallowheaders=*"
       - "traefik.http.middlewares.rtmp-cors.headers.accesscontrolalloworiginlist=*"
       - "traefik.http.routers.rtmp.middlewares=rtmp-cors"
-    volumes:
-      - ./nginx-rtmp/nginx.conf:/etc/nginx/nginx.conf:ro
 
   # Chatwoot - Descomentado para uso futuro
   # Para ativar, configure CHATWOOT_DB_PASSWORD e CHATWOOT_REDIS_PASSWORD no .env
