@@ -98,19 +98,19 @@ services:
       - evolution_postgres_data:/var/lib/postgresql/data
 
   nginx-rtmp:
-    image: tiangolo/nginx-rtmp:latest
+    image: alfg/nginx-rtmp:latest
     container_name: nginx-rtmp
     restart: always
     ports:
       - "1935:1935"
-      - "8080:8080"
+      - "8080:80"
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.rtmp.rule=Host(`stream.${DOMAIN_NAME}`)"
       - "traefik.http.routers.rtmp.entrypoints=websecure"
       - "traefik.http.routers.rtmp.tls=true"
       - "traefik.http.routers.rtmp.tls.certresolver=mytlschallenge"
-      - "traefik.http.services.rtmp.loadbalancer.server.port=8080"
+      - "traefik.http.services.rtmp.loadbalancer.server.port=80"
       - "traefik.http.middlewares.rtmp-cors.headers.accesscontrolallowmethods=GET,OPTIONS"
       - "traefik.http.middlewares.rtmp-cors.headers.accesscontrolallowheaders=*"
       - "traefik.http.middlewares.rtmp-cors.headers.accesscontrolalloworiginlist=*"

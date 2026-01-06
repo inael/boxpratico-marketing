@@ -362,7 +362,7 @@ export default function AdminPage() {
       const streamKey = rtmpKey.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
       // Check if camera with same stream key already exists
-      const hlsUrlToCheck = `http://72.61.135.214:8080/hls/${streamKey}.m3u8`;
+      const hlsUrlToCheck = `http://72.61.135.214:8080/live/${streamKey}.m3u8`;
       const existingCamera = mediaItems.find(
         m => m.type === 'rtmp' && m.sourceUrl === hlsUrlToCheck
       );
@@ -371,7 +371,7 @@ export default function AdminPage() {
         return;
       }
 
-      // Generate HLS URL for playback: http://72.61.135.214:8080/hls/stream-key.m3u8
+      // Generate HLS URL for playback: http://72.61.135.214:8080/live/stream-key.m3u8
       const hlsUrl = hlsUrlToCheck;
 
       // RTMP URL for camera configuration
@@ -1170,7 +1170,7 @@ export default function AdminPage() {
                                 <div className="p-2 bg-red-50 rounded border border-red-200">
                                   <p className="text-xs font-semibold text-red-800 mb-1">📹 Configurar na câmera:</p>
                                   <p className="text-xs text-gray-900 font-mono break-all select-all bg-white px-2 py-1 rounded">
-                                    {item.sourceUrl.replace('http://', 'rtmp://').replace(':8080/hls/', ':1935/live/').replace('.m3u8', '')}
+                                    {item.sourceUrl.replace('http://', 'rtmp://').replace(':8080/live/', ':1935/live/').replace('.m3u8', '')}
                                   </p>
                                 </div>
                                 {/* URL para visualização no navegador */}
@@ -1632,7 +1632,7 @@ export default function AdminPage() {
                       <p className="text-xs text-blue-700 mb-2">Esta URL será usada automaticamente pelo player para exibir o stream:</p>
                       <div className="bg-white p-3 rounded border border-blue-200">
                         <p className="text-sm text-gray-900 font-mono break-all">
-                          http://72.61.135.214:8080/hls/<span className="text-blue-600 font-bold">[NOME-DA-CAMERA]</span>.m3u8
+                          http://72.61.135.214:8080/live/<span className="text-blue-600 font-bold">[NOME-DA-CAMERA]</span>.m3u8
                         </p>
                       </div>
                       <p className="text-xs text-blue-600 mt-2">
