@@ -1155,9 +1155,19 @@ export default function AdminPage() {
                               <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
                             )}
                             {item.type === 'rtmp' && (
-                              <div className="mt-2 p-2 bg-blue-50 rounded border border-blue-200">
-                                <p className="text-xs font-semibold text-blue-900 mb-1">URL RTMP:</p>
-                                <p className="text-xs text-gray-900 font-mono break-all select-all">{item.sourceUrl}</p>
+                              <div className="mt-2 space-y-2">
+                                {/* URL para configurar na câmera */}
+                                <div className="p-2 bg-red-50 rounded border border-red-200">
+                                  <p className="text-xs font-semibold text-red-800 mb-1">📹 Configurar na câmera:</p>
+                                  <p className="text-xs text-gray-900 font-mono break-all select-all bg-white px-2 py-1 rounded">
+                                    {item.sourceUrl.replace('http://', 'rtmp://').replace(':8080/hls/', ':1935/live/').replace('.m3u8', '')}
+                                  </p>
+                                </div>
+                                {/* URL para visualização no navegador */}
+                                <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                                  <p className="text-xs font-semibold text-blue-800 mb-1">🌐 URL para navegador (HLS):</p>
+                                  <p className="text-xs text-gray-900 font-mono break-all select-all bg-white px-2 py-1 rounded">{item.sourceUrl}</p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1565,49 +1575,71 @@ export default function AdminPage() {
                   </div>
                 )}
                 {mediaType === 'rtmp' && !editingMedia && (
-                  <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="space-y-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                    <div className="flex items-center gap-2 mb-2">
+                      <svg className="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <span className="text-sm font-bold text-emerald-800">Configuração de Câmera RTMP/HLS</span>
+                    </div>
+
                     <div>
-                      <label className="block text-sm font-semibold text-blue-900 mb-1">Nome da Câmera (Stream Key)</label>
+                      <label className="block text-sm font-semibold text-emerald-900 mb-1">
+                        Nome da Câmera (Stream Key) *
+                      </label>
                       <input
                         name="rtmpKey"
-                        placeholder="camera1"
-                        className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+                        placeholder="Ex: camera-lobby, entrada-principal"
+                        className="w-full px-4 py-3 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-gray-900 bg-white"
                         required
                       />
-                      <p className="text-xs text-blue-600 mt-1">
-                        Use apenas letras, números e hífens. Ex: camera1, lobby, entrada
+                      <p className="text-xs text-emerald-600 mt-1">
+                        Use apenas letras minúsculas, números e hífens. Este nome identificará sua câmera.
                       </p>
                     </div>
 
-                    <div className="p-3 bg-white rounded border border-blue-300">
-                      <p className="text-sm font-semibold text-blue-900 mb-2">📹 Configuração da Câmera IP:</p>
-                      <p className="text-xs text-gray-700 mb-2">Configure sua câmera com a URL RTMP:</p>
-                      <p className="text-xs text-gray-900 font-mono break-all bg-gray-50 p-2 rounded">
-                        rtmp://72.61.135.214:1935/live/NOME-DA-CAMERA
-                      </p>
-                      <p className="text-xs text-gray-600 mt-2">
-                        Substitua NOME-DA-CAMERA pelo nome que você digitou acima
+                    <div className="p-4 bg-red-50 rounded-lg border-2 border-red-300">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">📹</span>
+                        <p className="text-sm font-bold text-red-800">CONFIGURAR NA CÂMERA:</p>
+                      </div>
+                      <p className="text-xs text-red-700 mb-2">Configure este endereço RTMP na sua câmera IP ou software de streaming (OBS):</p>
+                      <div className="bg-white p-3 rounded border border-red-200">
+                        <p className="text-sm text-gray-900 font-mono break-all select-all">
+                          rtmp://72.61.135.214:1935/live/<span className="text-red-600 font-bold">[NOME-DA-CAMERA]</span>
+                        </p>
+                      </div>
+                      <p className="text-xs text-red-600 mt-2 font-medium">
+                        ⚠️ Substitua [NOME-DA-CAMERA] pelo nome digitado acima
                       </p>
                     </div>
 
-                    <div className="p-3 bg-white rounded border border-blue-300">
-                      <p className="text-sm font-semibold text-blue-900 mb-2">🎬 URL HLS (gerada automaticamente):</p>
-                      <p className="text-xs text-gray-700 mb-2">A URL HLS para reprodução será:</p>
-                      <p className="text-xs text-gray-900 font-mono break-all bg-gray-50 p-2 rounded">
-                        http://72.61.135.214:8080/hls/NOME-DA-CAMERA.m3u8
+                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🌐</span>
+                        <p className="text-sm font-bold text-blue-800">URL PARA NAVEGADOR (HLS):</p>
+                      </div>
+                      <p className="text-xs text-blue-700 mb-2">Esta URL será usada automaticamente pelo player para exibir o stream:</p>
+                      <div className="bg-white p-3 rounded border border-blue-200">
+                        <p className="text-sm text-gray-900 font-mono break-all">
+                          http://72.61.135.214:8080/hls/<span className="text-blue-600 font-bold">[NOME-DA-CAMERA]</span>.m3u8
+                        </p>
+                      </div>
+                      <p className="text-xs text-blue-600 mt-2">
+                        ✓ Gerada automaticamente após o cadastro
                       </p>
                     </div>
 
                     <div>
-                      <label className="block text-sm font-semibold text-blue-900 mb-1">Imagem de Aviso (opcional)</label>
+                      <label className="block text-sm font-semibold text-emerald-900 mb-1">Imagem de Aviso (opcional)</label>
                       <input
                         type="file"
                         name="thumbnailFile"
                         accept="image/*"
-                        className="w-full px-4 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white text-gray-900"
+                        className="w-full px-4 py-3 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white text-gray-900"
                       />
-                      <p className="text-xs text-blue-600 mt-1">
-                        Imagem que aparecerá ao lado do título. Se não enviar, será usada a imagem padrão de aviso de câmera.
+                      <p className="text-xs text-emerald-600 mt-1">
+                        Imagem exibida enquanto carrega ou se a câmera estiver offline.
                       </p>
                     </div>
                   </div>
