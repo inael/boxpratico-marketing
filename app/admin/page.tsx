@@ -374,8 +374,8 @@ export default function AdminPage() {
       // Generate HLS URL for playback: http://72.61.135.214:8080/live/stream-key.m3u8
       const hlsUrl = hlsUrlToCheck;
 
-      // RTMP URL for camera configuration
-      const rtmpUrl = `rtmp://72.61.135.214:1935/live/${streamKey}`;
+      // RTMP URL for camera configuration (alfg/nginx-rtmp uses 'stream' app)
+      const rtmpUrl = `rtmp://72.61.135.214:1935/stream/${streamKey}`;
 
       // Handle thumbnail upload
       let thumbnailUrl = '/camera-warning.svg'; // Default image
@@ -1170,7 +1170,7 @@ export default function AdminPage() {
                                 <div className="p-2 bg-red-50 rounded border border-red-200">
                                   <p className="text-xs font-semibold text-red-800 mb-1">📹 Configurar na câmera:</p>
                                   <p className="text-xs text-gray-900 font-mono break-all select-all bg-white px-2 py-1 rounded">
-                                    {item.sourceUrl.replace('http://', 'rtmp://').replace(':8080/live/', ':1935/live/').replace('.m3u8', '')}
+                                    {item.sourceUrl.replace('http://', 'rtmp://').replace(':8080/live/', ':1935/stream/').replace('.m3u8', '')}
                                   </p>
                                 </div>
                                 {/* URL para visualização no navegador */}
@@ -1616,7 +1616,7 @@ export default function AdminPage() {
                       <p className="text-xs text-red-700 mb-2">Configure este endereço RTMP na sua câmera IP ou software de streaming (OBS):</p>
                       <div className="bg-white p-3 rounded border border-red-200">
                         <p className="text-sm text-gray-900 font-mono break-all select-all">
-                          rtmp://72.61.135.214:1935/live/<span className="text-red-600 font-bold">[NOME-DA-CAMERA]</span>
+                          rtmp://72.61.135.214:1935/stream/<span className="text-red-600 font-bold">[NOME-DA-CAMERA]</span>
                         </p>
                       </div>
                       <p className="text-xs text-red-600 mt-2 font-medium">
