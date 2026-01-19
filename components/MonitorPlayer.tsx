@@ -327,9 +327,9 @@ export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }:
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
             </svg>
           </div>
-          <h1 className="text-white text-4xl font-bold mb-4">Nenhuma Campanha Ativa</h1>
+          <h1 className="text-white text-4xl font-bold mb-4">Nenhuma Playlist Ativa</h1>
           <p className="text-gray-400 text-xl max-w-md mx-auto">
-            Configure uma campanha para este monitor no painel administrativo
+            Configure uma playlist para esta tela no painel administrativo
           </p>
           <div className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-white/10 rounded-xl backdrop-blur-sm">
             <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>
@@ -351,7 +351,7 @@ export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }:
           </div>
           <h1 className="text-white text-4xl font-bold mb-4">Nenhuma Mídia Cadastrada</h1>
           <p className="text-gray-400 text-xl max-w-md mx-auto">
-            Adicione mídias à campanha <span className="text-[#F59E0B] font-semibold">&quot;{activeCampaign?.name}&quot;</span>
+            Adicione mídias à playlist <span className="text-[#F59E0B] font-semibold">&quot;{activeCampaign?.name}&quot;</span>
           </p>
           <div className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-white/10 rounded-xl backdrop-blur-sm">
             <div className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></div>

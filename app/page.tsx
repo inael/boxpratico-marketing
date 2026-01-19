@@ -25,7 +25,7 @@ export default function HomePage() {
             </h1>
 
             <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-slide-up" style={{animationDelay: '0.1s'}}>
-              Transforme a comunicação do seu condomínio com um sistema completo de
+              Transforme a comunicação do seu negócio com um sistema completo de
               <span className="font-semibold text-[#D97706]"> digital signage </span>
               profissional
             </p>
@@ -83,7 +83,7 @@ export default function HomePage() {
                 Gestão Completa
               </h3>
               <p className="text-gray-600 leading-relaxed">
-                Painel administrativo intuitivo para gerenciar todos os condomínios e suas mídias
+                Painel administrativo intuitivo para gerenciar todos os locais e suas mídias
               </p>
             </div>
 
@@ -109,7 +109,7 @@ export default function HomePage() {
             Pronto para começar?
           </h2>
           <p className="text-xl text-white/90 mb-8">
-            Configure seu primeiro condomínio em menos de 5 minutos
+            Configure seu primeiro local em menos de 5 minutos
           </p>
           <Link
             href="/admin"
@@ -123,7 +123,7 @@ export default function HomePage() {
       <footer className="bg-gray-900 text-gray-400 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm">
-            © {new Date().getFullYear()} BoxPrático Marketing. Sistema de digital signage para condomínios.
+            © {new Date().getFullYear()} BoxPrático Marketing. Sistema de mídia indoor / digital signage.
           </p>
         </div>
       </footer>

@@ -281,7 +281,7 @@ export default function CampaignPreview() {
   if (!campaign) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-black">
-        <div className="text-white text-4xl">Campanha não encontrada</div>
+        <div className="text-white text-4xl">Playlist não encontrada</div>
       </div>
     );
   }
@@ -290,7 +290,7 @@ export default function CampaignPreview() {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-black">
         <div className="text-white text-4xl">
-          Nenhuma mídia cadastrada para esta campanha
+          Nenhuma mídia cadastrada para esta playlist
         </div>
       </div>
     );

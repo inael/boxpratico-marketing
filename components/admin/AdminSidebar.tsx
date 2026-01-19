@@ -10,7 +10,9 @@ import {
   MegaphoneIcon,
   TvIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  UserGroupIcon,
+  DocumentChartBarIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 
@@ -24,10 +26,12 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
-    { id: 'condominiums', label: 'Condomínios', icon: BuildingOfficeIcon },
-    { id: 'monitors', label: 'Monitores', icon: TvIcon },
+    { id: 'condominiums', label: 'Locais', icon: BuildingOfficeIcon },
+    { id: 'monitors', label: 'Telas', icon: TvIcon },
+    { id: 'advertisers', label: 'Anunciantes', icon: UserGroupIcon },
     { id: 'media', label: 'Mídias', icon: PhotoIcon },
-    { id: 'campaigns', label: 'Campanhas', icon: MegaphoneIcon },
+    { id: 'campaigns', label: 'Playlists', icon: MegaphoneIcon },
+    { id: 'reports', label: 'Relatórios', icon: DocumentChartBarIcon },
     { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
     { id: 'settings', label: 'Configurações', icon: CogIcon },
   ];

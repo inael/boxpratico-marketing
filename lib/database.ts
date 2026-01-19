@@ -18,6 +18,7 @@ import {
   Campaign,
   Monitor,
   MediaItem,
+  Advertiser,
 } from '@/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -481,3 +482,99 @@ export async function deleteMediaItem(id: string): Promise<boolean> {
 
 // NOTE: News items are fetched directly from RSS feed in the API route
 // No database persistence is needed for news
+
+// ============================================
+// ADVERTISERS (Anunciantes)
+// ============================================
+
+export async function getAdvertisers(): Promise<Advertiser[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<Advertiser>('advertisers');
+  }
+  return readJsonFile<Advertiser>('advertisers.json');
+}
+
+export async function getAdvertiserById(id: string): Promise<Advertiser | null> {
+  if (isRedisConfigured()) {
+    return getEntity<Advertiser>('advertisers', id);
+  }
+  const advertisers = await readJsonFile<Advertiser>('advertisers.json');
+  return advertisers.find(a => a.id === id) || null;
+}
+
+export async function getAdvertiserBySlug(slug: string): Promise<Advertiser | null> {
+  if (isRedisConfigured()) {
+    const id = await getIdBySlug('advertisers', slug);
+    if (!id) return null;
+    return getEntity<Advertiser>('advertisers', id);
+  }
+  const advertisers = await readJsonFile<Advertiser>('advertisers.json');
+  return advertisers.find(a => a.slug === slug) || null;
+}
+
+export async function createAdvertiser(data: Omit<Advertiser, 'id' | 'createdAt' | 'updatedAt'>): Promise<Advertiser> {
+  const advertiser: Advertiser = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('advertisers', advertiser.id, advertiser);
+    await setSlugMapping('advertisers', advertiser.slug, advertiser.id);
+  } else {
+    const advertisers = await readJsonFile<Advertiser>('advertisers.json');
+    advertisers.push(advertiser);
+    await writeJsonFile('advertisers.json', advertisers);
+  }
+
+  return advertiser;
+}
+
+export async function updateAdvertiser(id: string, updates: Partial<Advertiser>): Promise<Advertiser | null> {
+  const existing = await getAdvertiserById(id);
+  if (!existing) return null;
+
+  const updated: Advertiser = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    // Update slug mapping if changed
+    if (updates.slug && updates.slug !== existing.slug) {
+      await deleteSlugMapping('advertisers', existing.slug);
+      await setSlugMapping('advertisers', updates.slug, id);
+    }
+    await setEntity('advertisers', id, updated);
+  } else {
+    const advertisers = await readJsonFile<Advertiser>('advertisers.json');
+    const index = advertisers.findIndex(a => a.id === id);
+    if (index !== -1) {
+      advertisers[index] = updated;
+      await writeJsonFile('advertisers.json', advertisers);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteAdvertiser(id: string): Promise<boolean> {
+  const existing = await getAdvertiserById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await deleteSlugMapping('advertisers', existing.slug);
+    await deleteEntity('advertisers', id);
+  } else {
+    const advertisers = await readJsonFile<Advertiser>('advertisers.json');
+    const filtered = advertisers.filter(a => a.id !== id);
+    await writeJsonFile('advertisers.json', filtered);
+  }
+
+  return true;
+}

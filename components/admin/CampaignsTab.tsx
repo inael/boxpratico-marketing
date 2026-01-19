@@ -19,7 +19,7 @@ import {
   DocumentIcon,
   VideoCameraIcon,
 } from '@heroicons/react/24/outline';
-import { Campaign, Condominium, MediaItem, Monitor } from '@/types';
+import { Campaign, Condominium, MediaItem, Monitor, Advertiser, calculateDistanceKm } from '@/types';
 
 // Helper to send WhatsApp notifications
 async function sendWhatsAppNotification(
@@ -54,6 +54,8 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
   const [monitors, setMonitors] = useState<Monitor[]>([]);
+  const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
+  const [selectedAdvertiser, setSelectedAdvertiser] = useState<string>('');
   const [selectedCondominium, setSelectedCondominium] = useState<string>('');
   const [showForm, setShowForm] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
@@ -62,6 +64,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
   const [availableMediaItems, setAvailableMediaItems] = useState<MediaItem[]>([]);
   const [campaignMediaItems, setCampaignMediaItems] = useState<MediaItem[]>([]);
   const [campaignMediaMap, setCampaignMediaMap] = useState<Record<string, MediaItem[]>>({});
+  const [targetLocations, setTargetLocations] = useState<string[]>([]);
 
   // Function to get default dates
   const getDefaultDates = () => {
@@ -77,6 +80,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
 
   const [formData, setFormData] = useState({
     name: '',
+    advertiserId: '',
     monitorId: '',
     startDate: getDefaultDates().startDate,
     endDate: getDefaultDates().endDate,
@@ -94,7 +98,16 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
 
   useEffect(() => {
     fetchAllCampaigns();
+    fetchAdvertisers();
+    fetchAllMonitors();
   }, []);
+
+  useEffect(() => {
+    if (selectedAdvertiser) {
+      fetchCampaignsByAdvertiser();
+      fetchMediaItemsByAdvertiser();
+    }
+  }, [selectedAdvertiser]);
 
   useEffect(() => {
     if (selectedCondominium) {
@@ -119,6 +132,51 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       setAllCampaigns(data);
     } catch (error) {
       console.error('Failed to fetch all campaigns:', error);
+    }
+  };
+
+  const fetchAdvertisers = async () => {
+    try {
+      const response = await fetch('/api/advertisers');
+      const data = await response.json();
+      setAdvertisers(data);
+      // Auto-select first advertiser
+      if (data.length > 0 && !selectedAdvertiser) {
+        setSelectedAdvertiser(data[0].id);
+      }
+    } catch (error) {
+      console.error('Failed to fetch advertisers:', error);
+    }
+  };
+
+  const fetchAllMonitors = async () => {
+    try {
+      const response = await fetch('/api/monitors');
+      const data = await response.json();
+      setMonitors(data.filter((m: Monitor) => m.isActive));
+    } catch (error) {
+      console.error('Failed to fetch all monitors:', error);
+    }
+  };
+
+  const fetchCampaignsByAdvertiser = async () => {
+    try {
+      const response = await fetch(`/api/campaigns?advertiserId=${selectedAdvertiser}`);
+      const data = await response.json();
+      setCampaigns(data);
+      fetchCampaignMediaForList(data);
+    } catch (error) {
+      console.error('Failed to fetch campaigns by advertiser:', error);
+    }
+  };
+
+  const fetchMediaItemsByAdvertiser = async () => {
+    try {
+      const response = await fetch(`/api/media-items?advertiserId=${selectedAdvertiser}`);
+      const data = await response.json();
+      setAvailableMediaItems(data.filter((m: MediaItem) => m.isActive));
+    } catch (error) {
+      console.error('Failed to fetch media items by advertiser:', error);
     }
   };
 
@@ -254,7 +312,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       });
 
       if (hasIntersection) {
-        alert('Atenção: Esta campanha tem interseção de datas com outra campanha ativa neste condomínio. Isso pode causar conflitos na exibição.');
+        alert('Atenção: Esta playlist tem interseção de datas com outra playlist ativa neste local. Isso pode causar conflitos na exibição.');
         if (!confirm('Deseja continuar mesmo assim?')) {
           return;
         }
@@ -262,12 +320,18 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
     }
 
     try {
+      const campaignData = {
+        ...formData,
+        advertiserId: formData.advertiserId || selectedAdvertiser,
+        targetLocations,
+      };
+
       if (editingCampaign) {
         // Update campaign
         const response = await fetch(`/api/campaigns/${editingCampaign.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(campaignData),
         });
 
         if (response.ok) {
@@ -307,7 +371,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
             }
           }
 
-          await fetchCampaigns();
+          await fetchCampaignsByAdvertiser();
           resetForm();
         }
       } else {
@@ -315,10 +379,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
         const response = await fetch('/api/campaigns', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            ...formData,
-            condominiumId: selectedCondominium,
-          }),
+          body: JSON.stringify(campaignData),
         });
 
         if (response.ok) {
@@ -338,22 +399,24 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
             });
           }
 
-          // Send WhatsApp notification for new campaign
-          const selectedCondo = condominiums.find(c => c.id === selectedCondominium);
-          if (selectedCondo?.whatsappPhone) {
-            const details = formData.startDate && formData.endDate
-              ? `Período: ${formData.startDate} a ${formData.endDate}`
-              : '';
-            sendWhatsAppNotification(
-              'campaign_created',
-              selectedCondo.name,
-              selectedCondo.whatsappPhone,
-              formData.name,
-              details
-            );
+          // Send WhatsApp notification for each target location
+          for (const locationId of targetLocations) {
+            const selectedCondo = condominiums.find(c => c.id === locationId);
+            if (selectedCondo?.whatsappPhone) {
+              const details = formData.startDate && formData.endDate
+                ? `Período: ${formData.startDate} a ${formData.endDate}`
+                : '';
+              sendWhatsAppNotification(
+                'campaign_created',
+                selectedCondo.name,
+                selectedCondo.whatsappPhone,
+                formData.name,
+                details
+              );
+            }
           }
 
-          await fetchCampaigns();
+          await fetchCampaignsByAdvertiser();
           resetForm();
         }
       }
@@ -363,7 +426,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta campanha?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta playlist?')) return;
 
     try {
       const response = await fetch(`/api/campaigns/${id}`, {
@@ -371,7 +434,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       });
 
       if (response.ok) {
-        await fetchCampaigns();
+        await fetchCampaignsByAdvertiser();
         await fetchAllCampaigns();
       }
     } catch (error) {
@@ -383,6 +446,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
     setEditingCampaign(campaign);
     setFormData({
       name: campaign.name,
+      advertiserId: campaign.advertiserId || selectedAdvertiser,
       monitorId: campaign.monitorId || '',
       startDate: campaign.startDate || '',
       endDate: campaign.endDate || '',
@@ -391,6 +455,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       newsEveryNMedia: campaign.newsEveryNMedia || 3,
       newsDurationSeconds: campaign.newsDurationSeconds || 10,
     });
+    setTargetLocations(campaign.targetLocations || (campaign.condominiumId ? [campaign.condominiumId] : []));
     setShowForm(true);
   };
 
@@ -403,17 +468,77 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       });
 
       if (response.ok) {
-        await fetchCampaigns();
+        await fetchCampaignsByAdvertiser();
       }
     } catch (error) {
       console.error('Failed to toggle campaign:', error);
     }
   };
 
+  // Toggle a location in the targetLocations array
+  const toggleTargetLocation = (locationId: string) => {
+    setTargetLocations(prev =>
+      prev.includes(locationId)
+        ? prev.filter(id => id !== locationId)
+        : [...prev, locationId]
+    );
+  };
+
+  // Get the current advertiser's target radius config
+  const getCurrentAdvertiserRadius = () => {
+    const advertiser = advertisers.find(a => a.id === selectedAdvertiser);
+    return advertiser?.targetRadius;
+  };
+
+  // Select all locations within the advertiser's radius
+  const selectLocationsWithinRadius = () => {
+    const radiusConfig = getCurrentAdvertiserRadius();
+    if (!radiusConfig) return;
+
+    const locationsWithinRadius = condominiums.filter(condo => {
+      if (!condo.latitude || !condo.longitude) return false;
+      const distance = calculateDistanceKm(
+        radiusConfig.centerLat,
+        radiusConfig.centerLng,
+        condo.latitude,
+        condo.longitude
+      );
+      return distance <= radiusConfig.radiusKm;
+    });
+
+    setTargetLocations(locationsWithinRadius.map(l => l.id));
+  };
+
+  // Get distance from advertiser center for a location
+  const getDistanceFromAdvertiser = (condo: Condominium): number | null => {
+    const radiusConfig = getCurrentAdvertiserRadius();
+    if (!radiusConfig || !condo.latitude || !condo.longitude) return null;
+    return calculateDistanceKm(
+      radiusConfig.centerLat,
+      radiusConfig.centerLng,
+      condo.latitude,
+      condo.longitude
+    );
+  };
+
+  // Check if location is within advertiser's radius
+  const isWithinRadius = (condo: Condominium): boolean => {
+    const radiusConfig = getCurrentAdvertiserRadius();
+    if (!radiusConfig || !condo.latitude || !condo.longitude) return false;
+    const distance = calculateDistanceKm(
+      radiusConfig.centerLat,
+      radiusConfig.centerLng,
+      condo.latitude,
+      condo.longitude
+    );
+    return distance <= radiusConfig.radiusKm;
+  };
+
   const resetForm = () => {
     const defaultDates = getDefaultDates();
     setFormData({
       name: '',
+      advertiserId: selectedAdvertiser,
       monitorId: '',
       startDate: defaultDates.startDate,
       endDate: defaultDates.endDate,
@@ -422,24 +547,25 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       newsEveryNMedia: 3,
       newsDurationSeconds: 10,
     });
+    setTargetLocations([]);
     setEditingCampaign(null);
     setShowForm(false);
   };
 
   const handleCopyCampaigns = async () => {
     if (!copySourceCondominium || copySourceCondominium === selectedCondominium) {
-      alert('Selecione um condomínio diferente para copiar');
+      alert('Selecione um local diferente para copiar');
       return;
     }
 
     const sourceCampaigns = allCampaigns.filter(c => c.condominiumId === copySourceCondominium);
 
     if (sourceCampaigns.length === 0) {
-      alert('O condomínio selecionado não possui campanhas');
+      alert('O local selecionado não possui playlists');
       return;
     }
 
-    if (!confirm(`Deseja copiar ${sourceCampaigns.length} campanha(s) do condomínio selecionado?`)) {
+    if (!confirm(`Deseja copiar ${sourceCampaigns.length} playlist(s) do local selecionado?`)) {
       return;
     }
 
@@ -468,7 +594,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       }
 
       if (successCount > 0) {
-        alert(`${successCount} campanha(s) copiada(s) com sucesso!`);
+        alert(`${successCount} playlist(s) copiada(s) com sucesso!`);
         await fetchCampaigns();
         await fetchAllCampaigns();
         setShowCopyModal(false);
@@ -476,7 +602,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       }
     } catch (error) {
       console.error('Failed to copy campaigns:', error);
-      alert('Erro ao copiar campanhas');
+      alert('Erro ao copiar playlists');
     }
   };
 
@@ -486,124 +612,54 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
   const hasOtherCampaigns = allCampaigns.some(c => c.condominiumId !== selectedCondominium);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-display font-bold text-gray-900">Campanhas</h2>
-          <p className="text-gray-600 mt-1">Gerencie playlists personalizadas por condomínio</p>
+          <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Playlists</h2>
+          <p className="text-gray-600 mt-1 text-sm sm:text-base">Gerencie playlists por anunciante e distribua para os locais</p>
         </div>
-        {selectedCondominium && !showForm && (
-          <div className="flex gap-3">
-            {hasOtherCampaigns && (
-              <button
-                onClick={() => setShowCopyModal(true)}
-                className="flex items-center gap-2 bg-white border-2 border-[#D97706] text-[#D97706] px-6 py-3 rounded-xl hover:bg-[#FFFBEB] transition-all font-semibold"
-              >
-                <DocumentDuplicateIcon className="w-5 h-5" />
-                Copiar de Outro Condomínio
-              </button>
-            )}
+        {selectedAdvertiser && !showForm && (
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base"
             >
               <PlusIcon className="w-5 h-5" />
-              Nova Campanha
+              Nova Playlist
             </button>
           </div>
         )}
       </div>
 
-      {condominiums.length === 0 ? (
+      {advertisers.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
           <MegaphoneIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Crie um condomínio primeiro</p>
+          <p className="text-gray-500">Cadastre um anunciante primeiro na aba Anunciantes</p>
         </div>
       ) : (
         <>
           <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
             <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Condomínio Selecionado
+              Anunciante
             </label>
             <select
-              value={selectedCondominium}
-              onChange={(e) => setSelectedCondominium(e.target.value)}
+              value={selectedAdvertiser}
+              onChange={(e) => setSelectedAdvertiser(e.target.value)}
               disabled={showForm}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none font-medium bg-white text-gray-900 disabled:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {condominiums.map((condo) => (
-                <option key={condo.id} value={condo.id}>
-                  {condo.name}
+              {advertisers.map((advertiser) => (
+                <option key={advertiser.id} value={advertiser.id}>
+                  {advertiser.name} {advertiser.company ? `(${advertiser.company})` : ''}
                 </option>
               ))}
             </select>
             {showForm && (
               <p className="mt-2 text-xs text-gray-500">
-                Não é possível trocar o condomínio durante a edição de uma campanha
+                Não é possível trocar o anunciante durante a edição de uma playlist
               </p>
             )}
           </div>
-
-          {showCopyModal && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
-            >
-              <h3 className="text-xl font-display font-bold text-gray-900 mb-4">
-                Copiar Campanhas de Outro Condomínio
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Selecione o condomínio de origem para copiar todas as campanhas para o condomínio atual.
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Copiar campanhas de:
-                  </label>
-                  <select
-                    value={copySourceCondominium}
-                    onChange={(e) => setCopySourceCondominium(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none font-medium bg-white text-gray-900"
-                  >
-                    <option value="">Selecione um condomínio</option>
-                    {condominiums
-                      .filter(c => c.id !== selectedCondominium)
-                      .map((condo) => {
-                        const count = allCampaigns.filter(camp => camp.condominiumId === condo.id).length;
-                        return (
-                          <option key={condo.id} value={condo.id}>
-                            {condo.name} ({count} campanha{count !== 1 ? 's' : ''})
-                          </option>
-                        );
-                      })}
-                  </select>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={handleCopyCampaigns}
-                    disabled={!copySourceCondominium}
-                    className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Copiar Campanhas
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowCopyModal(false);
-                      setCopySourceCondominium('');
-                    }}
-                    className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 font-semibold hover:bg-gray-50 transition-all"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
 
           {showForm && (
             <motion.div
@@ -612,46 +668,132 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
               className="bg-white rounded-xl shadow-sm p-6 border border-gray-100"
             >
               <h3 className="text-xl font-display font-bold text-gray-900 mb-4">
-                {editingCampaign ? 'Editar Campanha' : 'Nova Campanha'}
+                {editingCampaign ? 'Editar Playlist' : 'Nova Playlist'}
               </h3>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Nome da Campanha *
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
-                      placeholder="Ex: Campanha Natal 2024"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Monitor *
-                    </label>
-                    <select
-                      value={formData.monitorId}
-                      onChange={(e) => setFormData({ ...formData, monitorId: e.target.value })}
-                      required
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
-                    >
-                      <option value="">Selecione um monitor</option>
-                      {monitors.map((monitor) => (
-                        <option key={monitor.id} value={monitor.id}>
-                          {monitor.name} {monitor.location ? `(${monitor.location})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                    {monitors.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1">
-                        Nenhum monitor cadastrado. Cadastre um na aba Monitores.
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Nome da Playlist *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
+                    placeholder="Ex: Playlist Natal 2024"
+                  />
+                </div>
+
+                {/* Seleção de Locais/Telas onde a playlist será exibida */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Locais onde exibir *
+                  </label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Selecione os locais/telas onde esta playlist será exibida
+                  </p>
+
+                  {/* Botão de seleção automática por raio */}
+                  {getCurrentAdvertiserRadius() && (
+                    <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <div>
+                            <p className="text-sm font-medium text-blue-800">
+                              Raio de alcance: {getCurrentAdvertiserRadius()?.radiusKm} km
+                            </p>
+                            {getCurrentAdvertiserRadius()?.centerName && (
+                              <p className="text-xs text-blue-600">
+                                Centro: {getCurrentAdvertiserRadius()?.centerName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={selectLocationsWithinRadius}
+                          className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          Selecionar no raio
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border border-gray-200 rounded-lg p-4 max-h-60 overflow-y-auto">
+                    {condominiums.length === 0 ? (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        Nenhum local cadastrado
                       </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {condominiums.map((condo) => {
+                          const condoMonitors = monitors.filter(m => m.condominiumId === condo.id);
+                          const distance = getDistanceFromAdvertiser(condo);
+                          const withinRadius = isWithinRadius(condo);
+                          const radiusConfig = getCurrentAdvertiserRadius();
+
+                          return (
+                            <label
+                              key={condo.id}
+                              className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+                                targetLocations.includes(condo.id)
+                                  ? 'bg-[#FFFBEB] border border-[#F59E0B]'
+                                  : withinRadius && radiusConfig
+                                  ? 'bg-blue-50 hover:bg-blue-100 border border-blue-200'
+                                  : 'bg-gray-50 hover:bg-gray-100'
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={targetLocations.includes(condo.id)}
+                                onChange={() => toggleTargetLocation(condo.id)}
+                                className="w-5 h-5 text-[#F59E0B] border-gray-300 rounded focus:ring-[#F59E0B]"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-gray-900">{condo.name}</span>
+                                  {withinRadius && radiusConfig && (
+                                    <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-medium rounded">
+                                      No raio
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
+                                  <span>
+                                    {condoMonitors.length} tela{condoMonitors.length !== 1 ? 's' : ''}
+                                  </span>
+                                  {distance !== null && (
+                                    <>
+                                      <span>-</span>
+                                      <span className={withinRadius ? 'text-blue-600 font-medium' : ''}>
+                                        {distance.toFixed(1)} km
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
+                  {targetLocations.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-2">
+                      Selecione pelo menos um local para exibir a playlist
+                    </p>
+                  )}
+                  {targetLocations.length > 0 && (
+                    <p className="text-xs text-green-600 mt-2">
+                      {targetLocations.length} local(is) selecionado(s)
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -716,7 +858,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                       className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                     />
                     <label htmlFor="isActive" className="text-sm font-semibold text-gray-700">
-                      Campanha ativa
+                      Playlist ativa
                     </label>
                   </div>
                   <div className="flex items-center gap-3">
@@ -728,7 +870,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                       className="w-5 h-5 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                     />
                     <label htmlFor="showNews" className="text-sm font-semibold text-gray-700">
-                      Exibir notícias nesta campanha
+                      Exibir notícias nesta playlist
                     </label>
                   </div>
                 </div>
@@ -736,7 +878,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                 {/* Gerenciador de Mídias */}
                 <div className="border-t border-gray-200 pt-4 mt-4">
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-lg font-semibold text-gray-900">Mídias da Campanha</h4>
+                    <h4 className="text-lg font-semibold text-gray-900">Mídias da Playlist</h4>
                     <div className="flex items-center gap-2 text-sm">
                       <ClockIcon className="w-4 h-4 text-gray-500" />
                       <span className="text-gray-600">
@@ -749,7 +891,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                     </div>
                   </div>
 
-                  {/* Lista de mídias da campanha */}
+                  {/* Lista de mídias da playlist */}
                   {campaignMediaItems.length > 0 ? (
                     <div className="space-y-2 mb-3 max-h-64 overflow-y-auto">
                       {campaignMediaItems.map((media, index) => (
@@ -827,7 +969,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                     type="submit"
                     className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
-                    {editingCampaign ? 'Atualizar' : 'Criar'} Campanha
+                    {editingCampaign ? 'Atualizar' : 'Criar'} Playlist
                   </button>
                   <button
                     type="button"
@@ -841,18 +983,18 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
             </motion.div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {filteredCampaigns.map((campaign, index) => (
               <motion.div
                 key={campaign.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
-                className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
+                className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-display font-bold text-gray-900">{campaign.name}</h3>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-display font-bold text-gray-900 truncate">{campaign.name}</h3>
                     {(campaign.startDate || campaign.endDate) && (
                       <p className="text-sm text-gray-500 mt-1">
                         {campaign.startDate && new Date(campaign.startDate).toLocaleDateString('pt-BR')}
@@ -996,12 +1138,12 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
           {filteredCampaigns.length === 0 && !showForm && (
             <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
               <MegaphoneIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhuma campanha criada ainda</p>
+              <p className="text-gray-500">Nenhuma playlist criada ainda</p>
               <button
                 onClick={() => setShowForm(true)}
                 className="mt-4 text-primary-600 hover:text-primary-700 font-semibold"
               >
-                Criar primeira campanha
+                Criar primeira playlist
               </button>
             </div>
           )}

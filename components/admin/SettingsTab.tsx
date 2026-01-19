@@ -9,6 +9,7 @@ import {
   DevicePhoneMobileIcon,
   QuestionMarkCircleIcon,
   XMarkIcon,
+  CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 
 interface Settings {
@@ -30,6 +31,12 @@ interface Settings {
     apiKey: string;
     instanceName: string;
     managerUrl: string;
+  };
+  networkPricing: {
+    pricePerDisplayMonth: number;
+    insertionsPerHour: number;
+    avgInsertionDurationSeconds: number;
+    operatingHoursPerDay: number;
   };
 }
 
@@ -64,6 +71,12 @@ export default function SettingsTab() {
       apiKey: '',
       instanceName: '',
       managerUrl: ''
+    },
+    networkPricing: {
+      pricePerDisplayMonth: 20,
+      insertionsPerHour: 4,
+      avgInsertionDurationSeconds: 15,
+      operatingHoursPerDay: 12
     }
   });
   const [loading, setLoading] = useState(true);
@@ -105,7 +118,13 @@ export default function SettingsTab() {
       setSettings({
         ...data,
         whatsapp: data.whatsapp || { notificationsEnabled: true },
-        evolution: data.evolution || { apiUrl: '', apiKey: '', instanceName: '', managerUrl: '' }
+        evolution: data.evolution || { apiUrl: '', apiKey: '', instanceName: '', managerUrl: '' },
+        networkPricing: data.networkPricing || {
+          pricePerDisplayMonth: 20,
+          insertionsPerHour: 4,
+          avgInsertionDurationSeconds: 15,
+          operatingHoursPerDay: 12
+        }
       });
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -332,22 +351,22 @@ export default function SettingsTab() {
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* WhatsApp Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <div className="flex items-center justify-between mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <DevicePhoneMobileIcon className="w-6 h-6 text-green-600" />
               </div>
               <div>
-                <h2 className="text-xl font-display font-bold text-gray-900">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
                   WhatsApp
                 </h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-xs sm:text-sm text-gray-500">
                   Conecte seu WhatsApp para receber notificações
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               {/* Quick access to Evolution Manager */}
               {(settings.evolution?.managerUrl || settings.evolution?.apiUrl) && (
                 <a
@@ -585,7 +604,7 @@ export default function SettingsTab() {
               <div>
                 <span className="font-semibold text-gray-900">Notificações Automáticas</span>
                 <p className="text-sm text-gray-500">
-                  Receba alertas sobre campanhas, monitores e mídias via WhatsApp
+                  Receba alertas sobre playlists, telas e mídias via WhatsApp
                 </p>
               </div>
               <div className="relative">
@@ -612,24 +631,24 @@ export default function SettingsTab() {
               Tipos de Notificações Enviadas
             </h4>
             <p className="text-sm text-blue-800 mb-3">
-              As mensagens são enviadas para o <strong>número de WhatsApp cadastrado em cada condomínio</strong>.
+              As mensagens são enviadas para o <strong>número de WhatsApp cadastrado em cada local</strong>.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
               <div className="flex items-start gap-2">
                 <span className="text-green-600">✅</span>
-                <span className="text-blue-800"><strong>Condomínio cadastrado</strong> - Confirmação de cadastro</span>
+                <span className="text-blue-800"><strong>Local cadastrado</strong> - Confirmação de cadastro</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-blue-600">🎯</span>
-                <span className="text-blue-800"><strong>Campanha criada</strong> - Nova campanha ativa</span>
+                <span className="text-blue-800"><strong>Playlist criada</strong> - Nova playlist ativa</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-yellow-600">📝</span>
-                <span className="text-blue-800"><strong>Campanha atualizada</strong> - Alterações na campanha</span>
+                <span className="text-blue-800"><strong>Playlist atualizada</strong> - Alterações na playlist</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-orange-600">⚠️</span>
-                <span className="text-blue-800"><strong>Campanha expirada</strong> - Fim do período</span>
+                <span className="text-blue-800"><strong>Playlist expirada</strong> - Fim do período</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-purple-600">📸</span>
@@ -641,19 +660,19 @@ export default function SettingsTab() {
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-cyan-600">📺</span>
-                <span className="text-blue-800"><strong>Monitor cadastrado</strong> - Novo monitor</span>
+                <span className="text-blue-800"><strong>Tela cadastrada</strong> - Nova tela</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-green-600">🟢</span>
-                <span className="text-blue-800"><strong>Monitor online</strong> - Funcionando</span>
+                <span className="text-blue-800"><strong>Tela online</strong> - Funcionando</span>
               </div>
               <div className="flex items-start gap-2">
                 <span className="text-red-600">🔴</span>
-                <span className="text-blue-800"><strong>Monitor offline</strong> - Sem resposta</span>
+                <span className="text-blue-800"><strong>Tela offline</strong> - Sem resposta</span>
               </div>
             </div>
             <p className="text-xs text-blue-600 mt-3">
-              💡 <strong>Dica:</strong> Certifique-se de cadastrar o número de WhatsApp ao criar cada condomínio para receber as notificações.
+              💡 <strong>Dica:</strong> Certifique-se de cadastrar o número de WhatsApp ao criar cada local para receber as notificações.
             </p>
           </div>
 
@@ -839,9 +858,141 @@ export default function SettingsTab() {
           )}
         </div>
 
+        {/* Network Pricing Configuration */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <CurrencyDollarIcon className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                Precos da Rede
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Configure os precos e parametros para calculo de orcamento
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Preco por Display (R$/mes)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={settings.networkPricing?.pricePerDisplayMonth || 20}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  networkPricing: { ...settings.networkPricing, pricePerDisplayMonth: parseFloat(e.target.value) || 0 }
+                })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                placeholder="20.00"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Valor base cobrado por cada tela/display por mes
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Insercoes por Hora
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={settings.networkPricing?.insertionsPerHour || 4}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  networkPricing: { ...settings.networkPricing, insertionsPerHour: parseInt(e.target.value) || 1 }
+                })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                placeholder="4"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Quantas vezes o anuncio aparece por hora em cada tela
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Duracao Media da Insercao (segundos)
+              </label>
+              <input
+                type="number"
+                min="5"
+                value={settings.networkPricing?.avgInsertionDurationSeconds || 15}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  networkPricing: { ...settings.networkPricing, avgInsertionDurationSeconds: parseInt(e.target.value) || 5 }
+                })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                placeholder="15"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Tempo medio de exibicao de cada insercao
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Horas de Funcionamento por Dia
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="24"
+                value={settings.networkPricing?.operatingHoursPerDay || 12}
+                onChange={(e) => setSettings({
+                  ...settings,
+                  networkPricing: { ...settings.networkPricing, operatingHoursPerDay: parseInt(e.target.value) || 1 }
+                })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                placeholder="12"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Media de horas que as telas ficam ligadas por dia
+              </p>
+            </div>
+          </div>
+
+          {/* Preview dos calculos */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+            <h4 className="font-semibold text-amber-900 mb-2">Previa de Calculo (por display/mes)</h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-amber-700">Insercoes/dia</p>
+                <p className="font-bold text-amber-900">
+                  {((settings.networkPricing?.insertionsPerHour || 4) * (settings.networkPricing?.operatingHoursPerDay || 12)).toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <div>
+                <p className="text-amber-700">Insercoes/mes</p>
+                <p className="font-bold text-amber-900">
+                  {((settings.networkPricing?.insertionsPerHour || 4) * (settings.networkPricing?.operatingHoursPerDay || 12) * 30).toLocaleString('pt-BR')}
+                </p>
+              </div>
+              <div>
+                <p className="text-amber-700">Tempo/dia</p>
+                <p className="font-bold text-amber-900">
+                  {Math.round((settings.networkPricing?.insertionsPerHour || 4) * (settings.networkPricing?.operatingHoursPerDay || 12) * (settings.networkPricing?.avgInsertionDurationSeconds || 15) / 60)} min
+                </p>
+              </div>
+              <div>
+                <p className="text-amber-700">Preco</p>
+                <p className="font-bold text-amber-900">
+                  R$ {(settings.networkPricing?.pricePerDisplayMonth || 20).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* RSS Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h2 className="text-xl font-display font-bold text-gray-900 mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+          <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900 mb-4">
             Configurações de RSS
           </h2>
 
@@ -941,8 +1092,8 @@ export default function SettingsTab() {
         </div>
 
         {/* Auth Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-          <h2 className="text-xl font-display font-bold text-gray-900 mb-4">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+          <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900 mb-4">
             Credenciais de Administrador
           </h2>
 

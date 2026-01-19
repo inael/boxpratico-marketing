@@ -376,13 +376,13 @@ export function buildNotificationMessage(type: NotificationType, data: Notificat
       return `${header}✅ *Condomínio Cadastrado*\n\nO condomínio *${data.condominiumName}* foi cadastrado com sucesso no sistema.`;
 
     case 'campaign_created':
-      return `${header}🎯 *Nova Campanha Criada*\n\nCondomínio: *${data.condominiumName}*\nCampanha: *${data.entityName}*\n${data.details || ''}`;
+      return `${header}🎯 *Nova Playlist Criada*\n\nLocal: *${data.condominiumName}*\nPlaylist: *${data.entityName}*\n${data.details || ''}`;
 
     case 'campaign_updated':
-      return `${header}📝 *Campanha Atualizada*\n\nCondomínio: *${data.condominiumName}*\nCampanha: *${data.entityName}*\n${data.details || ''}`;
+      return `${header}📝 *Playlist Atualizada*\n\nLocal: *${data.condominiumName}*\nPlaylist: *${data.entityName}*\n${data.details || ''}`;
 
     case 'campaign_expired':
-      return `${header}⚠️ *Campanha Expirada*\n\nCondomínio: *${data.condominiumName}*\nCampanha: *${data.entityName}*\n\nA campanha atingiu sua data de término e foi desativada automaticamente.`;
+      return `${header}⚠️ *Playlist Expirada*\n\nLocal: *${data.condominiumName}*\nPlaylist: *${data.entityName}*\n\nA playlist atingiu sua data de término e foi desativada automaticamente.`;
 
     case 'media_created':
       return `${header}📸 *Nova Mídia Adicionada*\n\nCondomínio: *${data.condominiumName}*\nMídia: *${data.entityName}*`;

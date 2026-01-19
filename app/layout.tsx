@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "BoxPratico Marketing",
-  description: "Sistema de marketing digital para condominios",
+  description: "Sistema de mídia indoor / digital signage",
 };
 
 export default function RootLayout({

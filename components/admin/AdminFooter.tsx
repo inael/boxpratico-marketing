@@ -9,7 +9,7 @@ export default function AdminFooter() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <span>© {currentYear} BoxPrático Marketing.</span>
-            <span className="hidden sm:inline">Sistema de digital signage para condomínios.</span>
+            <span className="hidden sm:inline">Sistema de mídia indoor / digital signage.</span>
           </div>
 
           <div className="flex items-center gap-6">

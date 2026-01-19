@@ -2,15 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { Condominium, MediaItem, Campaign, AnalyticsView, Monitor } from '@/types';
+import { Condominium, MediaItem, Campaign, AnalyticsView, Monitor, PricingModel, PricingConfig, CommissionConfig, Advertiser, BUSINESS_CATEGORIES, BusinessCategory } from '@/types';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminFooter from '@/components/admin/AdminFooter';
 import CampaignsTab from '@/components/admin/CampaignsTab';
 import SettingsTab from '@/components/admin/SettingsTab';
 import MonitorsTab from '@/components/admin/MonitorsTab';
+import AdvertisersTab from '@/components/admin/AdvertisersTab';
+import ReportsTab from '@/components/admin/ReportsTab';
 import OnboardingWizard from '@/components/admin/OnboardingWizard';
+import dynamic from 'next/dynamic';
 import { brazilianStates, citiesByState } from '@/lib/brazilian-cities';
+
+// Dynamic import for map component (no SSR)
+const LocationsMap = dynamic(() => import('@/components/admin/LocationsMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[400px] bg-gray-100 rounded-xl flex items-center justify-center">
+      <div className="text-gray-500">Carregando mapa...</div>
+    </div>
+  ),
+});
 import {
   BuildingOfficeIcon,
   PhotoIcon,
@@ -25,8 +38,30 @@ import {
   SignalIcon,
   MegaphoneIcon,
   ArrowRightOnRectangleIcon,
+  CurrencyDollarIcon,
+  MapPinIcon,
+  UserGroupIcon,
+  UsersIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+
+// Stream server configuration from environment variables
+const STREAM_DOMAIN = process.env.STREAM_DOMAIN || 'stream.boxpratico.com.br';
+const RTMP_SERVER = process.env.RTMP_SERVER || '72.61.135.214:1935';
+
+// Helper to convert HLS URL to RTMP URL for camera configuration
+function hlsToRtmpUrl(hlsUrl: string): string {
+  // Extract stream name from HLS URL and convert to RTMP format
+  const match = hlsUrl.match(/\/live\/([^.]+)\.m3u8$/);
+  if (match) {
+    return `rtmp://${RTMP_SERVER}/stream/${match[1]}`;
+  }
+  // Fallback for old URL formats
+  return hlsUrl
+    .replace(/https?:\/\/[^/]+/, `rtmp://${RTMP_SERVER}`)
+    .replace('/live/', '/stream/')
+    .replace('.m3u8', '');
+}
 
 // Helper to send WhatsApp notifications
 async function sendWhatsAppNotification(
@@ -80,12 +115,29 @@ export default function AdminPage() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [monitorDropdownOpen, setMonitorDropdownOpen] = useState<string | null>(null);
   const [allCampaigns, setAllCampaigns] = useState<Campaign[]>([]);
+  // Pricing states
+  const [pricingModel, setPricingModel] = useState<PricingModel>('network');
+  const [networkPrice, setNetworkPrice] = useState<string>('');
+  const [pricePerPoint, setPricePerPoint] = useState<string>('');
+  const [cityPopulation, setCityPopulation] = useState<string>('');
+  const [pricingNotes, setPricingNotes] = useState<string>('');
+  // Commission states (for the location owner)
+  const [commissionPercentage, setCommissionPercentage] = useState<string>('');
+  const [commissionNotes, setCommissionNotes] = useState<string>('');
+  // Categorias/restrições
+  const [localCategory, setLocalCategory] = useState<string>('');
+  const [blockedCategories, setBlockedCategories] = useState<string[]>([]);
+  const [blockOwnCategory, setBlockOwnCategory] = useState(false);
+  // Advertisers state
+  const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
+  const [selectedAdvertiserId, setSelectedAdvertiserId] = useState<string>('');
 
   useEffect(() => {
     if (status === 'authenticated') {
       loadCondominiums();
       loadMonitors();
       loadAllCampaigns();
+      loadAdvertisers();
     }
   }, [status]);
 
@@ -125,10 +177,36 @@ export default function AdminPage() {
       setCondoName(editingCondo.name);
       setCondoSlug(editingCondo.slug);
       setSelectedState(editingCondo.state || '');
+      // Set pricing fields
+      setPricingModel(editingCondo.pricing?.model || 'network');
+      setNetworkPrice(editingCondo.pricing?.networkPrice?.toString() || '');
+      setPricePerPoint(editingCondo.pricing?.pricePerPoint?.toString() || '');
+      setCityPopulation(editingCondo.pricing?.cityPopulation?.toString() || '');
+      setPricingNotes(editingCondo.pricing?.notes || '');
+      // Set commission fields
+      setCommissionPercentage(editingCondo.commission?.percentage?.toString() || '');
+      setCommissionNotes(editingCondo.commission?.notes || '');
+      // Category restriction fields
+      setLocalCategory(editingCondo.category || '');
+      setBlockedCategories(editingCondo.blockedCategories || []);
+      setBlockOwnCategory(editingCondo.blockOwnCategory || false);
     } else {
       setCondoName('');
       setCondoSlug('');
       setSelectedState('');
+      // Reset pricing fields
+      setPricingModel('network');
+      setNetworkPrice('');
+      setPricePerPoint('');
+      setCityPopulation('');
+      setPricingNotes('');
+      // Reset category fields
+      setLocalCategory('');
+      setBlockedCategories([]);
+      setBlockOwnCategory(false);
+      // Reset commission fields
+      setCommissionPercentage('');
+      setCommissionNotes('');
     }
   }, [editingCondo]);
 
@@ -191,6 +269,15 @@ export default function AdminPage() {
     }
   }
 
+  async function loadAdvertisers() {
+    const res = await fetch('/api/advertisers');
+    if (res.ok) {
+      const data = await res.json();
+      // Only show active advertisers in the media form
+      setAdvertisers(data.filter((a: Advertiser) => a.isActive));
+    }
+  }
+
   function sanitizeSlug(slug: string): string {
     return slug
       .toLowerCase()
@@ -237,6 +324,33 @@ export default function AdminPage() {
       photoUrl = uploadData.url;
     }
 
+    // Build pricing config
+    const pricing: PricingConfig = {
+      model: pricingModel,
+      networkPrice: networkPrice ? parseFloat(networkPrice) : undefined,
+      pricePerPoint: pricePerPoint ? parseFloat(pricePerPoint) : undefined,
+      cityPopulation: cityPopulation ? parseInt(cityPopulation) : undefined,
+      notes: pricingNotes || undefined,
+    };
+
+    // Build commission config (for location owner)
+    const commission: CommissionConfig | undefined = commissionPercentage
+      ? {
+          percentage: parseFloat(commissionPercentage),
+          notes: commissionNotes || undefined,
+        }
+      : undefined;
+
+    // Parse geolocation
+    const latitudeStr = formData.get('latitude') as string;
+    const longitudeStr = formData.get('longitude') as string;
+    const latitude = latitudeStr ? parseFloat(latitudeStr) : undefined;
+    const longitude = longitudeStr ? parseFloat(longitudeStr) : undefined;
+
+    // Parse average daily traffic
+    const trafficStr = formData.get('averageDailyTraffic') as string;
+    const averageDailyTraffic = trafficStr ? parseInt(trafficStr) : undefined;
+
     const data = {
       name: formData.get('name') as string,
       slug: getUniqueSlug(condoSlug),
@@ -246,7 +360,16 @@ export default function AdminPage() {
       city: formData.get('city') as string,
       whatsappPhone: formData.get('whatsappPhone') as string,
       photoUrl: photoUrl || undefined,
+      latitude,
+      longitude,
+      averageDailyTraffic,
       isActive: true,
+      pricing,
+      commission,
+      // Category restrictions
+      category: localCategory || undefined,
+      blockedCategories: blockedCategories.length > 0 ? blockedCategories : undefined,
+      blockOwnCategory,
     };
 
     const res = await fetch('/api/condominiums', {
@@ -269,6 +392,15 @@ export default function AdminPage() {
       setSelectedState('');
       setCondoName('');
       setCondoSlug('');
+      // Reset pricing
+      setPricingModel('network');
+      setNetworkPrice('');
+      setPricePerPoint('');
+      setCityPopulation('');
+      setPricingNotes('');
+      // Reset commission
+      setCommissionPercentage('');
+      setCommissionNotes('');
       loadCondominiums();
     }
   }
@@ -294,6 +426,33 @@ export default function AdminPage() {
       photoUrl = uploadData.url;
     }
 
+    // Build pricing config
+    const pricing: PricingConfig = {
+      model: pricingModel,
+      networkPrice: networkPrice ? parseFloat(networkPrice) : undefined,
+      pricePerPoint: pricePerPoint ? parseFloat(pricePerPoint) : undefined,
+      cityPopulation: cityPopulation ? parseInt(cityPopulation) : undefined,
+      notes: pricingNotes || undefined,
+    };
+
+    // Build commission config (for location owner)
+    const commission: CommissionConfig | undefined = commissionPercentage
+      ? {
+          percentage: parseFloat(commissionPercentage),
+          notes: commissionNotes || undefined,
+        }
+      : undefined;
+
+    // Parse geolocation
+    const latitudeStr = formData.get('latitude') as string;
+    const longitudeStr = formData.get('longitude') as string;
+    const latitude = latitudeStr ? parseFloat(latitudeStr) : undefined;
+    const longitude = longitudeStr ? parseFloat(longitudeStr) : undefined;
+
+    // Parse average daily traffic
+    const trafficStr = formData.get('averageDailyTraffic') as string;
+    const averageDailyTraffic = trafficStr ? parseInt(trafficStr) : undefined;
+
     const data = {
       name: formData.get('name') as string,
       slug: getUniqueSlug(condoSlug, editingCondo.id),
@@ -303,6 +462,15 @@ export default function AdminPage() {
       city: formData.get('city') as string,
       whatsappPhone: formData.get('whatsappPhone') as string,
       photoUrl: photoUrl || undefined,
+      latitude,
+      longitude,
+      averageDailyTraffic,
+      pricing,
+      commission,
+      // Category restrictions
+      category: localCategory || undefined,
+      blockedCategories: blockedCategories.length > 0 ? blockedCategories : undefined,
+      blockOwnCategory,
     };
 
     const res = await fetch(`/api/condominiums/${editingCondo.id}`, {
@@ -316,6 +484,9 @@ export default function AdminPage() {
       setSelectedState('');
       setCondoName('');
       setCondoSlug('');
+      // Reset commission
+      setCommissionPercentage('');
+      setCommissionNotes('');
       loadCondominiums();
     }
   }
@@ -362,7 +533,7 @@ export default function AdminPage() {
       const streamKey = rtmpKey.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
       // Check if camera with same stream key already exists
-      const hlsUrlToCheck = `https://stream.toolpad.cloud/live/${streamKey}.m3u8`;
+      const hlsUrlToCheck = `https://${STREAM_DOMAIN}/live/${streamKey}.m3u8`;
       const existingCamera = mediaItems.find(
         m => m.type === 'rtmp' && m.sourceUrl === hlsUrlToCheck
       );
@@ -371,11 +542,11 @@ export default function AdminPage() {
         return;
       }
 
-      // Generate HLS URL for playback: https://stream.toolpad.cloud/live/stream-key.m3u8
+      // Generate HLS URL for playback
       const hlsUrl = hlsUrlToCheck;
 
       // RTMP URL for camera configuration (alfg/nginx-rtmp uses 'stream' app)
-      const rtmpUrl = `rtmp://72.61.135.214:1935/stream/${streamKey}`;
+      const rtmpUrl = `rtmp://${RTMP_SERVER}/stream/${streamKey}`;
 
       // Handle thumbnail upload
       let thumbnailUrl = '/camera-warning.svg'; // Default image
@@ -406,6 +577,7 @@ export default function AdminPage() {
         order: mediaItems.length,
         condominiumId: selectedCondominium,
         campaignId: campaignId || undefined,
+        advertiserId: selectedAdvertiserId || undefined,
       };
 
       const res = await fetch('/api/media-items', {
@@ -420,6 +592,7 @@ export default function AdminPage() {
         setShowMediaForm(false);
         setMediaType('');
         setHasUploadedFile(false);
+        setSelectedAdvertiserId('');
         loadMediaItems();
       }
       return;
@@ -440,6 +613,7 @@ export default function AdminPage() {
         endTimeSeconds: showFullVideo ? undefined : endTimeSeconds,
         condominiumId: selectedCondominium,
         campaignId: campaignId || undefined,
+        advertiserId: selectedAdvertiserId || undefined,
       };
 
       const res = await fetch('/api/media-items', {
@@ -452,6 +626,7 @@ export default function AdminPage() {
         setShowMediaForm(false);
         setMediaType('');
         setHasUploadedFile(false);
+        setSelectedAdvertiserId('');
         loadMediaItems();
       }
       return;
@@ -484,6 +659,7 @@ export default function AdminPage() {
           order: mediaItems.length + i,
           condominiumId: selectedCondominium,
           campaignId: campaignId || undefined,
+          advertiserId: selectedAdvertiserId || undefined,
         };
 
         const res = await fetch('/api/media-items', {
@@ -504,6 +680,7 @@ export default function AdminPage() {
       setShowMediaForm(false);
       setMediaType('');
       setHasUploadedFile(false);
+      setSelectedAdvertiserId('');
       loadMediaItems();
       alert(`${successCount} mídia(s) criada(s) com sucesso!`);
     }
@@ -527,6 +704,7 @@ export default function AdminPage() {
 
   function handleEditMedia(item: MediaItem) {
     setEditingMedia(item);
+    setSelectedAdvertiserId(item.advertiserId || '');
     setShowMediaForm(true);
   }
 
@@ -572,6 +750,7 @@ export default function AdminPage() {
       startTimeSeconds: showFullVideo ? undefined : startTimeSeconds,
       endTimeSeconds: showFullVideo ? undefined : endTimeSeconds,
       campaignId: campaignId || undefined,
+      advertiserId: selectedAdvertiserId || undefined,
       thumbnailUrl,
     };
 
@@ -586,6 +765,7 @@ export default function AdminPage() {
       setEditingMedia(null);
       setMediaType('');
       setHasUploadedFile(false);
+      setSelectedAdvertiserId('');
       loadMediaItems();
     }
   }
@@ -607,7 +787,7 @@ export default function AdminPage() {
 
   function handleOpenPreview() {
     if (selectedCondoData) {
-      // Se uma campanha específica está selecionada, use a rota de preview por campanha
+      // Se uma playlist específica está selecionada, use a rota de preview por playlist
       // Senão, use a rota de preview por condomínio
       const url = selectedCampaignForPreview
         ? `/preview/${selectedCampaignForPreview}`
@@ -705,8 +885,8 @@ export default function AdminPage() {
                   className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-5 py-2.5 rounded-xl hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all font-semibold text-sm transform hover:scale-105 w-full sm:w-auto"
                 >
                   <SparklesIcon className="w-5 h-5" />
-                  <span className="hidden xs:inline">Criar Campanha Fácil</span>
-                  <span className="xs:hidden">Nova Campanha</span>
+                  <span className="hidden xs:inline">Criar Playlist Fácil</span>
+                  <span className="xs:hidden">Nova Playlist</span>
                 </button>
               </div>
 
@@ -725,8 +905,8 @@ export default function AdminPage() {
                       <h3 className="text-xl sm:text-2xl font-display font-bold">Bem-vindo ao BoxPrático Marketing!</h3>
                     </div>
                     <p className="text-white/90 mb-6 max-w-2xl">
-                      Parece que você está começando agora. Siga nosso guia passo a passo para criar sua primeira campanha
-                      e começar a exibir conteúdo nas TVs do seu condomínio.
+                      Parece que você está começando agora. Siga nosso guia passo a passo para criar sua primeira playlist
+                      e começar a exibir conteúdo nas TVs do seu local.
                     </p>
                     <button
                       onClick={() => setShowOnboarding(true)}
@@ -739,7 +919,7 @@ export default function AdminPage() {
                 </motion.div>
               )}
 
-              <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
                 <motion.button
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -756,7 +936,7 @@ export default function AdminPage() {
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">{activeCondos.length}</h3>
-                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Condomínios</p>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Locais</p>
                 </motion.button>
 
                 <motion.button
@@ -796,7 +976,7 @@ export default function AdminPage() {
                   <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-emerald-500 to-emerald-600 bg-clip-text text-transparent">
                     {monitors.filter(m => m.isOnline).length}
                   </h3>
-                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Players Online</p>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Telas Online</p>
                 </motion.button>
 
                 <motion.button
@@ -815,7 +995,26 @@ export default function AdminPage() {
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-purple-500 to-purple-600 bg-clip-text text-transparent">{activeCampaigns}</h3>
-                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Campanhas</p>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Playlists</p>
+                </motion.button>
+
+                <motion.button
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  onClick={() => setActiveTab('advertisers')}
+                  className="bg-white/80 backdrop-blur-sm rounded-xl sm:rounded-2xl shadow-soft p-3 sm:p-6 border border-[#FEF3C7] hover:shadow-medium transition-shadow text-left cursor-pointer"
+                >
+                  <div className="flex items-center justify-between mb-2 sm:mb-4">
+                    <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gradient-to-br from-cyan-100 to-cyan-200 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm">
+                      <UserGroupIcon className="w-5 h-5 sm:w-7 sm:h-7 text-cyan-600" />
+                    </div>
+                    <span className="text-[10px] sm:text-xs text-cyan-700 bg-cyan-50 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full font-semibold">
+                      Ativos
+                    </span>
+                  </div>
+                  <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-cyan-500 to-cyan-600 bg-clip-text text-transparent">{advertisers.length}</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Anunciantes</p>
                 </motion.button>
               </div>
 
@@ -886,49 +1085,76 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Condomínios Tab */}
+          {/* Locais Tab */}
           {activeTab === 'condominiums' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-3xl font-display font-bold text-gray-900">Condomínios</h2>
-                  <p className="text-gray-600 mt-1">Gerencie todos os condomínios cadastrados</p>
+                  <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Locais</h2>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Gerencie todos os locais cadastrados (academias, condomínios, mercados, clínicas...)</p>
                 </div>
                 <button
                   onClick={() => setShowCondoForm(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all font-semibold"
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold text-sm sm:text-base w-full sm:w-auto"
                 >
                   <PlusIcon className="w-5 h-5" />
-                  Novo Condomínio
+                  Novo Local
                 </button>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+              {/* Mapa de Locais */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-2xl shadow-soft p-4 sm:p-6 border border-gray-100"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <MapPinIcon className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-lg font-display font-bold text-gray-900">Mapa de Terminais</h3>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {condominiums.filter(c => c.latitude && c.longitude).length} de {condominiums.length} locais no mapa
+                  </span>
+                </div>
+                <LocationsMap
+                  locations={condominiums}
+                  monitors={monitors}
+                  onLocationSelect={(id) => {
+                    const condo = condominiums.find(c => c.id === id);
+                    if (condo) {
+                      setEditingCondo(condo);
+                    }
+                  }}
+                />
+              </motion.div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                 {condominiums.map((condo, index) => (
                   <motion.div
                     key={condo.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
+                    className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 hover:shadow-md transition-shadow"
                   >
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex items-start gap-4 flex-1">
+                    <div className="flex items-start justify-between mb-3 sm:mb-4">
+                      <div className="flex items-start gap-3 sm:gap-4 flex-1 min-w-0">
                         <div className="flex-shrink-0">
                           {condo.photoUrl ? (
                             <img
                               src={condo.photoUrl}
                               alt={condo.name}
-                              className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                              className="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg border border-gray-200"
                             />
                           ) : (
-                            <div className="w-16 h-16 bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20 rounded-lg flex items-center justify-center">
-                              <BuildingOfficeIcon className="w-8 h-8 text-[#D97706]" />
+                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20 rounded-lg flex items-center justify-center">
+                              <BuildingOfficeIcon className="w-6 h-6 sm:w-8 sm:h-8 text-[#D97706]" />
                             </div>
                           )}
                         </div>
-                        <div className="flex-1">
-                          <h3 className="text-lg font-display font-bold text-gray-900">{condo.name}</h3>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-base sm:text-lg font-display font-bold text-gray-900 truncate">{condo.name}</h3>
                           <p className="text-sm text-gray-500 mt-1">{condo.slug}</p>
                           {condo.cnpj && (
                             <p className="text-xs text-gray-400 mt-1">CNPJ: {condo.cnpj}</p>
@@ -953,7 +1179,7 @@ export default function AdminPage() {
 
                       <button
                         onClick={() => setSelectedCondominium(condo.id)}
-                        title="Selecionar este condomínio para gerenciar mídias e campanhas"
+                        title="Selecionar este local para gerenciar mídias e playlists"
                         className={`w-full text-xs px-3 py-2 rounded-lg font-medium transition-all ${
                           selectedCondominium === condo.id
                             ? 'bg-[#FEF3C7] text-[#92400E]'
@@ -972,7 +1198,7 @@ export default function AdminPage() {
                             ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
                             : 'bg-green-50 text-green-600 hover:bg-green-100'
                         }`}
-                        title={condo.isActive !== false ? 'Desativar este condomínio' : 'Ativar este condomínio'}
+                        title={condo.isActive !== false ? 'Desativar este local' : 'Ativar este local'}
                       >
                         {condo.isActive !== false ? (
                           <XCircleIcon className="w-4 h-4" />
@@ -984,7 +1210,7 @@ export default function AdminPage() {
                       <button
                         onClick={() => setEditingCondo(condo)}
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all text-sm font-medium"
-                        title="Editar dados do condomínio"
+                        title="Editar dados do local"
                       >
                         <PencilIcon className="w-4 h-4" />
                       </button>
@@ -995,9 +1221,9 @@ export default function AdminPage() {
                           const condoCampaigns = campaigns.filter(c => c.condominiumId === condo.id).length;
                           const condoMedias = mediaItems.filter(m => m.condominiumId === condo.id).length;
 
-                          const message = `ATENÇÃO: Ao excluir o condomínio "${condo.name}", serão deletados permanentemente:\n\n` +
-                            `• ${condoMonitors} monitor${condoMonitors !== 1 ? 'es' : ''}\n` +
-                            `• ${condoCampaigns} campanha${condoCampaigns !== 1 ? 's' : ''}\n` +
+                          const message = `ATENÇÃO: Ao excluir o local "${condo.name}", serão deletados permanentemente:\n\n` +
+                            `• ${condoMonitors} tela${condoMonitors !== 1 ? 's' : ''}\n` +
+                            `• ${condoCampaigns} playlist${condoCampaigns !== 1 ? 's' : ''}\n` +
                             `• ${condoMedias} mídia${condoMedias !== 1 ? 's' : ''}\n\n` +
                             `Esta ação não pode ser desfeita. Deseja continuar?`;
 
@@ -1006,7 +1232,7 @@ export default function AdminPage() {
                           }
                         }}
                         className="flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all text-sm font-medium"
-                        title="Excluir condomínio e todos os dados relacionados"
+                        title="Excluir local e todos os dados relacionados"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>
@@ -1027,17 +1253,59 @@ export default function AdminPage() {
                             {hasActiveCampaign ? (
                               <span>
                                 {activeCondoCampaigns.length === 1
-                                  ? `Campanha ativa: ${activeCondoCampaigns[0].name}`
-                                  : `${activeCondoCampaigns.length} campanhas ativas`
+                                  ? `Playlist ativa: ${activeCondoCampaigns[0].name}`
+                                  : `${activeCondoCampaigns.length} playlists ativas`
                                 }
                               </span>
                             ) : (
-                              <span>Sem campanha ativa</span>
+                              <span>Sem playlist ativa</span>
                             )}
                           </div>
                         </div>
                       );
                     })()}
+
+                    {/* Pricing and Commission Indicators */}
+                    {(condo.pricing && (condo.pricing.networkPrice || condo.pricing.pricePerPoint)) || condo.commission?.percentage ? (
+                      <div className="mt-3 space-y-2">
+                        {/* Pricing */}
+                        {condo.pricing && (condo.pricing.networkPrice || condo.pricing.pricePerPoint) && (
+                          <div className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium ${
+                            condo.pricing.model === 'network'
+                              ? 'bg-green-50 text-green-700'
+                              : 'bg-blue-50 text-blue-700'
+                          }`}>
+                            <div className="flex items-center gap-2">
+                              <CurrencyDollarIcon className="w-4 h-4" />
+                              <span>
+                                {condo.pricing.model === 'network' ? 'Por Rede' : 'Por Ponto'}
+                              </span>
+                            </div>
+                            <span className="font-bold">
+                              {condo.pricing.model === 'network'
+                                ? `R$ ${condo.pricing.networkPrice?.toFixed(2)}`
+                                : `R$ ${condo.pricing.pricePerPoint?.toFixed(2)}/tela`
+                              }
+                              {condo.pricing.model === 'per_point' && (
+                                <span className="font-normal opacity-75 ml-1">
+                                  ({monitors.filter(m => m.condominiumId === condo.id).length} telas = R$ {((condo.pricing.pricePerPoint || 0) * monitors.filter(m => m.condominiumId === condo.id).length).toFixed(2)})
+                                </span>
+                              )}
+                            </span>
+                          </div>
+                        )}
+                        {/* Commission */}
+                        {condo.commission?.percentage && (
+                          <div className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium bg-purple-50 text-purple-700">
+                            <div className="flex items-center gap-2">
+                              <span className="w-4 h-4 rounded-full bg-purple-200 flex items-center justify-center text-[10px] font-bold">%</span>
+                              <span>Comissão Local</span>
+                            </div>
+                            <span className="font-bold">{condo.commission.percentage}%</span>
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
 
                     {/* Monitor Dropdown Section */}
                     <div className="mt-4 pt-4 border-t border-gray-100">
@@ -1047,12 +1315,12 @@ export default function AdminPage() {
                             e.stopPropagation();
                             setMonitorDropdownOpen(monitorDropdownOpen === condo.id ? null : condo.id);
                           }}
-                          title="Ver monitores/TVs deste condomínio"
+                          title="Ver telas deste local"
                           className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 transition-all text-sm font-medium"
                         >
                           <div className="flex items-center gap-2">
                             <TvIcon className="w-5 h-5" />
-                            <span>Monitores ({monitors.filter(m => m.condominiumId === condo.id).length})</span>
+                            <span>Telas ({monitors.filter(m => m.condominiumId === condo.id).length})</span>
                           </div>
                           <ChevronDownIcon className={`w-4 h-4 transition-transform ${monitorDropdownOpen === condo.id ? 'rotate-180' : ''}`} />
                         </button>
@@ -1101,7 +1369,7 @@ export default function AdminPage() {
                             ) : (
                               <div className="p-4 text-center">
                                 <TvIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                                <p className="text-sm text-gray-500 mb-2">Nenhum monitor cadastrado</p>
+                                <p className="text-sm text-gray-500 mb-2">Nenhuma tela cadastrada</p>
                                 <button
                                   onClick={() => {
                                     setMonitorDropdownOpen(null);
@@ -1109,7 +1377,7 @@ export default function AdminPage() {
                                   }}
                                   className="text-xs text-purple-600 hover:text-purple-700 font-medium"
                                 >
-                                  Cadastrar Monitor →
+                                  Cadastrar Tela →
                                 </button>
                               </div>
                             )}
@@ -1124,7 +1392,7 @@ export default function AdminPage() {
               {condominiums.length === 0 && (
                 <div className="text-center py-12">
                   <BuildingOfficeIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">Nenhum condomínio cadastrado ainda</p>
+                  <p className="text-gray-500">Nenhum local cadastrado ainda</p>
                 </div>
               )}
             </div>
@@ -1132,16 +1400,16 @@ export default function AdminPage() {
 
           {/* Mídias Tab */}
           {activeTab === 'media' && (
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-3xl font-display font-bold text-gray-900">Mídias</h2>
-                  <p className="text-gray-600 mt-1">Gerencie o conteúdo exibido nas TVs</p>
+                  <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Mídias</h2>
+                  <p className="text-gray-600 mt-1 text-sm sm:text-base">Gerencie o conteúdo exibido nas TVs</p>
                 </div>
                 {selectedCondominium && (
                   <button
                     onClick={() => setShowMediaForm(true)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl hover:shadow-lg hover:shadow-[#F59E0B]/30 transition-all font-semibold shadow-md"
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg hover:shadow-[#F59E0B]/30 transition-all font-semibold shadow-md text-sm sm:text-base w-full sm:w-auto"
                   >
                     <PlusIcon className="w-5 h-5" />
                     Nova Mídia
@@ -1154,15 +1422,15 @@ export default function AdminPage() {
                   <BuildingOfficeIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">
                     {condominiums.length === 0
-                      ? 'Nenhum condomínio cadastrado. Cadastre um condomínio primeiro na aba "Condomínios".'
-                      : 'Selecione um condomínio acima para gerenciar suas mídias'}
+                      ? 'Nenhum local cadastrado. Cadastre um local primeiro na aba "Locais".'
+                      : 'Selecione um local acima para gerenciar suas mídias'}
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Condomínio Selecionado
+                      Local Selecionado
                     </label>
                     <select
                       value={selectedCondominium}
@@ -1177,17 +1445,17 @@ export default function AdminPage() {
                     </select>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
                     {mediaItems.map((item, index) => (
                       <motion.div
                         key={item.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 hover:shadow-md transition-shadow"
+                        className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 hover:shadow-md transition-shadow"
                       >
                         {/* Thumbnail Preview */}
-                        <div className="relative w-full h-32 mb-4 rounded-lg overflow-hidden bg-gray-100">
+                        <div className="relative w-full h-28 sm:h-32 mb-3 sm:mb-4 rounded-lg overflow-hidden bg-gray-100">
                           {item.type === 'image' ? (
                             <img
                               src={item.sourceUrl}
@@ -1222,9 +1490,9 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <h3 className="text-lg font-display font-bold text-gray-900">{item.title}</h3>
+                        <div className="flex items-start justify-between mb-2 sm:mb-3">
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base sm:text-lg font-display font-bold text-gray-900 truncate">{item.title}</h3>
                             {item.description && (
                               <p className="text-sm text-gray-500 mt-1 line-clamp-2">{item.description}</p>
                             )}
@@ -1234,7 +1502,7 @@ export default function AdminPage() {
                                 <div className="p-2 bg-red-50 rounded border border-red-200">
                                   <p className="text-xs font-semibold text-red-800 mb-1">📹 Configurar na câmera:</p>
                                   <p className="text-xs text-gray-900 font-mono break-all select-all bg-white px-2 py-1 rounded">
-                                    {item.sourceUrl.replace('https://stream.toolpad.cloud', 'rtmp://72.61.135.214:1935').replace('http://72.61.135.214:8080', 'rtmp://72.61.135.214:1935').replace('/live/', '/stream/').replace('.m3u8', '')}
+                                    {hlsToRtmpUrl(item.sourceUrl)}
                                   </p>
                                 </div>
                                 {/* URL para visualização no navegador */}
@@ -1247,8 +1515,8 @@ export default function AdminPage() {
                           </div>
                         </div>
 
-                        <div className="space-y-2 mb-4">
-                          <div className="flex items-center gap-2">
+                        <div className="space-y-2 mb-3 sm:mb-4">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded font-medium">
                               {item.type.toUpperCase()}
                             </span>
@@ -1258,8 +1526,8 @@ export default function AdminPage() {
                           </div>
                           {item.campaignId && (
                             <div className="flex items-center gap-1">
-                              <span className="text-xs bg-[#FFFBEB] text-[#B45309] px-2 py-1 rounded font-medium">
-                                📢 {campaigns.find(c => c.id === item.campaignId)?.name || 'Campanha não encontrada'}
+                              <span className="text-xs bg-[#FFFBEB] text-[#B45309] px-2 py-1 rounded font-medium truncate max-w-full">
+                                📢 {campaigns.find(c => c.id === item.campaignId)?.name || 'Playlist não encontrada'}
                               </span>
                             </div>
                           )}
@@ -1312,7 +1580,7 @@ export default function AdminPage() {
                   {mediaItems.length === 0 && (
                     <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
                       <PhotoIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500">Nenhuma mídia cadastrada para este condomínio</p>
+                      <p className="text-gray-500">Nenhuma mídia cadastrada para este local</p>
                     </div>
                   )}
                 </>
@@ -1323,6 +1591,16 @@ export default function AdminPage() {
           {/* Monitors Tab */}
           {activeTab === 'monitors' && (
             <MonitorsTab condominiums={condominiums} />
+          )}
+
+          {/* Advertisers Tab */}
+          {activeTab === 'advertisers' && (
+            <AdvertisersTab />
+          )}
+
+          {/* Reports Tab */}
+          {activeTab === 'reports' && (
+            <ReportsTab condominiums={condominiums} monitors={monitors} />
           )}
 
           {/* Campaigns Tab */}
@@ -1344,7 +1622,7 @@ export default function AdminPage() {
                     <thead className="bg-gradient-to-r from-[#FFFBEB] to-[#FEF3C7] border-b border-gray-200">
                       <tr>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Condomínio</th>
-                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Campanha</th>
+                        <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Playlist</th>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">IP</th>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Duração</th>
                         <th className="text-left px-6 py-4 text-sm font-semibold text-gray-700">Data/Hora</th>
@@ -1402,14 +1680,14 @@ export default function AdminPage() {
 
       {/* Condominium Form Modal */}
       {(showCondoForm || editingCondo) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 max-w-md w-full"
+            className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-md w-full my-4 sm:my-8"
           >
-            <h2 className="text-2xl font-display font-bold text-gray-900 mb-6">
-              {editingCondo ? 'Editar Condomínio' : 'Novo Condomínio'}
+            <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mb-4 sm:mb-6">
+              {editingCondo ? 'Editar Local' : 'Novo Local'}
             </h2>
             <form onSubmit={editingCondo ? handleUpdateCondominium : handleCreateCondominium}>
               <div className="space-y-4">
@@ -1419,7 +1697,7 @@ export default function AdminPage() {
                     name="name"
                     value={condoName}
                     onChange={(e) => setCondoName(e.target.value)}
-                    placeholder="Nome do condomínio"
+                    placeholder="Nome do local (ex: Academia XYZ, Mercado ABC)"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                     required
                   />
@@ -1497,11 +1775,11 @@ export default function AdminPage() {
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Receba notificações sobre campanhas, monitores e mídias
+                    Receba notificações sobre playlists, telas e mídias
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Foto do Condomínio (opcional)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Foto do Local (opcional)</label>
                   <input
                     type="file"
                     name="photo"
@@ -1513,20 +1791,321 @@ export default function AdminPage() {
                       <p className="text-xs text-gray-500 mb-2">Foto atual:</p>
                       <img
                         src={editingCondo.photoUrl}
-                        alt="Foto do condomínio"
+                        alt="Foto do local"
                         className="w-32 h-32 object-cover rounded-lg border border-gray-200"
                       />
                     </div>
                   )}
                 </div>
+
+                {/* Geolocalização */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <MapPinIcon className="w-5 h-5 text-blue-600" />
+                    <h3 className="text-sm font-bold text-gray-900">Geolocalização (para mapa)</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Latitude</label>
+                      <input
+                        name="latitude"
+                        type="number"
+                        step="any"
+                        defaultValue={editingCondo?.latitude}
+                        placeholder="-23.5505"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">Longitude</label>
+                      <input
+                        name="longitude"
+                        type="number"
+                        step="any"
+                        defaultValue={editingCondo?.longitude}
+                        placeholder="-46.6333"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Dica: Pesquise o endereço no Google Maps e copie as coordenadas da URL
+                  </p>
+                </div>
+
+                {/* Tráfego Médio */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <UsersIcon className="w-5 h-5 text-purple-600" />
+                    <h3 className="text-sm font-bold text-gray-900">Tráfego do Local</h3>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">
+                      Média de pessoas por dia (opcional)
+                    </label>
+                    <input
+                      name="averageDailyTraffic"
+                      type="number"
+                      min="0"
+                      defaultValue={editingCondo?.averageDailyTraffic}
+                      placeholder="Ex: 500"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                    />
+                    <p className="text-xs text-gray-500 mt-2">
+                      Quantidade média de pessoas que circulam pelo local diariamente. Usado para calcular o alcance estimado dos anúncios.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pricing Section */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <CurrencyDollarIcon className="w-5 h-5 text-green-600" />
+                    <h3 className="text-sm font-bold text-gray-900">Precificação</h3>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Modelo de Cobrança</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPricingModel('network')}
+                          className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                            pricingModel === 'network'
+                              ? 'border-green-500 bg-green-50 text-green-700'
+                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="font-bold">Por Rede</div>
+                          <div className="text-xs opacity-75">Pacote único</div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPricingModel('per_point')}
+                          className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                            pricingModel === 'per_point'
+                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                          }`}
+                        >
+                          <div className="font-bold">Por Ponto</div>
+                          <div className="text-xs opacity-75">Por tela</div>
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        {pricingModel === 'network'
+                          ? 'Ideal para cidades pequenas/interior - valor único para todas as telas'
+                          : 'Ideal para cidades grandes (+250k hab) - cobra por cada tela'
+                        }
+                      </p>
+                    </div>
+
+                    {pricingModel === 'network' ? (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Valor da Rede (R$)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={networkPrice}
+                          onChange={(e) => setNetworkPrice(e.target.value)}
+                          placeholder="Ex: 200.00"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Valor único para o cliente sair em todas as telas da rede
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-1">
+                          Valor por Ponto/Tela (R$)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={pricePerPoint}
+                          onChange={(e) => setPricePerPoint(e.target.value)}
+                          placeholder="Ex: 50.00"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          Valor cobrado por cada tela/ponto individual
+                        </p>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        <MapPinIcon className="w-4 h-4 inline mr-1" />
+                        População da Cidade (opcional)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={cityPopulation}
+                        onChange={(e) => setCityPopulation(e.target.value)}
+                        placeholder="Ex: 150000"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ajuda a definir a estratégia de venda (acima de 250k = por ponto)
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Observações (opcional)
+                      </label>
+                      <textarea
+                        value={pricingNotes}
+                        onChange={(e) => setPricingNotes(e.target.value)}
+                        placeholder="Ex: Desconto de 10% para pagamento anual"
+                        rows={2}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900 resize-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Commission Section - For location owner */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center">
+                      <span className="text-purple-600 text-xs font-bold">%</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-900">Comissão do Local</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Percentual que o local (farmácia, academia, etc.) recebe dos anunciantes
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Comissão (%)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        max="100"
+                        value={commissionPercentage}
+                        onChange={(e) => setCommissionPercentage(e.target.value)}
+                        placeholder="Ex: 30"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ex: 30% significa que o local recebe R$ 60 de cada R$ 200 de anunciante
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Observações
+                      </label>
+                      <input
+                        type="text"
+                        value={commissionNotes}
+                        onChange={(e) => setCommissionNotes(e.target.value)}
+                        placeholder="Ex: Pago mensalmente via PIX"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Category Restrictions Section */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
+                      <span className="text-xs">🚫</span>
+                    </div>
+                    <h3 className="text-sm font-bold text-gray-900">Restrições de Anúncios</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Configure quais tipos de anunciantes podem ou não exibir propagandas neste local
+                  </p>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Categoria deste Local
+                      </label>
+                      <select
+                        value={localCategory}
+                        onChange={(e) => setLocalCategory(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-900"
+                      >
+                        <option value="">Nenhuma categoria</option>
+                        {BUSINESS_CATEGORIES.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.icon} {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {localCategory && (
+                      <label className="flex items-center gap-3 p-3 rounded-lg bg-red-50 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={blockOwnCategory}
+                          onChange={(e) => setBlockOwnCategory(e.target.checked)}
+                          className="w-5 h-5 text-red-500 border-gray-300 rounded focus:ring-red-500"
+                        />
+                        <div>
+                          <span className="font-medium text-gray-900">Bloquear concorrentes</span>
+                          <p className="text-xs text-gray-500">
+                            Não exibir anúncios da mesma categoria ({BUSINESS_CATEGORIES.find(c => c.id === localCategory)?.name})
+                          </p>
+                        </div>
+                      </label>
+                    )}
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Outras categorias bloqueadas
+                      </label>
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
+                        {BUSINESS_CATEGORIES.filter(cat => cat.id !== localCategory).map((cat) => (
+                          <label
+                            key={cat.id}
+                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer text-sm ${
+                              blockedCategories.includes(cat.id)
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={blockedCategories.includes(cat.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setBlockedCategories([...blockedCategories, cat.id]);
+                                } else {
+                                  setBlockedCategories(blockedCategories.filter(id => id !== cat.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-red-500 border-gray-300 rounded focus:ring-red-500"
+                            />
+                            <span>{cat.icon} {cat.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {blockedCategories.length > 0 && (
+                        <p className="text-xs text-red-600 mt-2">
+                          {blockedCategories.length} categoria(s) bloqueada(s)
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-                >
-                  Salvar
-                </button>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 sm:mt-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -1535,10 +2114,29 @@ export default function AdminPage() {
                     setSelectedState('');
                     setCondoName('');
                     setCondoSlug('');
+                    // Reset pricing
+                    setPricingModel('network');
+                    setNetworkPrice('');
+                    setPricePerPoint('');
+                    setCityPopulation('');
+                    setPricingNotes('');
+                    // Reset commission
+                    setCommissionPercentage('');
+                    setCommissionNotes('');
+                    // Reset category restrictions
+                    setLocalCategory('');
+                    setBlockedCategories([]);
+                    setBlockOwnCategory(false);
                   }}
-                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all"
+                  className="flex-1 bg-gray-100 text-gray-700 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all text-sm sm:text-base"
                 >
                   Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:shadow-lg transition-all text-sm sm:text-base"
+                >
+                  Salvar
                 </button>
               </div>
             </form>
@@ -1548,13 +2146,13 @@ export default function AdminPage() {
 
       {/* Media Form Modal */}
       {showMediaForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 overflow-y-auto z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto z-50">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-2xl p-6 max-w-md w-full my-8"
+            className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-md w-full my-4 sm:my-8"
           >
-            <h2 className="text-2xl font-display font-bold text-gray-900 mb-6">
+            <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mb-4 sm:mb-6">
               {editingMedia ? 'Editar Mídia' : 'Nova Mídia'}
             </h2>
             <form onSubmit={editingMedia ? handleUpdateMedia : handleCreateMedia}>
@@ -1596,19 +2194,38 @@ export default function AdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Campanha (opcional)</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Playlist (opcional)</label>
                   <select
                     name="campaignId"
                     defaultValue={editingMedia?.campaignId || ''}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
                   >
-                    <option value="">Sem campanha</option>
+                    <option value="">Sem playlist</option>
                     {campaigns.map(campaign => (
                       <option key={campaign.id} value={campaign.id}>
                         {campaign.name}
                       </option>
                     ))}
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">Anunciante (opcional)</label>
+                  <select
+                    name="advertiserId"
+                    value={selectedAdvertiserId}
+                    onChange={(e) => setSelectedAdvertiserId(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                  >
+                    <option value="">Mídia interna (sem anunciante)</option>
+                    {advertisers.map(advertiser => (
+                      <option key={advertiser.id} value={advertiser.id}>
+                        {advertiser.name} {advertiser.segment ? `(${advertiser.segment})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Selecione o anunciante dono desta mídia para controle de faturamento
+                  </p>
                 </div>
                 {!editingMedia && mediaType !== 'youtube' && mediaType !== 'rtmp' && (
                   <div>
@@ -1679,7 +2296,7 @@ export default function AdminPage() {
                       <p className="text-xs text-red-700 mb-2">Configure este endereço RTMP na sua câmera IP ou software de streaming (OBS):</p>
                       <div className="bg-white p-3 rounded border border-red-200">
                         <p className="text-sm text-gray-900 font-mono break-all select-all">
-                          rtmp://72.61.135.214:1935/stream/<span className="text-red-600 font-bold">[NOME-DA-CAMERA]</span>
+                          rtmp://{RTMP_SERVER}/stream/<span className="text-red-600 font-bold">[NOME-DA-CAMERA]</span>
                         </p>
                       </div>
                       <p className="text-xs text-red-600 mt-2 font-medium">
@@ -1695,7 +2312,7 @@ export default function AdminPage() {
                       <p className="text-xs text-blue-700 mb-2">Esta URL será usada automaticamente pelo player para exibir o stream:</p>
                       <div className="bg-white p-3 rounded border border-blue-200">
                         <p className="text-sm text-gray-900 font-mono break-all">
-                          https://stream.toolpad.cloud/live/<span className="text-blue-600 font-bold">[NOME-DA-CAMERA]</span>.m3u8
+                          https://{STREAM_DOMAIN}/live/<span className="text-blue-600 font-bold">[NOME-DA-CAMERA]</span>.m3u8
                         </p>
                       </div>
                       <p className="text-xs text-blue-600 mt-2">
@@ -1826,13 +2443,7 @@ export default function AdminPage() {
                   </div>
                 )}
               </div>
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-                >
-                  {editingMedia ? 'Atualizar' : 'Criar'}
-                </button>
+              <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 sm:mt-6">
                 <button
                   type="button"
                   onClick={() => {
@@ -1840,10 +2451,17 @@ export default function AdminPage() {
                     setEditingMedia(null);
                     setMediaType('');
                     setHasUploadedFile(false);
+                    setSelectedAdvertiserId('');
                   }}
-                  className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all"
+                  className="flex-1 bg-gray-100 text-gray-700 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all text-sm sm:text-base"
                 >
                   Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:shadow-lg transition-all text-sm sm:text-base"
+                >
+                  {editingMedia ? 'Atualizar' : 'Criar'}
                 </button>
               </div>
             </form>

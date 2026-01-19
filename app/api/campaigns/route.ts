@@ -5,12 +5,21 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const condominiumId = searchParams.get('condominiumId');
+    const advertiserId = searchParams.get('advertiserId');
 
-    let campaigns;
+    let campaigns = await getCampaigns();
+
+    // Filter by condominiumId (legacy or targetLocations)
     if (condominiumId) {
-      campaigns = await getCampaignsByCondominiumId(condominiumId);
-    } else {
-      campaigns = await getCampaigns();
+      campaigns = campaigns.filter(c =>
+        c.condominiumId === condominiumId ||
+        (c.targetLocations && c.targetLocations.includes(condominiumId))
+      );
+    }
+
+    // Filter by advertiserId
+    if (advertiserId) {
+      campaigns = campaigns.filter(c => c.advertiserId === advertiserId);
     }
 
     return NextResponse.json(campaigns);
@@ -23,7 +32,19 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { condominiumId, name, monitorId, startDate, endDate, isActive, showNews, newsEveryNMedia, newsDurationSeconds } = body;
+    const {
+      advertiserId,
+      condominiumId,
+      targetLocations,
+      name,
+      monitorId,
+      startDate,
+      endDate,
+      isActive,
+      showNews,
+      newsEveryNMedia,
+      newsDurationSeconds
+    } = body;
 
     // Validate minimum news duration
     const validNewsDuration = newsDurationSeconds !== undefined && newsDurationSeconds !== null
@@ -31,7 +52,9 @@ export async function POST(request: NextRequest) {
       : undefined;
 
     const campaign = await createCampaign({
+      advertiserId,
       condominiumId,
+      targetLocations,
       name,
       monitorId,
       startDate,

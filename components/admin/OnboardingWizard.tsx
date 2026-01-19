@@ -22,28 +22,28 @@ interface OnboardingWizardProps {
 const steps = [
   {
     id: 1,
-    title: 'Cadastrar Condomínio',
-    description: 'Primeiro, cadastre o condomínio ou local onde as TVs serão instaladas.',
+    title: 'Cadastrar Local',
+    description: 'Primeiro, cadastre o local onde as TVs serão instaladas (academia, condomínio, mercado, clínica...).',
     icon: BuildingOfficeIcon,
     tab: 'condominiums',
-    action: 'Ir para Condomínios',
+    action: 'Ir para Locais',
     tips: [
-      'Preencha o nome e slug do condomínio',
+      'Preencha o nome e slug do local',
       'Adicione o endereço e cidade para organização',
-      'Você pode adicionar uma foto do condomínio',
+      'Você pode adicionar uma foto do local',
     ],
   },
   {
     id: 2,
-    title: 'Cadastrar Monitor',
-    description: 'Cadastre os monitores/TVs que exibirão o conteúdo no local.',
+    title: 'Cadastrar Tela',
+    description: 'Cadastre as telas/TVs que exibirão o conteúdo no local.',
     icon: TvIcon,
     tab: 'monitors',
-    action: 'Ir para Monitores',
+    action: 'Ir para Telas',
     tips: [
       'Dê um nome identificável para cada TV (ex: TV Portaria)',
       'O slug será usado na URL do player',
-      'Monitores enviam heartbeat para monitoramento',
+      'Telas enviam heartbeat para monitoramento',
     ],
   },
   {
@@ -62,22 +62,22 @@ const steps = [
   },
   {
     id: 4,
-    title: 'Criar Campanha',
-    description: 'Crie uma campanha para organizar e agendar suas mídias.',
+    title: 'Criar Playlist',
+    description: 'Crie uma playlist para organizar e agendar suas mídias.',
     icon: MegaphoneIcon,
     tab: 'campaigns',
-    action: 'Ir para Campanhas',
+    action: 'Ir para Playlists',
     tips: [
-      'Campanhas agrupam mídias para exibição',
+      'Playlists agrupam mídias para exibição',
       'Defina datas de início e fim (opcional)',
-      'Associe a campanha a um monitor específico',
+      'Associe a playlist a uma tela específica',
       'Configure exibição de notícias entre mídias',
     ],
   },
   {
     id: 5,
-    title: 'Ver Campanha',
-    description: 'Pronto! Visualize sua campanha rodando em uma TV.',
+    title: 'Ver Playlist',
+    description: 'Pronto! Visualize sua playlist rodando em uma TV.',
     icon: PlayIcon,
     tab: 'dashboard',
     action: 'Ver Preview',
@@ -132,10 +132,10 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
           </button>
           <div className="flex items-center gap-3 mb-2">
             <SparklesIcon className="w-8 h-8" />
-            <h2 className="text-2xl font-display font-bold">Criar Nova Campanha</h2>
+            <h2 className="text-2xl font-display font-bold">Criar Nova Playlist</h2>
           </div>
           <p className="text-white/80">
-            Siga os 5 passos abaixo para configurar sua campanha
+            Siga os 5 passos abaixo para configurar sua playlist
           </p>
           {/* Step Counter */}
           <div className="mt-3 flex items-center gap-2">

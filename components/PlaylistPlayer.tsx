@@ -288,7 +288,7 @@ export default function PlaylistPlayer({ condominiumId }: PlaylistPlayerProps) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-black">
         <div className="text-white text-4xl">
-          Nenhuma mídia cadastrada para este condomínio
+          Nenhuma mídia cadastrada para este local
         </div>
       </div>
     );
