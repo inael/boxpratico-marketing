@@ -1,20 +1,69 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { MediaItem, NewsItem, Condominium, Campaign } from '@/types';
+import { MediaItem, NewsItem, Condominium, Campaign, MediaSchedule, Monitor } from '@/types';
 import ImageSlide from './slides/ImageSlide';
+import TickerBar from './player/TickerBar';
+
+// Verifica se a mídia está dentro do agendamento
+function isMediaScheduledNow(schedule: MediaSchedule | undefined): boolean {
+  if (!schedule || !schedule.enabled) return true;
+
+  const now = new Date();
+  const today = now.getDay(); // 0 = Domingo
+
+  // Verificar dias da semana
+  if (schedule.daysOfWeek && schedule.daysOfWeek.length > 0) {
+    if (!schedule.daysOfWeek.includes(today)) {
+      return false;
+    }
+  }
+
+  // Verificar data início
+  if (schedule.startDate) {
+    const startDate = new Date(schedule.startDate + 'T00:00:00');
+    if (now < startDate) {
+      return false;
+    }
+  }
+
+  // Verificar data fim
+  if (schedule.endDate) {
+    const endDate = new Date(schedule.endDate + 'T23:59:59');
+    if (now > endDate) {
+      return false;
+    }
+  }
+
+  // Verificar horário
+  if (schedule.startTime || schedule.endTime) {
+    const currentTime = now.toTimeString().slice(0, 5); // "HH:MM"
+    const startTime = schedule.startTime || '00:00';
+    const endTime = schedule.endTime || '23:59';
+
+    if (currentTime < startTime || currentTime > endTime) {
+      return false;
+    }
+  }
+
+  return true;
+}
 import VideoSlide from './slides/VideoSlide';
 import YoutubeSlide from './slides/YoutubeSlide';
 import PdfSlide from './slides/PdfSlide';
 import NewsSlide from './slides/NewsSlide';
 import RtmpSlide from './slides/RtmpSlide';
+import ClockSlide from './slides/ClockSlide';
+import CurrencySlide from './slides/CurrencySlide';
+import WeatherSlide from './slides/WeatherSlide';
 
 interface PlayerFooterProps {
   city?: string;
   countdown?: number;
+  hasTickerBelow?: boolean;
 }
 
-function PlayerFooter({ city, countdown }: PlayerFooterProps) {
+function PlayerFooter({ city, countdown, hasTickerBelow }: PlayerFooterProps) {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [temperature, setTemperature] = useState<number | null>(null);
 
@@ -55,8 +104,11 @@ function PlayerFooter({ city, countdown }: PlayerFooterProps) {
     });
   };
 
+  // Se tem ticker abaixo, footer fica acima (bottom-12)
+  const bottomClass = hasTickerBelow ? 'bottom-12' : 'bottom-0';
+
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm px-12 py-6 flex items-center justify-between z-50">
+    <div className={`absolute ${bottomClass} left-0 right-0 bg-black/90 backdrop-blur-sm px-12 py-6 flex items-center justify-between z-50`}>
       <div className="flex items-center gap-12">
         <div>
           <p className="text-gray-400 text-sm uppercase tracking-wide mb-1">Hora</p>
@@ -105,6 +157,7 @@ interface MonitorPlayerProps {
 
 export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }: MonitorPlayerProps) {
   const [condominium, setCondominium] = useState<Condominium | null>(null);
+  const [monitor, setMonitor] = useState<Monitor | null>(null);
   const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
   const [newsItems, setNewsItems] = useState<NewsItem[]>([]);
@@ -140,6 +193,90 @@ export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }:
     return () => clearInterval(interval);
   }, [monitorSlug]);
 
+  // Poll for remote commands every 10 seconds
+  useEffect(() => {
+    const pollCommands = async () => {
+      try {
+        const response = await fetch(`/api/commands/poll?monitorSlug=${monitorSlug}`);
+        const commands = await response.json();
+
+        if (Array.isArray(commands) && commands.length > 0) {
+          for (const cmd of commands) {
+            try {
+              // Executar comando
+              let success = true;
+              let errorMessage = '';
+
+              switch (cmd.type) {
+                case 'refresh':
+                  // Recarregar a pagina
+                  window.location.reload();
+                  break;
+
+                case 'restart':
+                  // Reiniciar player (recarrega a pagina)
+                  window.location.reload();
+                  break;
+
+                case 'message':
+                  // Exibir mensagem na tela (pode ser implementado com um estado)
+                  if (cmd.payload?.text) {
+                    alert(cmd.payload.text);
+                  }
+                  break;
+
+                case 'clear_cache':
+                  // Limpar cache do navegador
+                  if ('caches' in window) {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                  }
+                  break;
+
+                default:
+                  // Comando nao suportado neste player web
+                  console.log(`Comando ${cmd.type} nao suportado no player web`);
+              }
+
+              // Reportar resultado
+              await fetch('/api/commands/poll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  commandId: cmd.id,
+                  status: success ? 'executed' : 'failed',
+                  errorMessage: errorMessage || undefined,
+                }),
+              });
+            } catch (cmdError) {
+              console.error('Error executing command:', cmdError);
+              // Reportar falha
+              await fetch('/api/commands/poll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  commandId: cmd.id,
+                  status: 'failed',
+                  errorMessage: String(cmdError),
+                }),
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to poll commands:', error);
+      }
+    };
+
+    // Poll every 10 seconds
+    const interval = setInterval(pollCommands, 10000);
+
+    // Poll once on mount
+    pollCommands();
+
+    return () => clearInterval(interval);
+  }, [monitorSlug]);
+
   const handleTimeUpdate = useCallback((time: number) => {
     setCountdown(time);
   }, []);
@@ -157,17 +294,21 @@ export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }:
   useEffect(() => {
     async function fetchData() {
       try {
-        const [condoRes, campaignsRes, mediaRes, newsRes] = await Promise.all([
+        const [condoRes, monitorRes, campaignsRes, mediaRes, newsRes] = await Promise.all([
           fetch(`/api/condominiums/${condominiumId}`),
+          fetch(`/api/monitors/${monitorId}`),
           fetch(`/api/campaigns?condominiumId=${condominiumId}`),
           fetch(`/api/media-items?condominiumId=${condominiumId}`),
           fetch('/api/news'),
         ]);
 
         const condoData = await condoRes.json();
+        const monitorData = await monitorRes.json();
         const campaigns: Campaign[] = await campaignsRes.json();
         const allMedia: MediaItem[] = await mediaRes.json();
         const news = await newsRes.json();
+
+        setMonitor(monitorData);
 
         // Find active campaigns for this monitor within date range
         const activeCampaigns = campaigns.filter(c =>
@@ -205,7 +346,7 @@ export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }:
 
         if (active) {
           filteredMedia = allMedia
-            .filter(m => m.isActive && m.campaignId === active.id)
+            .filter(m => m.isActive && m.campaignId === active.id && isMediaScheduledNow(m.schedule))
             .sort((a, b) => a.order - b.order);
         }
 
@@ -385,6 +526,12 @@ export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }:
         return <PdfSlide item={currentItem} />;
       case 'rtmp':
         return <RtmpSlide item={currentItem} onTimeUpdate={handleTimeUpdate} />;
+      case 'clock':
+        return <ClockSlide item={currentItem} onTimeUpdate={handleTimeUpdate} />;
+      case 'currency':
+        return <CurrencySlide item={currentItem} onTimeUpdate={handleTimeUpdate} />;
+      case 'weather':
+        return <WeatherSlide item={currentItem} city={condominium?.city} onTimeUpdate={handleTimeUpdate} />;
       default:
         return (
           <div className="w-full h-screen flex items-center justify-center bg-black">
@@ -394,14 +541,22 @@ export default function MonitorPlayer({ monitorId, monitorSlug, condominiumId }:
     }
   };
 
+  // Calcular padding inferior baseado no ticker e footer
+  const hasFooter = true; // PlayerFooter sempre visível
+  const hasTicker = monitor?.footerEnabled && monitor?.footerText;
+  const bottomPadding = hasTicker ? 'pb-24' : 'pb-20'; // 12 para ticker + 20 para footer = 24
+
   return (
     <div
       className={`relative w-full h-screen transition-opacity duration-500 ease-in-out ${
         isTransitioning ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      {renderSlide()}
-      <PlayerFooter city={condominium?.city} countdown={countdown} />
+      <div className={hasTicker ? 'h-[calc(100vh-3rem)]' : 'h-full'}>
+        {renderSlide()}
+      </div>
+      <TickerBar monitor={monitor} />
+      <PlayerFooter city={condominium?.city} countdown={countdown} hasTickerBelow={!!hasTicker} />
     </div>
   );
 }

@@ -18,8 +18,13 @@ import {
   FilmIcon,
   DocumentIcon,
   VideoCameraIcon,
+  CalendarDaysIcon,
+  Cog6ToothIcon,
 } from '@heroicons/react/24/outline';
-import { Campaign, Condominium, MediaItem, Monitor, Advertiser, calculateDistanceKm } from '@/types';
+import { Campaign, Condominium, MediaItem, Monitor, Advertiser, calculateDistanceKm, MEDIA_TYPE_ICONS } from '@/types';
+import MediaEditModal from './MediaEditModal';
+import SpecialMediaModal from './SpecialMediaModal';
+import PlayerPreviewModal from './PlayerPreviewModal';
 
 // Helper to send WhatsApp notifications
 async function sendWhatsAppNotification(
@@ -65,6 +70,17 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
   const [campaignMediaItems, setCampaignMediaItems] = useState<MediaItem[]>([]);
   const [campaignMediaMap, setCampaignMediaMap] = useState<Record<string, MediaItem[]>>({});
   const [targetLocations, setTargetLocations] = useState<string[]>([]);
+  const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
+  const [showMediaEditModal, setShowMediaEditModal] = useState(false);
+  const [showSpecialMediaModal, setShowSpecialMediaModal] = useState(false);
+  // Preview modal
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [selectedCampaignForPreview, setSelectedCampaignForPreview] = useState<Campaign | null>(null);
+
+  const handleOpenPreview = (campaign: Campaign) => {
+    setSelectedCampaignForPreview(campaign);
+    setShowPreviewModal(true);
+  };
 
   // Function to get default dates
   const getDefaultDates = () => {
@@ -216,6 +232,9 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       youtube: media.filter(m => m.type === 'youtube').length,
       pdf: media.filter(m => m.type === 'pdf').length,
       rtmp: media.filter(m => m.type === 'rtmp').length,
+      clock: media.filter(m => m.type === 'clock').length,
+      currency: media.filter(m => m.type === 'currency').length,
+      weather: media.filter(m => m.type === 'weather').length,
       total: media.length
     };
   };
@@ -280,6 +299,57 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
       if (media.type === 'video') return total;
       return total + (media.durationSeconds || 10);
     }, 0);
+  };
+
+  const handleEditMedia = (media: MediaItem) => {
+    setEditingMedia(media);
+    setShowMediaEditModal(true);
+  };
+
+  const handleSaveMedia = async (updatedMedia: MediaItem) => {
+    try {
+      const response = await fetch(`/api/media-items/${updatedMedia.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedMedia),
+      });
+
+      if (response.ok) {
+        // Atualizar na lista local
+        setCampaignMediaItems(campaignMediaItems.map(m =>
+          m.id === updatedMedia.id ? updatedMedia : m
+        ));
+        setAvailableMediaItems(availableMediaItems.map(m =>
+          m.id === updatedMedia.id ? updatedMedia : m
+        ));
+      }
+    } catch (error) {
+      console.error('Failed to update media:', error);
+    }
+  };
+
+  const handleSaveSpecialMedia = async (mediaData: Partial<MediaItem>) => {
+    try {
+      const response = await fetch('/api/media-items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...mediaData,
+          advertiserId: selectedAdvertiser,
+          order: campaignMediaItems.length,
+        }),
+      });
+
+      if (response.ok) {
+        const newMedia = await response.json();
+        // Adicionar a midia criada a playlist atual
+        setCampaignMediaItems([...campaignMediaItems, newMedia]);
+        // Atualizar lista de midias disponiveis
+        setAvailableMediaItems([...availableMediaItems, newMedia]);
+      }
+    } catch (error) {
+      console.error('Failed to create special media:', error);
+    }
   };
 
   const formatDuration = (seconds: number) => {
@@ -650,7 +720,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
             >
               {advertisers.map((advertiser) => (
                 <option key={advertiser.id} value={advertiser.id}>
-                  {advertiser.name} {advertiser.company ? `(${advertiser.company})` : ''}
+                  {advertiser.name} {advertiser.segment ? `(${advertiser.segment})` : ''}
                 </option>
               ))}
             </select>
@@ -924,17 +994,32 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                             </button>
                             <button
                               type="button"
+                              onClick={() => handleEditMedia(media)}
+                              className="p-1 rounded hover:bg-blue-100 text-blue-600"
+                              title="Editar midia (agendamento, duracao...)"
+                            >
+                              <Cog6ToothIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => removeMediaFromCampaign(media.id)}
                               className="p-1 rounded hover:bg-red-100 text-red-600"
                             >
                               <TrashIcon className="w-4 h-4" />
                             </button>
                           </div>
+                          {/* Indicador de agendamento */}
+                          {media.schedule?.enabled && (
+                            <div className="ml-8 mt-1 flex items-center gap-1 text-xs text-amber-600">
+                              <CalendarDaysIcon className="w-3 h-3" />
+                              <span>Agendada</span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-gray-500 text-sm italic mb-3">Nenhuma mídia adicionada ainda</p>
+                    <p className="text-gray-500 text-sm italic mb-3">Nenhuma midia adicionada ainda</p>
                   )}
 
                   {/* Mídias disponíveis */}
@@ -942,25 +1027,36 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Adicionar Mídias
                     </label>
-                    <select
-                      onChange={(e) => {
-                        const media = availableMediaItems.find(m => m.id === e.target.value);
-                        if (media) {
-                          addMediaToCampaign(media);
-                          e.target.value = '';
-                        }
-                      }}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
-                    >
-                      <option value="">Selecione uma mídia para adicionar</option>
-                      {availableMediaItems
-                        .filter(m => !campaignMediaItems.find(cm => cm.id === m.id))
-                        .map(media => (
-                          <option key={media.id} value={media.id}>
-                            {media.title} ({media.type})
-                          </option>
-                        ))}
-                    </select>
+                    <div className="flex gap-2">
+                      <select
+                        onChange={(e) => {
+                          const media = availableMediaItems.find(m => m.id === e.target.value);
+                          if (media) {
+                            addMediaToCampaign(media);
+                            e.target.value = '';
+                          }
+                        }}
+                        className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none bg-white text-gray-900"
+                      >
+                        <option value="">Selecione uma mídia para adicionar</option>
+                        {availableMediaItems
+                          .filter(m => !campaignMediaItems.find(cm => cm.id === m.id))
+                          .map(media => (
+                            <option key={media.id} value={media.id}>
+                              {MEDIA_TYPE_ICONS[media.type] || ''} {media.title} ({media.type})
+                            </option>
+                          ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowSpecialMediaModal(true)}
+                        className="px-4 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2 whitespace-nowrap"
+                        title="Adicionar midia especial (Hora Certa, Cotacao, Previsao do Tempo)"
+                      >
+                        <span>✨</span>
+                        <span className="hidden sm:inline">Midia Especial</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1077,6 +1173,24 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                             <span className="font-medium">{counts.rtmp}</span>
                           </div>
                         )}
+                        {counts.clock > 0 && (
+                          <div className="flex items-center gap-1 text-blue-600" title="Hora Certa">
+                            <ClockIcon className="w-4 h-4" />
+                            <span className="font-medium">{counts.clock}</span>
+                          </div>
+                        )}
+                        {counts.currency > 0 && (
+                          <div className="flex items-center gap-1 text-emerald-600" title="Cotação">
+                            <span className="text-sm">💹</span>
+                            <span className="font-medium">{counts.currency}</span>
+                          </div>
+                        )}
+                        {counts.weather > 0 && (
+                          <div className="flex items-center gap-1 text-amber-600" title="Previsão do Tempo">
+                            <span className="text-sm">🌤️</span>
+                            <span className="font-medium">{counts.weather}</span>
+                          </div>
+                        )}
                         <div className="ml-auto text-gray-500">
                           = <span className="font-semibold">{counts.total}</span> {counts.total === 1 ? 'mídia' : 'mídias'}
                         </div>
@@ -1107,15 +1221,13 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                     )}
                   </button>
 
-                  <a
-                    href={`/preview/${campaign.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => handleOpenPreview(campaign)}
                     className="px-3 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all inline-flex items-center justify-center"
                     title="Visualizar preview"
                   >
                     <EyeIcon className="w-4 h-4" />
-                  </a>
+                  </button>
 
                   <button
                     onClick={() => handleEdit(campaign)}
@@ -1149,6 +1261,36 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
           )}
         </>
       )}
+
+      {/* Modal de edição de mídia */}
+      <MediaEditModal
+        media={editingMedia}
+        isOpen={showMediaEditModal}
+        onClose={() => {
+          setShowMediaEditModal(false);
+          setEditingMedia(null);
+        }}
+        onSave={handleSaveMedia}
+      />
+
+      {/* Modal de mídia especial */}
+      <SpecialMediaModal
+        isOpen={showSpecialMediaModal}
+        onClose={() => setShowSpecialMediaModal(false)}
+        onSave={handleSaveSpecialMedia}
+        advertiserId={selectedAdvertiser}
+      />
+
+      {/* Modal de preview do player */}
+      <PlayerPreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => {
+          setShowPreviewModal(false);
+          setSelectedCampaignForPreview(null);
+        }}
+        monitor={null}
+        campaign={selectedCampaignForPreview}
+      />
     </div>
   );
 }

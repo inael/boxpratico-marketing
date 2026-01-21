@@ -11,6 +11,10 @@ import SettingsTab from '@/components/admin/SettingsTab';
 import MonitorsTab from '@/components/admin/MonitorsTab';
 import AdvertisersTab from '@/components/admin/AdvertisersTab';
 import ReportsTab from '@/components/admin/ReportsTab';
+import ContractsTab from '@/components/admin/ContractsTab';
+import UsersTab from '@/components/admin/UsersTab';
+import MediaGroupsTab from '@/components/admin/MediaGroupsTab';
+import LibraryTab from '@/components/admin/LibraryTab';
 import OnboardingWizard from '@/components/admin/OnboardingWizard';
 import dynamic from 'next/dynamic';
 import { brazilianStates, citiesByState } from '@/lib/brazilian-cities';
@@ -1598,9 +1602,29 @@ export default function AdminPage() {
             <AdvertisersTab />
           )}
 
+          {/* Contracts Tab */}
+          {activeTab === 'contracts' && (
+            <ContractsTab />
+          )}
+
+          {/* Users Tab */}
+          {activeTab === 'users' && (
+            <UsersTab />
+          )}
+
           {/* Reports Tab */}
           {activeTab === 'reports' && (
             <ReportsTab condominiums={condominiums} monitors={monitors} />
+          )}
+
+          {/* Media Groups Tab */}
+          {activeTab === 'media-groups' && (
+            <MediaGroupsTab />
+          )}
+
+          {/* Library Tab */}
+          {activeTab === 'library' && (
+            <LibraryTab />
           )}
 
           {/* Campaigns Tab */}

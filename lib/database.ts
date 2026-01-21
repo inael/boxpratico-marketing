@@ -19,6 +19,12 @@ import {
   Monitor,
   MediaItem,
   Advertiser,
+  Contract,
+  User,
+  MediaGroup,
+  LibraryItem,
+  LibraryFolder,
+  RemoteCommand,
 } from '@/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -577,4 +583,682 @@ export async function deleteAdvertiser(id: string): Promise<boolean> {
   }
 
   return true;
+}
+
+// ============================================
+// CONTRACTS (Contratos)
+// ============================================
+
+export async function getContracts(): Promise<Contract[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<Contract>('contracts');
+  }
+  return readJsonFile<Contract>('contracts.json');
+}
+
+export async function getContractById(id: string): Promise<Contract | null> {
+  if (isRedisConfigured()) {
+    return getEntity<Contract>('contracts', id);
+  }
+  const contracts = await readJsonFile<Contract>('contracts.json');
+  return contracts.find(c => c.id === id) || null;
+}
+
+export async function getContractsByCondominiumId(condominiumId: string): Promise<Contract[]> {
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`contracts:byCondominium:${condominiumId}`);
+    if (ids.length === 0) return [];
+    const contracts = await Promise.all(ids.map(id => getEntity<Contract>('contracts', id)));
+    return contracts.filter((c): c is Contract => c !== null);
+  }
+  const contracts = await readJsonFile<Contract>('contracts.json');
+  return contracts.filter(c => c.condominiumId === condominiumId);
+}
+
+export async function getContractsByAdvertiserId(advertiserId: string): Promise<Contract[]> {
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`contracts:byAdvertiser:${advertiserId}`);
+    if (ids.length === 0) return [];
+    const contracts = await Promise.all(ids.map(id => getEntity<Contract>('contracts', id)));
+    return contracts.filter((c): c is Contract => c !== null);
+  }
+  const contracts = await readJsonFile<Contract>('contracts.json');
+  return contracts.filter(c => c.advertiserId === advertiserId);
+}
+
+export async function createContract(data: Omit<Contract, 'id' | 'createdAt' | 'updatedAt'>): Promise<Contract> {
+  const contract: Contract = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('contracts', contract.id, contract);
+    if (contract.condominiumId) {
+      await addToIndex(`contracts:byCondominium:${contract.condominiumId}`, contract.id);
+    }
+    if (contract.advertiserId) {
+      await addToIndex(`contracts:byAdvertiser:${contract.advertiserId}`, contract.id);
+    }
+    await addToIndex(`contracts:byType:${contract.type}`, contract.id);
+    await addToIndex(`contracts:byStatus:${contract.status}`, contract.id);
+  } else {
+    const contracts = await readJsonFile<Contract>('contracts.json');
+    contracts.push(contract);
+    await writeJsonFile('contracts.json', contracts);
+  }
+
+  return contract;
+}
+
+export async function updateContract(id: string, updates: Partial<Contract>): Promise<Contract | null> {
+  const existing = await getContractById(id);
+  if (!existing) return null;
+
+  const updated: Contract = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    // Update status index if changed
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`contracts:byStatus:${existing.status}`, id);
+      await addToIndex(`contracts:byStatus:${updates.status}`, id);
+    }
+    await setEntity('contracts', id, updated);
+  } else {
+    const contracts = await readJsonFile<Contract>('contracts.json');
+    const index = contracts.findIndex(c => c.id === id);
+    if (index !== -1) {
+      contracts[index] = updated;
+      await writeJsonFile('contracts.json', contracts);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteContract(id: string): Promise<boolean> {
+  const existing = await getContractById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    if (existing.condominiumId) {
+      await removeFromIndex(`contracts:byCondominium:${existing.condominiumId}`, id);
+    }
+    if (existing.advertiserId) {
+      await removeFromIndex(`contracts:byAdvertiser:${existing.advertiserId}`, id);
+    }
+    await removeFromIndex(`contracts:byType:${existing.type}`, id);
+    await removeFromIndex(`contracts:byStatus:${existing.status}`, id);
+    await deleteEntity('contracts', id);
+  } else {
+    const contracts = await readJsonFile<Contract>('contracts.json');
+    const filtered = contracts.filter(c => c.id !== id);
+    await writeJsonFile('contracts.json', filtered);
+  }
+
+  return true;
+}
+
+// ============================================
+// USERS (Usuarios)
+// ============================================
+
+export async function getUsers(): Promise<User[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<User>('users');
+  }
+  return readJsonFile<User>('users.json');
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  if (isRedisConfigured()) {
+    return getEntity<User>('users', id);
+  }
+  const users = await readJsonFile<User>('users.json');
+  return users.find(u => u.id === id) || null;
+}
+
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const users = await getUsers();
+  return users.find(u => u.email.toLowerCase() === email.toLowerCase()) || null;
+}
+
+export async function createUser(data: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+  const user: User = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('users', user.id, user);
+    await addToIndex(`users:byEmail:${user.email.toLowerCase()}`, user.id);
+    await addToIndex(`users:byRole:${user.role}`, user.id);
+  } else {
+    const users = await readJsonFile<User>('users.json');
+    users.push(user);
+    await writeJsonFile('users.json', users);
+  }
+
+  return user;
+}
+
+export async function updateUser(id: string, updates: Partial<User>): Promise<User | null> {
+  const existing = await getUserById(id);
+  if (!existing) return null;
+
+  const updated: User = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    if (updates.email && updates.email !== existing.email) {
+      await removeFromIndex(`users:byEmail:${existing.email.toLowerCase()}`, id);
+      await addToIndex(`users:byEmail:${updates.email.toLowerCase()}`, id);
+    }
+    if (updates.role && updates.role !== existing.role) {
+      await removeFromIndex(`users:byRole:${existing.role}`, id);
+      await addToIndex(`users:byRole:${updates.role}`, id);
+    }
+    await setEntity('users', id, updated);
+  } else {
+    const users = await readJsonFile<User>('users.json');
+    const index = users.findIndex(u => u.id === id);
+    if (index !== -1) {
+      users[index] = updated;
+      await writeJsonFile('users.json', users);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  const existing = await getUserById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await removeFromIndex(`users:byEmail:${existing.email.toLowerCase()}`, id);
+    await removeFromIndex(`users:byRole:${existing.role}`, id);
+    await deleteEntity('users', id);
+  } else {
+    const users = await readJsonFile<User>('users.json');
+    const filtered = users.filter(u => u.id !== id);
+    await writeJsonFile('users.json', filtered);
+  }
+
+  return true;
+}
+
+// ============================================
+// MEDIA GROUPS (Grupos de Midias)
+// ============================================
+
+export async function getMediaGroups(): Promise<MediaGroup[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<MediaGroup>('media-groups');
+  }
+  return readJsonFile<MediaGroup>('media-groups.json');
+}
+
+export async function getMediaGroupById(id: string): Promise<MediaGroup | null> {
+  if (isRedisConfigured()) {
+    return getEntity<MediaGroup>('media-groups', id);
+  }
+  const groups = await readJsonFile<MediaGroup>('media-groups.json');
+  return groups.find(g => g.id === id) || null;
+}
+
+export async function getMediaGroupBySlug(slug: string): Promise<MediaGroup | null> {
+  if (isRedisConfigured()) {
+    const id = await getIdBySlug('media-groups', slug);
+    if (!id) return null;
+    return getEntity<MediaGroup>('media-groups', id);
+  }
+  const groups = await readJsonFile<MediaGroup>('media-groups.json');
+  return groups.find(g => g.slug === slug) || null;
+}
+
+export async function getMediaGroupsByAdvertiserId(advertiserId: string): Promise<MediaGroup[]> {
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`media-groups:byAdvertiser:${advertiserId}`);
+    if (ids.length === 0) return [];
+    const groups = await Promise.all(ids.map(id => getEntity<MediaGroup>('media-groups', id)));
+    return groups.filter((g): g is MediaGroup => g !== null);
+  }
+  const groups = await readJsonFile<MediaGroup>('media-groups.json');
+  return groups.filter(g => g.advertiserId === advertiserId);
+}
+
+export async function createMediaGroup(data: Omit<MediaGroup, 'id' | 'createdAt' | 'updatedAt'>): Promise<MediaGroup> {
+  const group: MediaGroup = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('media-groups', group.id, group);
+    await setSlugMapping('media-groups', group.slug, group.id);
+    if (group.advertiserId) {
+      await addToIndex(`media-groups:byAdvertiser:${group.advertiserId}`, group.id);
+    }
+  } else {
+    const groups = await readJsonFile<MediaGroup>('media-groups.json');
+    groups.push(group);
+    await writeJsonFile('media-groups.json', groups);
+  }
+
+  return group;
+}
+
+export async function updateMediaGroup(id: string, updates: Partial<MediaGroup>): Promise<MediaGroup | null> {
+  const existing = await getMediaGroupById(id);
+  if (!existing) return null;
+
+  const updated: MediaGroup = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    // Update slug mapping if changed
+    if (updates.slug && updates.slug !== existing.slug) {
+      await deleteSlugMapping('media-groups', existing.slug);
+      await setSlugMapping('media-groups', updates.slug, id);
+    }
+    // Update advertiser index if changed
+    if (updates.advertiserId !== undefined && updates.advertiserId !== existing.advertiserId) {
+      if (existing.advertiserId) {
+        await removeFromIndex(`media-groups:byAdvertiser:${existing.advertiserId}`, id);
+      }
+      if (updates.advertiserId) {
+        await addToIndex(`media-groups:byAdvertiser:${updates.advertiserId}`, id);
+      }
+    }
+    await setEntity('media-groups', id, updated);
+  } else {
+    const groups = await readJsonFile<MediaGroup>('media-groups.json');
+    const index = groups.findIndex(g => g.id === id);
+    if (index !== -1) {
+      groups[index] = updated;
+      await writeJsonFile('media-groups.json', groups);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteMediaGroup(id: string): Promise<boolean> {
+  const existing = await getMediaGroupById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await deleteSlugMapping('media-groups', existing.slug);
+    if (existing.advertiserId) {
+      await removeFromIndex(`media-groups:byAdvertiser:${existing.advertiserId}`, id);
+    }
+    await deleteEntity('media-groups', id);
+  } else {
+    const groups = await readJsonFile<MediaGroup>('media-groups.json');
+    const filtered = groups.filter(g => g.id !== id);
+    await writeJsonFile('media-groups.json', filtered);
+  }
+
+  return true;
+}
+
+// ============================================
+// LIBRARY ITEMS (Biblioteca de Conteudos)
+// ============================================
+
+export async function getLibraryItems(): Promise<LibraryItem[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<LibraryItem>('library-items');
+  }
+  return readJsonFile<LibraryItem>('library-items.json');
+}
+
+export async function getLibraryItemById(id: string): Promise<LibraryItem | null> {
+  if (isRedisConfigured()) {
+    return getEntity<LibraryItem>('library-items', id);
+  }
+  const items = await readJsonFile<LibraryItem>('library-items.json');
+  return items.find(i => i.id === id) || null;
+}
+
+export async function getLibraryItemsByFolder(folder: string): Promise<LibraryItem[]> {
+  const items = await getLibraryItems();
+  return items.filter(i => i.folder === folder);
+}
+
+export async function getLibraryItemsByAdvertiserId(advertiserId: string): Promise<LibraryItem[]> {
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`library-items:byAdvertiser:${advertiserId}`);
+    if (ids.length === 0) return [];
+    const items = await Promise.all(ids.map(id => getEntity<LibraryItem>('library-items', id)));
+    return items.filter((i): i is LibraryItem => i !== null);
+  }
+  const items = await readJsonFile<LibraryItem>('library-items.json');
+  return items.filter(i => i.advertiserId === advertiserId);
+}
+
+export async function createLibraryItem(data: Omit<LibraryItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<LibraryItem> {
+  const item: LibraryItem = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('library-items', item.id, item);
+    if (item.advertiserId) {
+      await addToIndex(`library-items:byAdvertiser:${item.advertiserId}`, item.id);
+    }
+    if (item.folder) {
+      await addToIndex(`library-items:byFolder:${item.folder}`, item.id);
+    }
+    await addToIndex(`library-items:byType:${item.fileType}`, item.id);
+  } else {
+    const items = await readJsonFile<LibraryItem>('library-items.json');
+    items.push(item);
+    await writeJsonFile('library-items.json', items);
+  }
+
+  return item;
+}
+
+export async function updateLibraryItem(id: string, updates: Partial<LibraryItem>): Promise<LibraryItem | null> {
+  const existing = await getLibraryItemById(id);
+  if (!existing) return null;
+
+  const updated: LibraryItem = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    // Update folder index if changed
+    if (updates.folder !== undefined && updates.folder !== existing.folder) {
+      if (existing.folder) {
+        await removeFromIndex(`library-items:byFolder:${existing.folder}`, id);
+      }
+      if (updates.folder) {
+        await addToIndex(`library-items:byFolder:${updates.folder}`, id);
+      }
+    }
+    // Update advertiser index if changed
+    if (updates.advertiserId !== undefined && updates.advertiserId !== existing.advertiserId) {
+      if (existing.advertiserId) {
+        await removeFromIndex(`library-items:byAdvertiser:${existing.advertiserId}`, id);
+      }
+      if (updates.advertiserId) {
+        await addToIndex(`library-items:byAdvertiser:${updates.advertiserId}`, id);
+      }
+    }
+    await setEntity('library-items', id, updated);
+  } else {
+    const items = await readJsonFile<LibraryItem>('library-items.json');
+    const index = items.findIndex(i => i.id === id);
+    if (index !== -1) {
+      items[index] = updated;
+      await writeJsonFile('library-items.json', items);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteLibraryItem(id: string): Promise<boolean> {
+  const existing = await getLibraryItemById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    if (existing.folder) {
+      await removeFromIndex(`library-items:byFolder:${existing.folder}`, id);
+    }
+    if (existing.advertiserId) {
+      await removeFromIndex(`library-items:byAdvertiser:${existing.advertiserId}`, id);
+    }
+    await removeFromIndex(`library-items:byType:${existing.fileType}`, id);
+    await deleteEntity('library-items', id);
+  } else {
+    const items = await readJsonFile<LibraryItem>('library-items.json');
+    const filtered = items.filter(i => i.id !== id);
+    await writeJsonFile('library-items.json', filtered);
+  }
+
+  return true;
+}
+
+// ============================================
+// LIBRARY FOLDERS (Pastas da Biblioteca)
+// ============================================
+
+export async function getLibraryFolders(): Promise<LibraryFolder[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<LibraryFolder>('library-folders');
+  }
+  return readJsonFile<LibraryFolder>('library-folders.json');
+}
+
+export async function getLibraryFolderById(id: string): Promise<LibraryFolder | null> {
+  if (isRedisConfigured()) {
+    return getEntity<LibraryFolder>('library-folders', id);
+  }
+  const folders = await readJsonFile<LibraryFolder>('library-folders.json');
+  return folders.find(f => f.id === id) || null;
+}
+
+export async function createLibraryFolder(data: Omit<LibraryFolder, 'id' | 'createdAt' | 'updatedAt'>): Promise<LibraryFolder> {
+  const folder: LibraryFolder = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('library-folders', folder.id, folder);
+    await setSlugMapping('library-folders', folder.slug, folder.id);
+  } else {
+    const folders = await readJsonFile<LibraryFolder>('library-folders.json');
+    folders.push(folder);
+    await writeJsonFile('library-folders.json', folders);
+  }
+
+  return folder;
+}
+
+export async function updateLibraryFolder(id: string, updates: Partial<LibraryFolder>): Promise<LibraryFolder | null> {
+  const existing = await getLibraryFolderById(id);
+  if (!existing) return null;
+
+  const updated: LibraryFolder = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    if (updates.slug && updates.slug !== existing.slug) {
+      await deleteSlugMapping('library-folders', existing.slug);
+      await setSlugMapping('library-folders', updates.slug, id);
+    }
+    await setEntity('library-folders', id, updated);
+  } else {
+    const folders = await readJsonFile<LibraryFolder>('library-folders.json');
+    const index = folders.findIndex(f => f.id === id);
+    if (index !== -1) {
+      folders[index] = updated;
+      await writeJsonFile('library-folders.json', folders);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteLibraryFolder(id: string): Promise<boolean> {
+  const existing = await getLibraryFolderById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await deleteSlugMapping('library-folders', existing.slug);
+    await deleteEntity('library-folders', id);
+  } else {
+    const folders = await readJsonFile<LibraryFolder>('library-folders.json');
+    const filtered = folders.filter(f => f.id !== id);
+    await writeJsonFile('library-folders.json', filtered);
+  }
+
+  return true;
+}
+
+// ============================================
+// REMOTE COMMANDS (Comandos Remotos)
+// ============================================
+
+export async function getRemoteCommands(): Promise<RemoteCommand[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<RemoteCommand>('remote-commands');
+  }
+  return readJsonFile<RemoteCommand>('remote-commands.json');
+}
+
+export async function getRemoteCommandById(id: string): Promise<RemoteCommand | null> {
+  if (isRedisConfigured()) {
+    return getEntity<RemoteCommand>('remote-commands', id);
+  }
+  const commands = await readJsonFile<RemoteCommand>('remote-commands.json');
+  return commands.find(c => c.id === id) || null;
+}
+
+export async function getRemoteCommandsByMonitorId(monitorId: string): Promise<RemoteCommand[]> {
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`remote-commands:byMonitor:${monitorId}`);
+    if (ids.length === 0) return [];
+    const commands = await Promise.all(ids.map(id => getEntity<RemoteCommand>('remote-commands', id)));
+    return commands.filter((c): c is RemoteCommand => c !== null);
+  }
+  const commands = await readJsonFile<RemoteCommand>('remote-commands.json');
+  return commands.filter(c => c.monitorId === monitorId);
+}
+
+export async function getPendingCommandsForMonitor(monitorId: string): Promise<RemoteCommand[]> {
+  const commands = await getRemoteCommandsByMonitorId(monitorId);
+  return commands.filter(c => c.status === 'pending' || c.status === 'sent');
+}
+
+export async function createRemoteCommand(
+  data: Omit<RemoteCommand, 'id' | 'createdAt' | 'status'>
+): Promise<RemoteCommand> {
+  const command: RemoteCommand = {
+    ...data,
+    id: Date.now().toString(),
+    status: 'pending',
+    createdAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('remote-commands', command.id, command);
+    await addToIndex(`remote-commands:byMonitor:${command.monitorId}`, command.id);
+    await addToIndex(`remote-commands:byStatus:${command.status}`, command.id);
+  } else {
+    const commands = await readJsonFile<RemoteCommand>('remote-commands.json');
+    commands.push(command);
+    await writeJsonFile('remote-commands.json', commands);
+  }
+
+  return command;
+}
+
+export async function updateRemoteCommand(
+  id: string,
+  updates: Partial<RemoteCommand>
+): Promise<RemoteCommand | null> {
+  const existing = await getRemoteCommandById(id);
+  if (!existing) return null;
+
+  const updated: RemoteCommand = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+  };
+
+  if (isRedisConfigured()) {
+    // Update status index if changed
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`remote-commands:byStatus:${existing.status}`, id);
+      await addToIndex(`remote-commands:byStatus:${updates.status}`, id);
+    }
+    await setEntity('remote-commands', id, updated);
+  } else {
+    const commands = await readJsonFile<RemoteCommand>('remote-commands.json');
+    const index = commands.findIndex(c => c.id === id);
+    if (index !== -1) {
+      commands[index] = updated;
+      await writeJsonFile('remote-commands.json', commands);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteRemoteCommand(id: string): Promise<boolean> {
+  const existing = await getRemoteCommandById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await removeFromIndex(`remote-commands:byMonitor:${existing.monitorId}`, id);
+    await removeFromIndex(`remote-commands:byStatus:${existing.status}`, id);
+    await deleteEntity('remote-commands', id);
+  } else {
+    const commands = await readJsonFile<RemoteCommand>('remote-commands.json');
+    const filtered = commands.filter(c => c.id !== id);
+    await writeJsonFile('remote-commands.json', filtered);
+  }
+
+  return true;
+}
+
+// Limpar comandos antigos (mais de 7 dias)
+export async function cleanupOldCommands(): Promise<number> {
+  const commands = await getRemoteCommands();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+  let deletedCount = 0;
+  for (const command of commands) {
+    const createdAt = new Date(command.createdAt);
+    if (createdAt < sevenDaysAgo && (command.status === 'executed' || command.status === 'failed')) {
+      await deleteRemoteCommand(command.id);
+      deletedCount++;
+    }
+  }
+
+  return deletedCount;
 }

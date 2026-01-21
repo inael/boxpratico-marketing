@@ -13,8 +13,13 @@ import {
   SignalIcon,
   SignalSlashIcon,
   ClockIcon,
+  CommandLineIcon,
+  EyeIcon,
 } from '@heroicons/react/24/outline';
-import { Monitor, Condominium, Campaign, MediaItem, ScreenOrientation } from '@/types';
+import { Monitor, Condominium, Campaign, MediaItem, ScreenOrientation, SocialClass } from '@/types';
+import { LabelWithTooltip } from '@/components/ui/Tooltip';
+import RemoteCommandModal from './RemoteCommandModal';
+import PlayerPreviewModal from './PlayerPreviewModal';
 
 // Helper to send WhatsApp notifications
 async function sendWhatsAppNotification(
@@ -63,8 +68,36 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('22:00');
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]); // Todos os dias
-  // Orientação da tela
+  // Orientacao da tela
   const [orientation, setOrientation] = useState<ScreenOrientation>('horizontal');
+  // Metricas de audiencia
+  const [averageMonthlyTraffic, setAverageMonthlyTraffic] = useState<number | ''>('');
+  const [averagePeoplePerHour, setAveragePeoplePerHour] = useState<number | ''>('');
+  const [socialClass, setSocialClass] = useState<SocialClass | ''>('');
+  // Configuracoes do terminal
+  const [updateCycleMinutes, setUpdateCycleMinutes] = useState<number>(10);
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
+  // Barra de rodape
+  const [footerEnabled, setFooterEnabled] = useState<boolean>(false);
+  const [footerText, setFooterText] = useState<string>('');
+  // Mostrar configuracoes avancadas
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+  // Modal de comandos remotos
+  const [showCommandModal, setShowCommandModal] = useState(false);
+  const [selectedMonitorForCommand, setSelectedMonitorForCommand] = useState<Monitor | null>(null);
+  // Modal de preview do player
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [selectedMonitorForPreview, setSelectedMonitorForPreview] = useState<Monitor | null>(null);
+
+  const handleOpenCommands = (monitor: Monitor) => {
+    setSelectedMonitorForCommand(monitor);
+    setShowCommandModal(true);
+  };
+
+  const handleOpenPreview = (monitor: Monitor) => {
+    setSelectedMonitorForPreview(monitor);
+    setShowPreviewModal(true);
+  };
 
   useEffect(() => {
     if (condominiums.length > 0 && !selectedCondominium) {
@@ -267,7 +300,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Montar objeto de horário de funcionamento
+    // Montar objeto de horario de funcionamento
     const operatingSchedule = {
       is24h,
       startTime: is24h ? undefined : startTime,
@@ -275,18 +308,28 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
       daysOfWeek: is24h ? undefined : daysOfWeek,
     };
 
+    // Dados do monitor
+    const monitorData = {
+      name: monitorName,
+      slug: monitorSlug,
+      location: monitorLocation,
+      orientation,
+      operatingSchedule,
+      averageMonthlyTraffic: averageMonthlyTraffic || undefined,
+      averagePeoplePerHour: averagePeoplePerHour || undefined,
+      socialClass: socialClass || undefined,
+      updateCycleMinutes,
+      soundEnabled,
+      footerEnabled,
+      footerText: footerEnabled ? footerText : undefined,
+    };
+
     try {
       if (editingMonitor) {
         const response = await fetch(`/api/monitors/${editingMonitor.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: monitorName,
-            slug: monitorSlug,
-            location: monitorLocation,
-            orientation,
-            operatingSchedule,
-          }),
+          body: JSON.stringify(monitorData),
         });
 
         if (response.ok) {
@@ -301,13 +344,9 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            name: monitorName,
-            slug: monitorSlug,
-            location: monitorLocation,
+            ...monitorData,
             condominiumId: selectedCondominium,
             isActive: true,
-            orientation,
-            operatingSchedule,
           }),
         });
 
@@ -360,6 +399,22 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
 
   const handleEdit = (monitor: Monitor) => {
     setEditingMonitor(monitor);
+    setMonitorName(monitor.name);
+    setMonitorSlug(monitor.slug);
+    setMonitorLocation(monitor.location || '');
+    setOrientation(monitor.orientation || 'horizontal');
+    setIs24h(monitor.operatingSchedule?.is24h !== false);
+    setStartTime(monitor.operatingSchedule?.startTime || '08:00');
+    setEndTime(monitor.operatingSchedule?.endTime || '22:00');
+    setDaysOfWeek(monitor.operatingSchedule?.daysOfWeek || [0, 1, 2, 3, 4, 5, 6]);
+    setAverageMonthlyTraffic(monitor.averageMonthlyTraffic || '');
+    setAveragePeoplePerHour(monitor.averagePeoplePerHour || '');
+    setSocialClass(monitor.socialClass || '');
+    setUpdateCycleMinutes(monitor.updateCycleMinutes || 10);
+    setSoundEnabled(monitor.soundEnabled || false);
+    setFooterEnabled(monitor.footerEnabled || false);
+    setFooterText(monitor.footerText || '');
+    setShowAdvanced(!!monitor.averageMonthlyTraffic || !!monitor.footerEnabled);
     setShowForm(true);
   };
 
@@ -388,6 +443,14 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
     setStartTime('08:00');
     setEndTime('22:00');
     setDaysOfWeek([0, 1, 2, 3, 4, 5, 6]);
+    setAverageMonthlyTraffic('');
+    setAveragePeoplePerHour('');
+    setSocialClass('');
+    setUpdateCycleMinutes(10);
+    setSoundEnabled(false);
+    setFooterEnabled(false);
+    setFooterText('');
+    setShowAdvanced(false);
     setEditingMonitor(null);
     setShowForm(false);
   };
@@ -646,11 +709,158 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                       </div>
 
                       <p className="text-xs text-gray-500">
-                        A tela ficará ativa de {startTime} às {endTime} nos dias selecionados
+                        A tela ficara ativa de {startTime} as {endTime} nos dias selecionados
                       </p>
                     </div>
                   )}
                 </div>
+
+                {/* Botao para mostrar configuracoes avancadas */}
+                <div className="border-t border-gray-200 pt-4 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="flex items-center gap-2 text-sm font-medium text-[#F59E0B] hover:text-[#D97706]"
+                  >
+                    {showAdvanced ? '▼' : '▶'} Configuracoes Avancadas
+                  </button>
+                </div>
+
+                {showAdvanced && (
+                  <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    {/* Metricas de Audiencia */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        Metricas de Audiencia
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <LabelWithTooltip
+                            label="Fluxo mensal de pessoas"
+                            tooltip="Quantas pessoas circulam neste local por mes. Usado para calcular o alcance dos anuncios."
+                            htmlFor="averageMonthlyTraffic"
+                          />
+                          <input
+                            id="averageMonthlyTraffic"
+                            type="number"
+                            min={0}
+                            value={averageMonthlyTraffic}
+                            onChange={(e) => setAverageMonthlyTraffic(e.target.value ? parseInt(e.target.value) : '')}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white"
+                            placeholder="Ex: 5000"
+                          />
+                        </div>
+                        <div>
+                          <LabelWithTooltip
+                            label="Media de pessoas/hora"
+                            tooltip="Quantas pessoas estao presentes simultaneamente em media. Ex: em uma academia, podem ter 30 pessoas ao mesmo tempo."
+                            htmlFor="averagePeoplePerHour"
+                          />
+                          <input
+                            id="averagePeoplePerHour"
+                            type="number"
+                            min={0}
+                            value={averagePeoplePerHour}
+                            onChange={(e) => setAveragePeoplePerHour(e.target.value ? parseInt(e.target.value) : '')}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white"
+                            placeholder="Ex: 30"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <LabelWithTooltip
+                          label="Classe social predominante"
+                          tooltip="Classe social do publico que frequenta o local. Ajuda anunciantes a segmentar campanhas."
+                        />
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {(['A', 'B', 'C', 'D', 'E'] as SocialClass[]).map((cls) => (
+                            <button
+                              key={cls}
+                              type="button"
+                              onClick={() => setSocialClass(socialClass === cls ? '' : cls)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                socialClass === cls
+                                  ? 'bg-[#F59E0B] text-white'
+                                  : 'bg-white border border-gray-300 text-gray-600 hover:border-[#F59E0B]'
+                              }`}
+                            >
+                              Classe {cls}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Configuracoes do Terminal */}
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Configuracoes do Terminal</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <LabelWithTooltip
+                            label="Ciclo de atualizacao (min)"
+                            tooltip="Intervalo em minutos para verificar novas midias no servidor. Recomendado: 10 minutos."
+                            htmlFor="updateCycleMinutes"
+                          />
+                          <input
+                            id="updateCycleMinutes"
+                            type="number"
+                            min={1}
+                            max={60}
+                            value={updateCycleMinutes}
+                            onChange={(e) => setUpdateCycleMinutes(parseInt(e.target.value) || 10)}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white"
+                          />
+                        </div>
+                        <div className="flex items-center">
+                          <label className="flex items-center gap-3 cursor-pointer mt-6">
+                            <input
+                              type="checkbox"
+                              checked={soundEnabled}
+                              onChange={(e) => setSoundEnabled(e.target.checked)}
+                              className="w-5 h-5 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+                            />
+                            <span className="text-sm text-gray-700">Som do terminal ligado</span>
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Barra de Rodape */}
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                          Barra de Rodape (Ticker)
+                        </h4>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={footerEnabled}
+                            onChange={(e) => setFooterEnabled(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#F59E0B]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F59E0B]"></div>
+                        </label>
+                      </div>
+                      {footerEnabled && (
+                        <div>
+                          <LabelWithTooltip
+                            label="Texto do rodape"
+                            tooltip="Texto que aparecera rolando na parte inferior da tela. Use para avisos, informacoes do local, etc."
+                            htmlFor="footerText"
+                          />
+                          <textarea
+                            id="footerText"
+                            value={footerText}
+                            onChange={(e) => setFooterText(e.target.value)}
+                            rows={2}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white resize-none"
+                            placeholder="Ex: Bem-vindo ao Condominio! WiFi: condominio123 | Proibido fumar nas areas comuns"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex gap-3 pt-4">
                   <button
@@ -815,6 +1025,22 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                     </button>
 
                     <button
+                      onClick={() => handleOpenPreview(monitor)}
+                      className="px-2 sm:px-3 py-2 rounded-lg bg-cyan-50 text-cyan-600 hover:bg-cyan-100 transition-all"
+                      title="Visualizar player"
+                    >
+                      <EyeIcon className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      onClick={() => handleOpenCommands(monitor)}
+                      className="px-2 sm:px-3 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all"
+                      title="Comandos remotos"
+                    >
+                      <CommandLineIcon className="w-4 h-4" />
+                    </button>
+
+                    <button
                       onClick={() => handleEdit(monitor)}
                       className="px-2 sm:px-3 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
                     >
@@ -847,6 +1073,26 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
           )}
         </>
       )}
+
+      {/* Modal de comandos remotos */}
+      <RemoteCommandModal
+        isOpen={showCommandModal}
+        onClose={() => {
+          setShowCommandModal(false);
+          setSelectedMonitorForCommand(null);
+        }}
+        monitor={selectedMonitorForCommand}
+      />
+
+      {/* Modal de preview do player */}
+      <PlayerPreviewModal
+        isOpen={showPreviewModal}
+        onClose={() => {
+          setShowPreviewModal(false);
+          setSelectedMonitorForPreview(null);
+        }}
+        monitor={selectedMonitorForPreview}
+      />
     </div>
   );
 }

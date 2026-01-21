@@ -13,6 +13,10 @@ import {
   XMarkIcon,
   UserGroupIcon,
   DocumentChartBarIcon,
+  DocumentTextIcon,
+  UsersIcon,
+  FolderIcon,
+  CloudArrowUpIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 
@@ -30,7 +34,11 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     { id: 'monitors', label: 'Telas', icon: TvIcon },
     { id: 'advertisers', label: 'Anunciantes', icon: UserGroupIcon },
     { id: 'media', label: 'Mídias', icon: PhotoIcon },
+    { id: 'media-groups', label: 'Grupos de Mídias', icon: FolderIcon },
+    { id: 'library', label: 'Biblioteca', icon: CloudArrowUpIcon },
     { id: 'campaigns', label: 'Playlists', icon: MegaphoneIcon },
+    { id: 'contracts', label: 'Contratos', icon: DocumentTextIcon },
+    { id: 'users', label: 'Usuários', icon: UsersIcon },
     { id: 'reports', label: 'Relatórios', icon: DocumentChartBarIcon },
     { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
     { id: 'settings', label: 'Configurações', icon: CogIcon },
