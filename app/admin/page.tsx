@@ -136,13 +136,20 @@ export default function AdminPage() {
   // Advertisers state
   const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
   const [selectedAdvertiserId, setSelectedAdvertiserId] = useState<string>('');
+  // Loading state for dashboard
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
 
   useEffect(() => {
     if (status === 'authenticated') {
-      loadCondominiums();
-      loadMonitors();
-      loadAllCampaigns();
-      loadAdvertisers();
+      setIsLoadingData(true);
+      Promise.all([
+        loadCondominiums(),
+        loadMonitors(),
+        loadAllCampaigns(),
+        loadAdvertisers(),
+      ]).finally(() => {
+        setIsLoadingData(false);
+      });
     }
   }, [status]);
 
@@ -885,18 +892,56 @@ export default function AdminPage() {
                   <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Dashboard</h2>
                   <p className="text-gray-600 mt-1 text-sm sm:text-base">Visão geral do sistema</p>
                 </div>
-                <button
-                  onClick={() => setShowOnboarding(true)}
-                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-5 py-2.5 rounded-xl hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all font-semibold text-sm transform hover:scale-105 w-full sm:w-auto"
-                >
-                  <SparklesIcon className="w-5 h-5" />
-                  <span className="hidden xs:inline">Criar Playlist Fácil</span>
-                  <span className="xs:hidden">Nova Playlist</span>
-                </button>
+                {!isLoadingData && (
+                  <button
+                    onClick={() => setShowOnboarding(true)}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-5 py-2.5 rounded-xl hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] transition-all font-semibold text-sm transform hover:scale-105 w-full sm:w-auto"
+                  >
+                    <SparklesIcon className="w-5 h-5" />
+                    <span className="hidden xs:inline">Criar Playlist Fácil</span>
+                    <span className="xs:hidden">Nova Playlist</span>
+                  </button>
+                )}
               </div>
 
+              {/* Loading Skeleton */}
+              {isLoadingData && (
+                <div className="space-y-6 animate-pulse">
+                  {/* Skeleton for stats cards */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="bg-white/80 rounded-xl sm:rounded-2xl p-3 sm:p-6 border border-gray-100">
+                        <div className="flex items-center justify-between mb-2 sm:mb-4">
+                          <div className="w-10 h-10 sm:w-14 sm:h-14 bg-gray-200 rounded-xl sm:rounded-2xl" />
+                          <div className="w-12 h-5 bg-gray-200 rounded-full" />
+                        </div>
+                        <div className="w-12 h-8 bg-gray-200 rounded mb-2" />
+                        <div className="w-16 h-4 bg-gray-200 rounded" />
+                      </div>
+                    ))}
+                  </div>
+                  {/* Skeleton for media types */}
+                  <div>
+                    <div className="w-32 h-6 bg-gray-200 rounded mb-4" />
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="bg-white rounded-xl p-3 sm:p-4 border border-gray-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-200 rounded-lg" />
+                            <div>
+                              <div className="w-8 h-6 bg-gray-200 rounded mb-1" />
+                              <div className="w-12 h-3 bg-gray-200 rounded" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Welcome Card for First Time Users */}
-              {isFirstTime && (
+              {!isLoadingData && isFirstTime && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -924,6 +969,9 @@ export default function AdminPage() {
                 </motion.div>
               )}
 
+              {/* Dashboard Content - only show when data is loaded */}
+              {!isLoadingData && (
+                <>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
                 <motion.button
                   initial={{ opacity: 0, y: 20 }}
@@ -1087,6 +1135,8 @@ export default function AdminPage() {
                   </div>
                 </div>
               </motion.div>
+                </>
+              )}
             </div>
           )}
 
