@@ -13,6 +13,7 @@ import AdvertisersTab from '@/components/admin/AdvertisersTab';
 import ReportsTab from '@/components/admin/ReportsTab';
 import ContractsTab from '@/components/admin/ContractsTab';
 import UsersTab from '@/components/admin/UsersTab';
+import AccountsTab from '@/components/admin/AccountsTab';
 import MediaGroupsTab from '@/components/admin/MediaGroupsTab';
 import LibraryTab from '@/components/admin/LibraryTab';
 import OnboardingWizard from '@/components/admin/OnboardingWizard';
@@ -1610,6 +1611,11 @@ export default function AdminPage() {
           {/* Users Tab */}
           {activeTab === 'users' && (
             <UsersTab />
+          )}
+
+          {/* Accounts Tab */}
+          {activeTab === 'accounts' && (
+            <AccountsTab />
           )}
 
           {/* Reports Tab */}

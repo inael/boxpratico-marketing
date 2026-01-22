@@ -17,6 +17,7 @@ import {
   UsersIcon,
   FolderIcon,
   CloudArrowUpIcon,
+  BuildingStorefrontIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 
@@ -38,6 +39,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
     { id: 'library', label: 'Biblioteca', icon: CloudArrowUpIcon },
     { id: 'campaigns', label: 'Playlists', icon: MegaphoneIcon },
     { id: 'contracts', label: 'Contratos', icon: DocumentTextIcon },
+    { id: 'accounts', label: 'Contas', icon: BuildingStorefrontIcon },
     { id: 'users', label: 'Usuários', icon: UsersIcon },
     { id: 'reports', label: 'Relatórios', icon: DocumentChartBarIcon },
     { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },

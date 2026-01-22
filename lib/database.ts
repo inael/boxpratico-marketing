@@ -25,6 +25,10 @@ import {
   LibraryItem,
   LibraryFolder,
   RemoteCommand,
+  Account,
+  ActivationCode,
+  generateActivationCode,
+  ACCOUNT_PLAN_LIMITS,
 } from '@/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -1256,6 +1260,379 @@ export async function cleanupOldCommands(): Promise<number> {
     const createdAt = new Date(command.createdAt);
     if (createdAt < sevenDaysAgo && (command.status === 'executed' || command.status === 'failed')) {
       await deleteRemoteCommand(command.id);
+      deletedCount++;
+    }
+  }
+
+  return deletedCount;
+}
+
+// ============================================
+// ACCOUNTS (Contas/Tenants)
+// ============================================
+
+export async function getAccounts(): Promise<Account[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<Account>('accounts');
+  }
+  return readJsonFile<Account>('accounts.json');
+}
+
+export async function getAccountById(id: string): Promise<Account | null> {
+  if (isRedisConfigured()) {
+    return getEntity<Account>('accounts', id);
+  }
+  const accounts = await readJsonFile<Account>('accounts.json');
+  return accounts.find(a => a.id === id) || null;
+}
+
+export async function getAccountBySlug(slug: string): Promise<Account | null> {
+  if (isRedisConfigured()) {
+    const id = await getIdBySlug('accounts', slug);
+    if (!id) return null;
+    return getEntity<Account>('accounts', id);
+  }
+  const accounts = await readJsonFile<Account>('accounts.json');
+  return accounts.find(a => a.slug === slug) || null;
+}
+
+export async function getAccountByEmail(email: string): Promise<Account | null> {
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`accounts:byEmail:${email.toLowerCase()}`);
+    if (ids.length === 0) return null;
+    return getEntity<Account>('accounts', ids[0]);
+  }
+  const accounts = await readJsonFile<Account>('accounts.json');
+  return accounts.find(a => a.email.toLowerCase() === email.toLowerCase()) || null;
+}
+
+export async function createAccount(
+  data: Omit<Account, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<Account> {
+  const account: Account = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('accounts', account.id, account);
+    await setSlugMapping('accounts', account.slug, account.id);
+    await addToIndex(`accounts:byEmail:${account.email.toLowerCase()}`, account.id);
+    await addToIndex(`accounts:byStatus:${account.status}`, account.id);
+    await addToIndex(`accounts:byPlan:${account.plan}`, account.id);
+  } else {
+    const accounts = await readJsonFile<Account>('accounts.json');
+    accounts.push(account);
+    await writeJsonFile('accounts.json', accounts);
+  }
+
+  return account;
+}
+
+export async function updateAccount(
+  id: string,
+  updates: Partial<Account>
+): Promise<Account | null> {
+  const existing = await getAccountById(id);
+  if (!existing) return null;
+
+  const updated: Account = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    // Atualizar índices se mudou
+    if (updates.slug && updates.slug !== existing.slug) {
+      await deleteSlugMapping('accounts', existing.slug);
+      await setSlugMapping('accounts', updates.slug, id);
+    }
+    if (updates.email && updates.email !== existing.email) {
+      await removeFromIndex(`accounts:byEmail:${existing.email.toLowerCase()}`, id);
+      await addToIndex(`accounts:byEmail:${updates.email.toLowerCase()}`, id);
+    }
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`accounts:byStatus:${existing.status}`, id);
+      await addToIndex(`accounts:byStatus:${updates.status}`, id);
+    }
+    if (updates.plan && updates.plan !== existing.plan) {
+      await removeFromIndex(`accounts:byPlan:${existing.plan}`, id);
+      await addToIndex(`accounts:byPlan:${updates.plan}`, id);
+    }
+    await setEntity('accounts', id, updated);
+  } else {
+    const accounts = await readJsonFile<Account>('accounts.json');
+    const index = accounts.findIndex(a => a.id === id);
+    if (index !== -1) {
+      accounts[index] = updated;
+      await writeJsonFile('accounts.json', accounts);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteAccount(id: string): Promise<boolean> {
+  const existing = await getAccountById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await deleteSlugMapping('accounts', existing.slug);
+    await removeFromIndex(`accounts:byEmail:${existing.email.toLowerCase()}`, id);
+    await removeFromIndex(`accounts:byStatus:${existing.status}`, id);
+    await removeFromIndex(`accounts:byPlan:${existing.plan}`, id);
+    await deleteEntity('accounts', id);
+  } else {
+    const accounts = await readJsonFile<Account>('accounts.json');
+    const filtered = accounts.filter(a => a.id !== id);
+    await writeJsonFile('accounts.json', filtered);
+  }
+
+  return true;
+}
+
+// Criar conta trial
+export async function createTrialAccount(data: {
+  name: string;
+  ownerName: string;
+  email: string;
+  phone?: string;
+  trialDays: number;
+}): Promise<Account> {
+  // Gerar slug único
+  const baseSlug = data.name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  // Verificar se email já existe
+  const existingAccount = await getAccountByEmail(data.email);
+  if (existingAccount) {
+    throw new Error('Já existe uma conta com este email');
+  }
+
+  // Calcular data de expiração
+  const trialDays = Math.min(Math.max(data.trialDays, 1), 30); // 1-30 dias
+  const trialStartedAt = new Date().toISOString();
+  const trialExpiresAt = new Date();
+  trialExpiresAt.setDate(trialExpiresAt.getDate() + trialDays);
+
+  const limits = ACCOUNT_PLAN_LIMITS.trial;
+
+  return createAccount({
+    name: data.name,
+    slug: `${baseSlug}-${Date.now()}`,
+    ownerName: data.ownerName,
+    email: data.email,
+    phone: data.phone,
+    plan: 'trial',
+    maxMonitors: limits.monitors,
+    maxStorageMB: limits.storageMB,
+    trialDays,
+    trialStartedAt,
+    trialExpiresAt: trialExpiresAt.toISOString(),
+    status: 'trial',
+  });
+}
+
+// Verificar se trial expirou
+export function isAccountTrialExpired(account: Account): boolean {
+  if (account.plan !== 'trial' || !account.trialExpiresAt) {
+    return false;
+  }
+  return new Date() > new Date(account.trialExpiresAt);
+}
+
+// ============================================
+// ACTIVATION CODES (Códigos de Ativação)
+// ============================================
+
+export async function getActivationCodes(): Promise<ActivationCode[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<ActivationCode>('activation-codes');
+  }
+  return readJsonFile<ActivationCode>('activation-codes.json');
+}
+
+export async function getActivationCodeById(id: string): Promise<ActivationCode | null> {
+  if (isRedisConfigured()) {
+    return getEntity<ActivationCode>('activation-codes', id);
+  }
+  const codes = await readJsonFile<ActivationCode>('activation-codes.json');
+  return codes.find(c => c.id === id) || null;
+}
+
+export async function getActivationCodeByCode(code: string): Promise<ActivationCode | null> {
+  const normalizedCode = code.toUpperCase().trim();
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`activation-codes:byCode:${normalizedCode}`);
+    if (ids.length === 0) return null;
+    return getEntity<ActivationCode>('activation-codes', ids[0]);
+  }
+  const codes = await readJsonFile<ActivationCode>('activation-codes.json');
+  return codes.find(c => c.code === normalizedCode) || null;
+}
+
+export async function getActivationCodeByDeviceId(deviceId: string): Promise<ActivationCode | null> {
+  if (isRedisConfigured()) {
+    const ids = await getFromIndex(`activation-codes:byDevice:${deviceId}`);
+    if (ids.length === 0) return null;
+    // Retornar o mais recente
+    const codes = await Promise.all(ids.map(id => getEntity<ActivationCode>('activation-codes', id)));
+    const validCodes = codes.filter((c): c is ActivationCode => c !== null);
+    return validCodes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+  }
+  const codes = await readJsonFile<ActivationCode>('activation-codes.json');
+  const deviceCodes = codes.filter(c => c.deviceId === deviceId);
+  return deviceCodes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+}
+
+export async function createActivationCode(deviceId: string): Promise<ActivationCode> {
+  // Gerar código único
+  let code = generateActivationCode();
+  let existing = await getActivationCodeByCode(code);
+  while (existing) {
+    code = generateActivationCode();
+    existing = await getActivationCodeByCode(code);
+  }
+
+  // Código expira em 15 minutos
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+  const activationCode: ActivationCode = {
+    id: Date.now().toString(),
+    code,
+    deviceId,
+    createdAt: new Date().toISOString(),
+    expiresAt: expiresAt.toISOString(),
+    status: 'pending',
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('activation-codes', activationCode.id, activationCode);
+    await addToIndex(`activation-codes:byCode:${code}`, activationCode.id);
+    await addToIndex(`activation-codes:byDevice:${deviceId}`, activationCode.id);
+    await addToIndex(`activation-codes:byStatus:${activationCode.status}`, activationCode.id);
+  } else {
+    const codes = await readJsonFile<ActivationCode>('activation-codes.json');
+    codes.push(activationCode);
+    await writeJsonFile('activation-codes.json', codes);
+  }
+
+  return activationCode;
+}
+
+export async function updateActivationCode(
+  id: string,
+  updates: Partial<ActivationCode>
+): Promise<ActivationCode | null> {
+  const existing = await getActivationCodeById(id);
+  if (!existing) return null;
+
+  const updated: ActivationCode = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    code: existing.code,
+    deviceId: existing.deviceId,
+    createdAt: existing.createdAt,
+  };
+
+  if (isRedisConfigured()) {
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`activation-codes:byStatus:${existing.status}`, id);
+      await addToIndex(`activation-codes:byStatus:${updates.status}`, id);
+    }
+    await setEntity('activation-codes', id, updated);
+  } else {
+    const codes = await readJsonFile<ActivationCode>('activation-codes.json');
+    const index = codes.findIndex(c => c.id === id);
+    if (index !== -1) {
+      codes[index] = updated;
+      await writeJsonFile('activation-codes.json', codes);
+    }
+  }
+
+  return updated;
+}
+
+// Ativar código com conta existente ou nova
+export async function activateCode(
+  code: string,
+  accountId: string,
+  monitorData: {
+    name: string;
+    condominiumId: string;
+  }
+): Promise<{ activationCode: ActivationCode; monitor: Monitor } | null> {
+  const activationCode = await getActivationCodeByCode(code);
+
+  if (!activationCode) {
+    throw new Error('Código inválido');
+  }
+
+  if (activationCode.status === 'activated') {
+    throw new Error('Este código já foi utilizado');
+  }
+
+  if (new Date() > new Date(activationCode.expiresAt)) {
+    await updateActivationCode(activationCode.id, { status: 'expired' });
+    throw new Error('Este código expirou');
+  }
+
+  // Criar monitor vinculado à conta
+  const monitor = await createMonitor({
+    name: monitorData.name,
+    slug: `${monitorData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+    condominiumId: monitorData.condominiumId,
+    deviceId: activationCode.deviceId,
+    isActive: true,
+    isOnline: false,
+  });
+
+  // Atualizar código de ativação
+  await updateActivationCode(activationCode.id, {
+    status: 'activated',
+    activatedAt: new Date().toISOString(),
+    accountId,
+    monitorId: monitor.id,
+  });
+
+  const updatedCode = await getActivationCodeById(activationCode.id);
+
+  return {
+    activationCode: updatedCode!,
+    monitor,
+  };
+}
+
+// Verificar se código é válido (não expirado e não ativado)
+export async function isActivationCodeValid(code: string): Promise<boolean> {
+  const activationCode = await getActivationCodeByCode(code);
+
+  if (!activationCode) return false;
+  if (activationCode.status !== 'pending') return false;
+  if (new Date() > new Date(activationCode.expiresAt)) return false;
+
+  return true;
+}
+
+// Limpar códigos expirados
+export async function cleanupExpiredActivationCodes(): Promise<number> {
+  const codes = await getActivationCodes();
+  let deletedCount = 0;
+
+  for (const code of codes) {
+    if (code.status === 'pending' && new Date() > new Date(code.expiresAt)) {
+      await updateActivationCode(code.id, { status: 'expired' });
       deletedCount++;
     }
   }

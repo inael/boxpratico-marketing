@@ -143,7 +143,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
     if (editingMonitor) {
       setMonitorName(editingMonitor.name);
       setMonitorSlug(editingMonitor.slug);
-      setMonitorLocation(editingMonitor.location);
+      setMonitorLocation(editingMonitor.location || '');
       setOrientation(editingMonitor.orientation || 'horizontal');
       // Carregar horário de funcionamento
       if (editingMonitor.operatingSchedule) {

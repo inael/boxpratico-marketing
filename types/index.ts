@@ -125,6 +125,8 @@ export interface Condominium {
   pricing?: PricingConfig;
   // Configuração de comissão (para o local)
   commission?: CommissionConfig;
+  // ID da conta vinculada (para multi-tenant)
+  accountId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -247,11 +249,13 @@ export interface Monitor {
   id: string;
   name: string;
   slug: string;
-  location: string;
+  location?: string;
   condominiumId: string;
   isActive: boolean;
   lastHeartbeat?: string;
   isOnline?: boolean;
+  // ID do dispositivo vinculado (para sistema de ativação)
+  deviceId?: string;
 
   // Orientacao da tela (horizontal = paisagem, vertical = retrato)
   orientation?: ScreenOrientation;
@@ -630,6 +634,100 @@ export const COMMAND_TYPE_ICONS: Record<RemoteCommandType, string> = {
   update_settings: '⚙️',
   reboot: '🔌',
 };
+
+// ============================================
+// ACCOUNTS (Contas/Tenants)
+// ============================================
+
+export type AccountPlan = 'trial' | 'basic' | 'pro' | 'enterprise';
+export type AccountStatus = 'active' | 'trial' | 'expired' | 'suspended' | 'cancelled';
+
+export interface Account {
+  id: string;
+  name: string;              // Nome da empresa/condomínio
+  slug: string;
+
+  // Dados do proprietário
+  ownerName: string;
+  email: string;
+  phone?: string;
+
+  // Plano e limites
+  plan: AccountPlan;
+  maxMonitors: number;       // Trial: 1, Basic: 3, Pro: 10, Enterprise: ilimitado
+  maxStorageMB: number;      // Em MB
+
+  // Trial
+  trialDays?: number;        // 1-30 dias
+  trialStartedAt?: string;
+  trialExpiresAt?: string;
+
+  // Status
+  status: AccountStatus;
+
+  // Metadados
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt?: string;
+}
+
+// Limites por plano
+export const ACCOUNT_PLAN_LIMITS: Record<AccountPlan, { monitors: number; storageMB: number; label: string }> = {
+  trial: { monitors: 1, storageMB: 100, label: 'Teste Grátis' },
+  basic: { monitors: 3, storageMB: 500, label: 'Básico' },
+  pro: { monitors: 10, storageMB: 2000, label: 'Profissional' },
+  enterprise: { monitors: 999, storageMB: 10000, label: 'Empresarial' },
+};
+
+// Labels de status
+export const ACCOUNT_STATUS_LABELS: Record<AccountStatus, string> = {
+  active: 'Ativo',
+  trial: 'Período de Teste',
+  expired: 'Expirado',
+  suspended: 'Suspenso',
+  cancelled: 'Cancelado',
+};
+
+// ============================================
+// ACTIVATION CODES (Códigos de Ativação)
+// ============================================
+
+export type ActivationStatus = 'pending' | 'activated' | 'expired';
+
+export interface ActivationCode {
+  id: string;
+  code: string;              // "ABC-1234" (formato amigável)
+  deviceId: string;          // Identificador único do dispositivo
+
+  // Expiração do código (15 minutos)
+  createdAt: string;
+  expiresAt: string;
+
+  // Status
+  status: ActivationStatus;
+
+  // Após ativação
+  activatedAt?: string;
+  accountId?: string;
+  monitorId?: string;
+}
+
+// Gerar código amigável (ABC-1234)
+export function generateActivationCode(): string {
+  const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // Sem I e O para evitar confusão
+  const numbers = '0123456789';
+
+  let code = '';
+  for (let i = 0; i < 3; i++) {
+    code += letters[Math.floor(Math.random() * letters.length)];
+  }
+  code += '-';
+  for (let i = 0; i < 4; i++) {
+    code += numbers[Math.floor(Math.random() * numbers.length)];
+  }
+
+  return code;
+}
 
 // Relatório consolidado por anunciante
 export interface AdvertiserExposureReport {
