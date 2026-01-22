@@ -127,7 +127,7 @@ export default function LocationsMap({
   };
 
   return (
-    <div className="w-full h-[400px] rounded-xl overflow-hidden border border-gray-200">
+    <div className="relative w-full h-[400px] rounded-xl overflow-hidden border border-gray-200">
       <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"

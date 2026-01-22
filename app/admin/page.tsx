@@ -1093,6 +1093,438 @@ export default function AdminPage() {
           {/* Locais Tab */}
           {activeTab === 'condominiums' && (
             <div className="space-y-4 sm:space-y-6">
+              {/* Formulário inline quando ativo */}
+              {(showCondoForm || editingCondo) ? (
+                <div className="bg-white rounded-2xl shadow-soft p-4 sm:p-6 border border-gray-100">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900">
+                      {editingCondo ? 'Editar Local' : 'Novo Local'}
+                    </h2>
+                    <button
+                      onClick={() => {
+                        setShowCondoForm(false);
+                        setEditingCondo(null);
+                        setSelectedState('');
+                        setCondoName('');
+                        setCondoSlug('');
+                        setPricingModel('network');
+                        setNetworkPrice('');
+                        setPricePerPoint('');
+                        setCityPopulation('');
+                        setPricingNotes('');
+                        setCommissionPercentage('');
+                        setCommissionNotes('');
+                        setLocalCategory('');
+                        setBlockedCategories([]);
+                        setBlockOwnCategory(false);
+                      }}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <XCircleIcon className="w-6 h-6" />
+                    </button>
+                  </div>
+                  <form onSubmit={editingCondo ? handleUpdateCondominium : handleCreateCondominium}>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Coluna 1 - Dados Básicos */}
+                      <div className="space-y-4">
+                        <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 pb-2 border-b border-gray-200">
+                          <BuildingOfficeIcon className="w-5 h-5 text-[#F59E0B]" />
+                          Dados Básicos
+                        </h3>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Nome</label>
+                          <input
+                            name="name"
+                            value={condoName}
+                            onChange={(e) => setCondoName(e.target.value)}
+                            placeholder="Nome do local (ex: Academia XYZ, Mercado ABC)"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Slug</label>
+                          <input
+                            name="slug"
+                            value={condoSlug}
+                            readOnly
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 outline-none"
+                          />
+                          <p className="text-xs text-gray-500 mt-1">
+                            Gerado automaticamente a partir do nome
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">CNPJ (opcional)</label>
+                          <input
+                            name="cnpj"
+                            defaultValue={editingCondo?.cnpj}
+                            placeholder="00.000.000/0000-00"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Endereço (opcional)</label>
+                          <input
+                            name="address"
+                            defaultValue={editingCondo?.address}
+                            placeholder="Rua, número, bairro"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Estado</label>
+                            <select
+                              name="state"
+                              value={selectedState}
+                              onChange={(e) => setSelectedState(e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                            >
+                              <option value="">Selecione</option>
+                              {brazilianStates.map(state => (
+                                <option key={state.code} value={state.code}>
+                                  {state.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Cidade</label>
+                            <select
+                              name="city"
+                              defaultValue={editingCondo?.city}
+                              disabled={!selectedState}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
+                            >
+                              <option value="">
+                                {selectedState ? 'Selecione' : 'Selecione o estado'}
+                              </option>
+                              {availableCities.map(city => (
+                                <option key={city} value={city}>
+                                  {city}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">WhatsApp para Notificações</label>
+                          <input
+                            name="whatsappPhone"
+                            defaultValue={editingCondo?.whatsappPhone}
+                            placeholder="(11) 99999-9999"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Foto do Local</label>
+                          <input
+                            type="file"
+                            name="photo"
+                            accept="image/*"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#FFFBEB] file:text-[#B45309] hover:file:bg-[#FEF3C7]"
+                          />
+                          {editingCondo?.photoUrl && (
+                            <div className="mt-2 flex items-center gap-2">
+                              <img
+                                src={editingCondo.photoUrl}
+                                alt="Foto do local"
+                                className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                              />
+                              <span className="text-xs text-gray-500">Foto atual</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Geolocalização */}
+                        <div className="pt-4 border-t border-gray-200">
+                          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
+                            <MapPinIcon className="w-5 h-5 text-blue-600" />
+                            Geolocalização
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-1">Latitude</label>
+                              <input
+                                name="latitude"
+                                type="number"
+                                step="any"
+                                defaultValue={editingCondo?.latitude}
+                                placeholder="-23.5505"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-1">Longitude</label>
+                              <input
+                                name="longitude"
+                                type="number"
+                                step="any"
+                                defaultValue={editingCondo?.longitude}
+                                placeholder="-46.6333"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                              />
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Dica: Pesquise o endereço no Google Maps e copie as coordenadas
+                          </p>
+                        </div>
+
+                        {/* Tráfego */}
+                        <div className="pt-4 border-t border-gray-200">
+                          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
+                            <UsersIcon className="w-5 h-5 text-purple-600" />
+                            Tráfego do Local
+                          </h3>
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">
+                              Média de pessoas por dia
+                            </label>
+                            <input
+                              name="averageDailyTraffic"
+                              type="number"
+                              min="0"
+                              defaultValue={editingCondo?.averageDailyTraffic}
+                              placeholder="Ex: 500"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Coluna 2 - Precificação e Restrições */}
+                      <div className="space-y-4">
+                        {/* Precificação */}
+                        <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 pb-2 border-b border-gray-200">
+                          <CurrencyDollarIcon className="w-5 h-5 text-green-600" />
+                          Precificação
+                        </h3>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Modelo de Cobrança</label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPricingModel('network')}
+                              className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                                pricingModel === 'network'
+                                  ? 'border-green-500 bg-green-50 text-green-700'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="font-bold">Por Rede</div>
+                              <div className="text-xs opacity-75">Pacote único</div>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPricingModel('per_point')}
+                              className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
+                                pricingModel === 'per_point'
+                                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                              }`}
+                            >
+                              <div className="font-bold">Por Ponto</div>
+                              <div className="text-xs opacity-75">Por tela</div>
+                            </button>
+                          </div>
+                        </div>
+                        {pricingModel === 'network' ? (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Valor da Rede (R$)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={networkPrice}
+                              onChange={(e) => setNetworkPrice(e.target.value)}
+                              placeholder="Ex: 200.00"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Valor por Ponto/Tela (R$)</label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={pricePerPoint}
+                              onChange={(e) => setPricePerPoint(e.target.value)}
+                              placeholder="Ex: 50.00"
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">População da Cidade</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={cityPopulation}
+                            onChange={(e) => setCityPopulation(e.target.value)}
+                            placeholder="Ex: 150000"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">Observações de Preço</label>
+                          <textarea
+                            value={pricingNotes}
+                            onChange={(e) => setPricingNotes(e.target.value)}
+                            placeholder="Ex: Desconto de 10% para pagamento anual"
+                            rows={2}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900 resize-none"
+                          />
+                        </div>
+
+                        {/* Comissão */}
+                        <div className="pt-4 border-t border-gray-200">
+                          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
+                            <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center">
+                              <span className="text-purple-600 text-xs font-bold">%</span>
+                            </div>
+                            Comissão do Local
+                          </h3>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-1">Comissão (%)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                max="100"
+                                value={commissionPercentage}
+                                onChange={(e) => setCommissionPercentage(e.target.value)}
+                                placeholder="Ex: 30"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-1">Observações</label>
+                              <input
+                                type="text"
+                                value={commissionNotes}
+                                onChange={(e) => setCommissionNotes(e.target.value)}
+                                placeholder="Ex: Pago via PIX"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Restrições */}
+                        <div className="pt-4 border-t border-gray-200">
+                          <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2 mb-4">
+                            <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
+                              <span className="text-xs">🚫</span>
+                            </div>
+                            Restrições de Anúncios
+                          </h3>
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-1">Categoria deste Local</label>
+                              <select
+                                value={localCategory}
+                                onChange={(e) => setLocalCategory(e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-900"
+                              >
+                                <option value="">Nenhuma categoria</option>
+                                {BUSINESS_CATEGORIES.map((cat) => (
+                                  <option key={cat.id} value={cat.id}>
+                                    {cat.icon} {cat.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            {localCategory && (
+                              <label className="flex items-center gap-3 p-3 rounded-lg bg-red-50 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={blockOwnCategory}
+                                  onChange={(e) => setBlockOwnCategory(e.target.checked)}
+                                  className="w-5 h-5 text-red-500 border-gray-300 rounded focus:ring-red-500"
+                                />
+                                <div>
+                                  <span className="font-medium text-gray-900">Bloquear concorrentes</span>
+                                  <p className="text-xs text-gray-500">
+                                    Não exibir anúncios da mesma categoria
+                                  </p>
+                                </div>
+                              </label>
+                            )}
+                            <div>
+                              <label className="block text-sm font-semibold text-gray-700 mb-2">Categorias bloqueadas</label>
+                              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-lg">
+                                {BUSINESS_CATEGORIES.filter(cat => cat.id !== localCategory).map((cat) => (
+                                  <label
+                                    key={cat.id}
+                                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer text-sm ${
+                                      blockedCategories.includes(cat.id)
+                                        ? 'bg-red-100 text-red-800'
+                                        : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                    }`}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={blockedCategories.includes(cat.id)}
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setBlockedCategories([...blockedCategories, cat.id]);
+                                        } else {
+                                          setBlockedCategories(blockedCategories.filter(id => id !== cat.id));
+                                        }
+                                      }}
+                                      className="w-4 h-4 text-red-500 border-gray-300 rounded focus:ring-red-500"
+                                    />
+                                    <span>{cat.icon} {cat.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Botões de Ação */}
+                    <div className="flex gap-3 mt-6 pt-6 border-t border-gray-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowCondoForm(false);
+                          setEditingCondo(null);
+                          setSelectedState('');
+                          setCondoName('');
+                          setCondoSlug('');
+                          setPricingModel('network');
+                          setNetworkPrice('');
+                          setPricePerPoint('');
+                          setCityPopulation('');
+                          setPricingNotes('');
+                          setCommissionPercentage('');
+                          setCommissionNotes('');
+                          setLocalCategory('');
+                          setBlockedCategories([]);
+                          setBlockOwnCategory(false);
+                        }}
+                        className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                      >
+                        Salvar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              ) : (
+                /* Listagem normal */
+                <>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Locais</h2>
@@ -1399,6 +1831,8 @@ export default function AdminPage() {
                   <BuildingOfficeIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">Nenhum local cadastrado ainda</p>
                 </div>
+              )}
+                </>
               )}
             </div>
           )}
@@ -1708,473 +2142,7 @@ export default function AdminPage() {
         <AdminFooter />
       </div>
 
-      {/* Condominium Form Modal */}
-      {(showCondoForm || editingCondo) && (
-        <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center p-2 sm:p-4 z-50 overflow-y-auto">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 max-w-md w-full my-4 sm:my-8"
-          >
-            <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900 mb-4 sm:mb-6">
-              {editingCondo ? 'Editar Local' : 'Novo Local'}
-            </h2>
-            <form onSubmit={editingCondo ? handleUpdateCondominium : handleCreateCondominium}>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Nome</label>
-                  <input
-                    name="name"
-                    value={condoName}
-                    onChange={(e) => setCondoName(e.target.value)}
-                    placeholder="Nome do local (ex: Academia XYZ, Mercado ABC)"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Slug</label>
-                  <input
-                    name="slug"
-                    value={condoSlug}
-                    readOnly
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 outline-none"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Gerado automaticamente a partir do nome
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">CNPJ (opcional)</label>
-                  <input
-                    name="cnpj"
-                    defaultValue={editingCondo?.cnpj}
-                    placeholder="00.000.000/0000-00"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Endereço (opcional)</label>
-                  <input
-                    name="address"
-                    defaultValue={editingCondo?.address}
-                    placeholder="Rua, número, bairro"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Estado (opcional)</label>
-                  <select
-                    name="state"
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                  >
-                    <option value="">Selecione o estado</option>
-                    {brazilianStates.map(state => (
-                      <option key={state.code} value={state.code}>
-                        {state.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Cidade (opcional)</label>
-                  <select
-                    name="city"
-                    defaultValue={editingCondo?.city}
-                    disabled={!selectedState}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none disabled:bg-gray-100 disabled:cursor-not-allowed text-gray-900"
-                  >
-                    <option value="">
-                      {selectedState ? 'Selecione a cidade' : 'Selecione o estado primeiro'}
-                    </option>
-                    {availableCities.map(city => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">WhatsApp para Notificações (opcional)</label>
-                  <input
-                    name="whatsappPhone"
-                    defaultValue={editingCondo?.whatsappPhone}
-                    placeholder="(11) 99999-9999"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Receba notificações sobre playlists, telas e mídias
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1">Foto do Local (opcional)</label>
-                  <input
-                    type="file"
-                    name="photo"
-                    accept="image/*"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-[#FFFBEB] file:text-[#B45309] hover:file:bg-[#FEF3C7]"
-                  />
-                  {editingCondo?.photoUrl && (
-                    <div className="mt-2">
-                      <p className="text-xs text-gray-500 mb-2">Foto atual:</p>
-                      <img
-                        src={editingCondo.photoUrl}
-                        alt="Foto do local"
-                        className="w-32 h-32 object-cover rounded-lg border border-gray-200"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Geolocalização */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <MapPinIcon className="w-5 h-5 text-blue-600" />
-                    <h3 className="text-sm font-bold text-gray-900">Geolocalização (para mapa)</h3>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Latitude</label>
-                      <input
-                        name="latitude"
-                        type="number"
-                        step="any"
-                        defaultValue={editingCondo?.latitude}
-                        placeholder="-23.5505"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">Longitude</label>
-                      <input
-                        name="longitude"
-                        type="number"
-                        step="any"
-                        defaultValue={editingCondo?.longitude}
-                        placeholder="-46.6333"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Dica: Pesquise o endereço no Google Maps e copie as coordenadas da URL
-                  </p>
-                </div>
-
-                {/* Tráfego Médio */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <UsersIcon className="w-5 h-5 text-purple-600" />
-                    <h3 className="text-sm font-bold text-gray-900">Tráfego do Local</h3>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Média de pessoas por dia (opcional)
-                    </label>
-                    <input
-                      name="averageDailyTraffic"
-                      type="number"
-                      min="0"
-                      defaultValue={editingCondo?.averageDailyTraffic}
-                      placeholder="Ex: 500"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                    />
-                    <p className="text-xs text-gray-500 mt-2">
-                      Quantidade média de pessoas que circulam pelo local diariamente. Usado para calcular o alcance estimado dos anúncios.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Pricing Section */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <CurrencyDollarIcon className="w-5 h-5 text-green-600" />
-                    <h3 className="text-sm font-bold text-gray-900">Precificação</h3>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Modelo de Cobrança</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setPricingModel('network')}
-                          className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                            pricingModel === 'network'
-                              ? 'border-green-500 bg-green-50 text-green-700'
-                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="font-bold">Por Rede</div>
-                          <div className="text-xs opacity-75">Pacote único</div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPricingModel('per_point')}
-                          className={`p-3 rounded-lg border-2 text-sm font-medium transition-all ${
-                            pricingModel === 'per_point'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
-                              : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="font-bold">Por Ponto</div>
-                          <div className="text-xs opacity-75">Por tela</div>
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {pricingModel === 'network'
-                          ? 'Ideal para cidades pequenas/interior - valor único para todas as telas'
-                          : 'Ideal para cidades grandes (+250k hab) - cobra por cada tela'
-                        }
-                      </p>
-                    </div>
-
-                    {pricingModel === 'network' ? (
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">
-                          Valor da Rede (R$)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={networkPrice}
-                          onChange={(e) => setNetworkPrice(e.target.value)}
-                          placeholder="Ex: 200.00"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Valor único para o cliente sair em todas as telas da rede
-                        </p>
-                      </div>
-                    ) : (
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">
-                          Valor por Ponto/Tela (R$)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={pricePerPoint}
-                          onChange={(e) => setPricePerPoint(e.target.value)}
-                          placeholder="Ex: 50.00"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Valor cobrado por cada tela/ponto individual
-                        </p>
-                      </div>
-                    )}
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        <MapPinIcon className="w-4 h-4 inline mr-1" />
-                        População da Cidade (opcional)
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={cityPopulation}
-                        onChange={(e) => setCityPopulation(e.target.value)}
-                        placeholder="Ex: 150000"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Ajuda a definir a estratégia de venda (acima de 250k = por ponto)
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Observações (opcional)
-                      </label>
-                      <textarea
-                        value={pricingNotes}
-                        onChange={(e) => setPricingNotes(e.target.value)}
-                        placeholder="Ex: Desconto de 10% para pagamento anual"
-                        rows={2}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900 resize-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Commission Section - For location owner */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center">
-                      <span className="text-purple-600 text-xs font-bold">%</span>
-                    </div>
-                    <h3 className="text-sm font-bold text-gray-900">Comissão do Local</h3>
-                  </div>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Percentual que o local (farmácia, academia, etc.) recebe dos anunciantes
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Comissão (%)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        max="100"
-                        value={commissionPercentage}
-                        onChange={(e) => setCommissionPercentage(e.target.value)}
-                        placeholder="Ex: 30"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
-                      />
-                      <p className="text-xs text-gray-500 mt-1">
-                        Ex: 30% significa que o local recebe R$ 60 de cada R$ 200 de anunciante
-                      </p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Observações
-                      </label>
-                      <input
-                        type="text"
-                        value={commissionNotes}
-                        onChange={(e) => setCommissionNotes(e.target.value)}
-                        placeholder="Ex: Pago mensalmente via PIX"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Category Restrictions Section */}
-                <div className="border-t border-gray-200 pt-4 mt-4">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
-                      <span className="text-xs">🚫</span>
-                    </div>
-                    <h3 className="text-sm font-bold text-gray-900">Restrições de Anúncios</h3>
-                  </div>
-                  <p className="text-xs text-gray-500 mb-4">
-                    Configure quais tipos de anunciantes podem ou não exibir propagandas neste local
-                  </p>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
-                        Categoria deste Local
-                      </label>
-                      <select
-                        value={localCategory}
-                        onChange={(e) => setLocalCategory(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 outline-none text-gray-900"
-                      >
-                        <option value="">Nenhuma categoria</option>
-                        {BUSINESS_CATEGORIES.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.icon} {cat.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {localCategory && (
-                      <label className="flex items-center gap-3 p-3 rounded-lg bg-red-50 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={blockOwnCategory}
-                          onChange={(e) => setBlockOwnCategory(e.target.checked)}
-                          className="w-5 h-5 text-red-500 border-gray-300 rounded focus:ring-red-500"
-                        />
-                        <div>
-                          <span className="font-medium text-gray-900">Bloquear concorrentes</span>
-                          <p className="text-xs text-gray-500">
-                            Não exibir anúncios da mesma categoria ({BUSINESS_CATEGORIES.find(c => c.id === localCategory)?.name})
-                          </p>
-                        </div>
-                      </label>
-                    )}
-
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Outras categorias bloqueadas
-                      </label>
-                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-lg">
-                        {BUSINESS_CATEGORIES.filter(cat => cat.id !== localCategory).map((cat) => (
-                          <label
-                            key={cat.id}
-                            className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer text-sm ${
-                              blockedCategories.includes(cat.id)
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={blockedCategories.includes(cat.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setBlockedCategories([...blockedCategories, cat.id]);
-                                } else {
-                                  setBlockedCategories(blockedCategories.filter(id => id !== cat.id));
-                                }
-                              }}
-                              className="w-4 h-4 text-red-500 border-gray-300 rounded focus:ring-red-500"
-                            />
-                            <span>{cat.icon} {cat.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {blockedCategories.length > 0 && (
-                        <p className="text-xs text-red-600 mt-2">
-                          {blockedCategories.length} categoria(s) bloqueada(s)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col-reverse sm:flex-row gap-3 mt-4 sm:mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCondoForm(false);
-                    setEditingCondo(null);
-                    setSelectedState('');
-                    setCondoName('');
-                    setCondoSlug('');
-                    // Reset pricing
-                    setPricingModel('network');
-                    setNetworkPrice('');
-                    setPricePerPoint('');
-                    setCityPopulation('');
-                    setPricingNotes('');
-                    // Reset commission
-                    setCommissionPercentage('');
-                    setCommissionNotes('');
-                    // Reset category restrictions
-                    setLocalCategory('');
-                    setBlockedCategories([]);
-                    setBlockOwnCategory(false);
-                  }}
-                  className="flex-1 bg-gray-100 text-gray-700 py-2.5 sm:py-3 rounded-lg font-semibold hover:bg-gray-200 transition-all text-sm sm:text-base"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-2.5 sm:py-3 rounded-lg font-semibold hover:shadow-lg transition-all text-sm sm:text-base"
-                >
-                  Salvar
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Media Form Modal */}
+            {/* Media Form Modal */}
       {showMediaForm && (
         <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto z-50">
           <motion.div

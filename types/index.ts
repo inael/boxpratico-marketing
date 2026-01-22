@@ -348,6 +348,9 @@ export interface NetworkPricingConfig {
 // Tipo de usuario
 export type UserRole = 'admin' | 'operator' | 'viewer';
 
+// Provedor de autenticação
+export type AuthProvider = 'credentials' | 'google';
+
 // Usuario do sistema
 export interface User {
   id: string;
@@ -355,6 +358,14 @@ export interface User {
   email: string;
   passwordHash?: string;
   avatarUrl?: string;
+
+  // Autenticação OAuth
+  provider?: AuthProvider;
+  providerId?: string; // ID do usuário no Google/etc
+  emailVerified?: boolean;
+
+  // Conta vinculada (multi-tenant)
+  accountId?: string;
 
   // Permissoes
   role: UserRole;
@@ -383,6 +394,106 @@ export interface User {
 
   createdAt: string;
   updatedAt: string;
+}
+
+// Permissões granulares por recurso
+export type Permission =
+  // Locais
+  | 'condominiums:read'
+  | 'condominiums:create'
+  | 'condominiums:update'
+  | 'condominiums:delete'
+  // Monitores
+  | 'monitors:read'
+  | 'monitors:create'
+  | 'monitors:update'
+  | 'monitors:delete'
+  // Anunciantes
+  | 'advertisers:read'
+  | 'advertisers:create'
+  | 'advertisers:update'
+  | 'advertisers:delete'
+  // Mídias
+  | 'media:read'
+  | 'media:create'
+  | 'media:update'
+  | 'media:delete'
+  // Playlists/Campanhas
+  | 'campaigns:read'
+  | 'campaigns:create'
+  | 'campaigns:update'
+  | 'campaigns:delete'
+  // Usuários
+  | 'users:read'
+  | 'users:create'
+  | 'users:update'
+  | 'users:delete'
+  // Contas
+  | 'accounts:read'
+  | 'accounts:create'
+  | 'accounts:update'
+  | 'accounts:delete'
+  // Contratos
+  | 'contracts:read'
+  | 'contracts:create'
+  | 'contracts:update'
+  | 'contracts:delete'
+  // Configurações
+  | 'settings:read'
+  | 'settings:update'
+  // Relatórios
+  | 'reports:read'
+  | 'analytics:read';
+
+// Permissões por role
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  admin: [
+    'condominiums:read', 'condominiums:create', 'condominiums:update', 'condominiums:delete',
+    'monitors:read', 'monitors:create', 'monitors:update', 'monitors:delete',
+    'advertisers:read', 'advertisers:create', 'advertisers:update', 'advertisers:delete',
+    'media:read', 'media:create', 'media:update', 'media:delete',
+    'campaigns:read', 'campaigns:create', 'campaigns:update', 'campaigns:delete',
+    'users:read', 'users:create', 'users:update', 'users:delete',
+    'accounts:read', 'accounts:create', 'accounts:update', 'accounts:delete',
+    'contracts:read', 'contracts:create', 'contracts:update', 'contracts:delete',
+    'settings:read', 'settings:update',
+    'reports:read', 'analytics:read',
+  ],
+  operator: [
+    'condominiums:read', 'condominiums:create', 'condominiums:update',
+    'monitors:read', 'monitors:create', 'monitors:update',
+    'advertisers:read', 'advertisers:create', 'advertisers:update',
+    'media:read', 'media:create', 'media:update',
+    'campaigns:read', 'campaigns:create', 'campaigns:update',
+    'users:read',
+    'contracts:read', 'contracts:create', 'contracts:update',
+    'reports:read', 'analytics:read',
+  ],
+  viewer: [
+    'condominiums:read',
+    'monitors:read',
+    'advertisers:read',
+    'media:read',
+    'campaigns:read',
+    'reports:read',
+  ],
+};
+
+// Verificar se usuário tem permissão
+export function hasPermission(user: User, permission: Permission): boolean {
+  if (user.isAdmin) return true;
+  const rolePermissions = ROLE_PERMISSIONS[user.role] || [];
+  return rolePermissions.includes(permission);
+}
+
+// Verificar múltiplas permissões (todas devem ser verdadeiras)
+export function hasAllPermissions(user: User, permissions: Permission[]): boolean {
+  return permissions.every(p => hasPermission(user, p));
+}
+
+// Verificar pelo menos uma permissão
+export function hasAnyPermission(user: User, permissions: Permission[]): boolean {
+  return permissions.some(p => hasPermission(user, p));
 }
 
 // Labels para roles
@@ -689,6 +800,151 @@ export const ACCOUNT_STATUS_LABELS: Record<AccountStatus, string> = {
 };
 
 // ============================================
+// PRICING CONFIG (Configuração de Preços)
+// ============================================
+
+// Faixa de desconto por volume de telas
+export interface VolumeDiscount {
+  minScreens: number;    // Quantidade mínima de telas
+  maxScreens: number;    // Quantidade máxima (999 = ilimitado)
+  pricePerScreen: number; // Preço por tela nessa faixa
+  discountPercent: number; // % de desconto em relação ao preço base
+}
+
+// Configuração global de preços do sistema
+export interface SystemPricingConfig {
+  // ======== OPERADORES (Whitelabel) ========
+  // Preço base por monitor/mês para operadores
+  operatorPricePerMonitor: number; // R$35 default
+
+  // Comissão da plataforma sobre receita dos operadores (%)
+  platformCommissionPercent: number; // 20% default
+
+  // ======== ANUNCIANTES ========
+  // Preço base por tela/mês para anunciantes
+  advertiserBasePricePerScreen: number; // R$35 default
+
+  // Faixas de desconto por volume
+  volumeDiscounts: VolumeDiscount[];
+
+  // Multiplicadores por características do local
+  premiumMultipliers: {
+    // Tráfego alto (>1000 pessoas/dia)
+    highTraffic: number; // 1.5x default
+    // Classe A/B
+    premiumLocation: number; // 1.3x default
+    // Horário nobre (18h-22h)
+    primeTime: number; // 1.2x default
+  };
+
+  // ======== TRIAL ========
+  trialDaysDefault: number; // 7 dias default
+  trialDaysMax: number; // 30 dias max
+
+  // ======== PAGAMENTO ========
+  // Taxa do gateway (MercadoPago ~5%)
+  paymentGatewayFeePercent: number;
+
+  // Métodos habilitados
+  paymentMethods: {
+    pix: boolean;
+    creditCard: boolean;
+    boleto: boolean;
+  };
+
+  // Última atualização
+  updatedAt: string;
+}
+
+// Valores padrão de configuração de preços
+export const DEFAULT_PRICING_CONFIG: SystemPricingConfig = {
+  // Operadores
+  operatorPricePerMonitor: 35,
+  platformCommissionPercent: 20,
+
+  // Anunciantes
+  advertiserBasePricePerScreen: 35,
+  volumeDiscounts: [
+    { minScreens: 1, maxScreens: 5, pricePerScreen: 35, discountPercent: 0 },
+    { minScreens: 6, maxScreens: 10, pricePerScreen: 30, discountPercent: 14 },
+    { minScreens: 11, maxScreens: 20, pricePerScreen: 25, discountPercent: 29 },
+    { minScreens: 21, maxScreens: 999, pricePerScreen: 20, discountPercent: 43 },
+  ],
+  premiumMultipliers: {
+    highTraffic: 1.5,
+    premiumLocation: 1.3,
+    primeTime: 1.2,
+  },
+
+  // Trial
+  trialDaysDefault: 7,
+  trialDaysMax: 30,
+
+  // Pagamento
+  paymentGatewayFeePercent: 5,
+  paymentMethods: {
+    pix: true,
+    creditCard: true,
+    boleto: true,
+  },
+
+  updatedAt: new Date().toISOString(),
+};
+
+// Calcular preço por tela baseado no volume
+export function calculatePricePerScreen(
+  screenCount: number,
+  config: SystemPricingConfig = DEFAULT_PRICING_CONFIG
+): number {
+  const discount = config.volumeDiscounts.find(
+    d => screenCount >= d.minScreens && screenCount <= d.maxScreens
+  );
+  return discount?.pricePerScreen || config.advertiserBasePricePerScreen;
+}
+
+// Calcular preço total para anunciante
+export function calculateAdvertiserPrice(
+  screenCount: number,
+  options: {
+    isHighTraffic?: boolean;
+    isPremiumLocation?: boolean;
+    isPrimeTime?: boolean;
+  } = {},
+  config: SystemPricingConfig = DEFAULT_PRICING_CONFIG
+): { pricePerScreen: number; totalPrice: number; discount: number } {
+  let pricePerScreen = calculatePricePerScreen(screenCount, config);
+
+  // Aplicar multiplicadores premium
+  if (options.isHighTraffic) {
+    pricePerScreen *= config.premiumMultipliers.highTraffic;
+  }
+  if (options.isPremiumLocation) {
+    pricePerScreen *= config.premiumMultipliers.premiumLocation;
+  }
+  if (options.isPrimeTime) {
+    pricePerScreen *= config.premiumMultipliers.primeTime;
+  }
+
+  const totalPrice = Math.round(pricePerScreen * screenCount * 100) / 100;
+  const baseTotal = config.advertiserBasePricePerScreen * screenCount;
+  const discount = Math.round((1 - totalPrice / baseTotal) * 100);
+
+  return {
+    pricePerScreen: Math.round(pricePerScreen * 100) / 100,
+    totalPrice,
+    discount: Math.max(0, discount),
+  };
+}
+
+// Calcular comissão da plataforma sobre operador
+export function calculatePlatformCommission(
+  operatorRevenue: number,
+  config: SystemPricingConfig = DEFAULT_PRICING_CONFIG
+): number {
+  return Math.round(operatorRevenue * (config.platformCommissionPercent / 100) * 100) / 100;
+}
+
+// ============================================
 // ACTIVATION CODES (Códigos de Ativação)
 // ============================================
 
@@ -750,5 +1006,155 @@ export interface AdvertiserExposureReport {
   locationsCount: number;
   // Número de monitores onde aparece
   monitorsCount: number;
+}
+
+// ============================================
+// PAGAMENTOS (MercadoPago)
+// ============================================
+
+export type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded' | 'in_process';
+export type PaymentMethod = 'pix' | 'credit_card' | 'boleto';
+export type SubscriptionStatus = 'pending' | 'authorized' | 'paused' | 'cancelled';
+
+// Pagamento individual (PIX, cartão, boleto)
+export interface Payment {
+  id: string;
+
+  // MercadoPago
+  mpPaymentId?: string;        // ID do pagamento no MercadoPago
+  mpPreferenceId?: string;     // ID da preferência (checkout)
+
+  // Quem está pagando
+  accountId: string;           // Conta do operador/anunciante
+  userId?: string;             // Usuário que fez o pagamento
+
+  // Tipo de pagamento
+  type: 'subscription' | 'one_time' | 'advertiser_campaign';
+
+  // Valores
+  amount: number;              // Valor em reais
+  currency: string;            // BRL
+
+  // Método de pagamento
+  paymentMethod?: PaymentMethod;
+
+  // Status
+  status: PaymentStatus;
+  statusDetail?: string;       // Detalhes do status (erro, etc)
+
+  // PIX
+  pixQrCode?: string;          // QR Code Base64
+  pixQrCodeBase64?: string;    // QR Code para exibição
+  pixCopiaECola?: string;      // Código copia e cola
+  pixExpiresAt?: string;       // Expiração do PIX
+
+  // Boleto
+  boletoUrl?: string;          // URL do boleto
+  boletoBarcode?: string;      // Código de barras
+  boletoExpiresAt?: string;    // Vencimento
+
+  // Referência
+  description: string;         // Descrição do pagamento
+  externalReference?: string;  // Referência externa (accountId, subscriptionId, etc)
+
+  // Datas
+  createdAt: string;
+  updatedAt: string;
+  paidAt?: string;
+  refundedAt?: string;
+}
+
+// Assinatura recorrente (para operadores)
+export interface Subscription {
+  id: string;
+
+  // MercadoPago
+  mpSubscriptionId?: string;   // ID da assinatura no MercadoPago
+  mpPlanId?: string;           // ID do plano
+
+  // Quem está assinando
+  accountId: string;
+  userId?: string;
+
+  // Plano
+  planType: 'operator_monthly';  // Tipo de plano
+
+  // Valores
+  amount: number;              // Valor mensal
+  currency: string;            // BRL
+
+  // Quantidade (monitores ativos)
+  quantity: number;            // Número de monitores
+  pricePerUnit: number;        // Preço por monitor (ex: R$35)
+
+  // Status
+  status: SubscriptionStatus;
+
+  // Período
+  billingDay: number;          // Dia do mês para cobrança (1-28)
+  currentPeriodStart?: string;
+  currentPeriodEnd?: string;
+  nextBillingDate?: string;
+
+  // Datas
+  createdAt: string;
+  updatedAt: string;
+  cancelledAt?: string;
+
+  // Último pagamento
+  lastPaymentId?: string;
+  lastPaymentDate?: string;
+  lastPaymentStatus?: PaymentStatus;
+}
+
+// Webhook do MercadoPago
+export interface MercadoPagoWebhook {
+  id: string;
+  action: string;              // 'payment.created', 'payment.updated', etc
+  type: string;                // 'payment', 'subscription', etc
+  data: {
+    id: string;                // ID do recurso
+  };
+  date_created: string;
+  live_mode: boolean;
+  user_id: string;
+  api_version: string;
+}
+
+// Fatura/Invoice (para histórico)
+export interface Invoice {
+  id: string;
+
+  // Referência
+  paymentId: string;
+  subscriptionId?: string;
+  accountId: string;
+
+  // Valores
+  amount: number;
+  currency: string;
+
+  // Período (para assinaturas)
+  periodStart?: string;
+  periodEnd?: string;
+
+  // Status
+  status: 'draft' | 'open' | 'paid' | 'void' | 'uncollectible';
+
+  // Dados fiscais
+  description: string;
+  items: InvoiceItem[];
+
+  // Datas
+  createdAt: string;
+  paidAt?: string;
+  dueDate?: string;
+}
+
+export interface InvoiceItem {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
 }
 

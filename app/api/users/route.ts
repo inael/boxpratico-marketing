@@ -1,16 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUsers, createUser, getUserByEmail } from '@/lib/database';
 import { User } from '@/types';
-import crypto from 'crypto';
-
-// Simple password hashing (in production, use bcrypt)
-function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
-}
+import bcrypt from 'bcryptjs';
+import { requirePermission, filterByAccount, AuthenticatedUser } from '@/lib/auth-utils';
 
 export async function GET() {
   try {
-    const users = await getUsers();
+    // Verificar permissão
+    const authResult = await requirePermission('users:read');
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const currentUser = authResult as AuthenticatedUser;
+    let users = await getUsers();
+
+    // Filtrar por conta (multi-tenant)
+    users = filterByAccount(users as (User & { accountId?: string })[], currentUser);
+
     // Remove password hash from response
     const safeUsers = users.map(({ passwordHash, ...user }) => user);
     return NextResponse.json(safeUsers);
@@ -25,6 +32,13 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar permissão
+    const authResult = await requirePermission('users:create');
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const currentUser = authResult as AuthenticatedUser;
     const body = await request.json();
 
     // Validate required fields
@@ -44,13 +58,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Hash password with bcrypt
+    let passwordHash: string | undefined;
+    if (body.password) {
+      passwordHash = await bcrypt.hash(body.password, 12);
+    }
+
+    // Não permitir criar admin se não for admin
+    const role = body.role || 'operator';
+    const isAdmin = currentUser.isAdmin && (body.isAdmin || role === 'admin');
+
     const userData: Omit<User, 'id' | 'createdAt' | 'updatedAt'> = {
       name: body.name,
       email: body.email.toLowerCase(),
-      passwordHash: body.password ? hashPassword(body.password) : undefined,
+      passwordHash,
       avatarUrl: body.avatarUrl,
-      role: body.role || 'operator',
-      isAdmin: body.isAdmin || body.role === 'admin',
+      provider: body.password ? 'credentials' : undefined,
+      emailVerified: false,
+      accountId: body.accountId || currentUser.accountId, // Herdar accountId
+      role,
+      isAdmin,
       allowedTerminals: body.allowedTerminals,
       allowedAdvertisers: body.allowedAdvertisers,
       restrictContent: body.restrictContent || false,
@@ -65,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     const user = await createUser(userData);
     // Remove password hash from response
-    const { passwordHash, ...safeUser } = user;
+    const { passwordHash: _, ...safeUser } = user;
 
     return NextResponse.json(safeUser, { status: 201 });
   } catch (error) {

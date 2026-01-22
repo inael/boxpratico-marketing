@@ -10,7 +10,14 @@ import {
   QuestionMarkCircleIcon,
   XMarkIcon,
   CurrencyDollarIcon,
+  BuildingStorefrontIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
+import {
+  SystemPricingConfig,
+  DEFAULT_PRICING_CONFIG,
+  VolumeDiscount,
+} from '@/types';
 
 interface Settings {
   rss: {
@@ -38,6 +45,7 @@ interface Settings {
     avgInsertionDurationSeconds: number;
     operatingHoursPerDay: number;
   };
+  systemPricing?: SystemPricingConfig;
 }
 
 interface WhatsAppStatus {
@@ -77,7 +85,8 @@ export default function SettingsTab() {
       insertionsPerHour: 4,
       avgInsertionDurationSeconds: 15,
       operatingHoursPerDay: 12
-    }
+    },
+    systemPricing: DEFAULT_PRICING_CONFIG
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -124,7 +133,8 @@ export default function SettingsTab() {
           insertionsPerHour: 4,
           avgInsertionDurationSeconds: 15,
           operatingHoursPerDay: 12
-        }
+        },
+        systemPricing: data.systemPricing || DEFAULT_PRICING_CONFIG
       });
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -985,6 +995,358 @@ export default function SettingsTab() {
                 <p className="font-bold text-amber-900">
                   R$ {(settings.networkPricing?.pricePerDisplayMonth || 20).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* System Pricing Configuration */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <BuildingStorefrontIcon className="w-6 h-6 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                Precos do Sistema
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Configuracao de precos para operadores e anunciantes
+              </p>
+            </div>
+          </div>
+
+          {/* Operadores (Whitelabel) */}
+          <div className="mb-6">
+            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <BuildingStorefrontIcon className="w-5 h-5 text-green-600" />
+              Operadores (Whitelabel)
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-green-50 rounded-xl">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Preco por Monitor (R$/mes)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={settings.systemPricing?.operatorPricePerMonitor || 35}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    systemPricing: {
+                      ...settings.systemPricing!,
+                      operatorPricePerMonitor: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900"
+                  placeholder="35.00"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Valor cobrado por cada monitor ativo
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Comissao da Plataforma (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value={settings.systemPricing?.platformCommissionPercent || 20}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    systemPricing: {
+                      ...settings.systemPricing!,
+                      platformCommissionPercent: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-gray-900"
+                  placeholder="20"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  % sobre receita que operadores geram com anunciantes
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Anunciantes */}
+          <div className="mb-6">
+            <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <UserGroupIcon className="w-5 h-5 text-blue-600" />
+              Anunciantes
+            </h3>
+            <div className="p-4 bg-blue-50 rounded-xl space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Preco Base por Tela (R$/mes)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={settings.systemPricing?.advertiserBasePricePerScreen || 35}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    systemPricing: {
+                      ...settings.systemPricing!,
+                      advertiserBasePricePerScreen: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-900"
+                  placeholder="35.00"
+                />
+              </div>
+
+              {/* Faixas de desconto por volume */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Descontos por Volume de Telas
+                </label>
+                <div className="space-y-2">
+                  {(settings.systemPricing?.volumeDiscounts || DEFAULT_PRICING_CONFIG.volumeDiscounts).map((discount, index) => (
+                    <div key={index} className="grid grid-cols-4 gap-2 items-center">
+                      <div className="text-sm text-gray-600">
+                        {discount.minScreens}-{discount.maxScreens === 999 ? '+' : discount.maxScreens} telas
+                      </div>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={discount.pricePerScreen}
+                        onChange={(e) => {
+                          const newDiscounts = [...(settings.systemPricing?.volumeDiscounts || DEFAULT_PRICING_CONFIG.volumeDiscounts)];
+                          newDiscounts[index] = {
+                            ...newDiscounts[index],
+                            pricePerScreen: parseFloat(e.target.value) || 0
+                          };
+                          setSettings({
+                            ...settings,
+                            systemPricing: {
+                              ...settings.systemPricing!,
+                              volumeDiscounts: newDiscounts
+                            }
+                          });
+                        }}
+                        className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                        placeholder="R$/tela"
+                      />
+                      <div className="text-sm text-gray-500">
+                        R$/tela
+                      </div>
+                      <div className="text-sm text-green-600 font-medium">
+                        {discount.discountPercent > 0 ? `-${discount.discountPercent}%` : 'Base'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Multiplicadores Premium */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Multiplicadores Premium
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-600">Alto Trafego (x)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={settings.systemPricing?.premiumMultipliers?.highTraffic || 1.5}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        systemPricing: {
+                          ...settings.systemPricing!,
+                          premiumMultipliers: {
+                            ...settings.systemPricing!.premiumMultipliers,
+                            highTraffic: parseFloat(e.target.value) || 1
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600">Local Premium (x)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={settings.systemPricing?.premiumMultipliers?.premiumLocation || 1.3}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        systemPricing: {
+                          ...settings.systemPricing!,
+                          premiumMultipliers: {
+                            ...settings.systemPricing!.premiumMultipliers,
+                            premiumLocation: parseFloat(e.target.value) || 1
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-600">Horario Nobre (x)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={settings.systemPricing?.premiumMultipliers?.primeTime || 1.2}
+                      onChange={(e) => setSettings({
+                        ...settings,
+                        systemPricing: {
+                          ...settings.systemPricing!,
+                          premiumMultipliers: {
+                            ...settings.systemPricing!.premiumMultipliers,
+                            primeTime: parseFloat(e.target.value) || 1
+                          }
+                        }
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Trial */}
+          <div className="mb-6">
+            <h3 className="font-semibold text-gray-800 mb-3">Periodo de Teste</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-purple-50 rounded-xl">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Dias Padrao
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="30"
+                  value={settings.systemPricing?.trialDaysDefault || 7}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    systemPricing: {
+                      ...settings.systemPricing!,
+                      trialDaysDefault: parseInt(e.target.value) || 7
+                    }
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Dias Maximo
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="90"
+                  value={settings.systemPricing?.trialDaysMax || 30}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    systemPricing: {
+                      ...settings.systemPricing!,
+                      trialDaysMax: parseInt(e.target.value) || 30
+                    }
+                  })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-900"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Pagamento */}
+          <div>
+            <h3 className="font-semibold text-gray-800 mb-3">Metodos de Pagamento</h3>
+            <div className="p-4 bg-gray-50 rounded-xl space-y-3">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Taxa do Gateway (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="20"
+                  step="0.1"
+                  value={settings.systemPricing?.paymentGatewayFeePercent || 5}
+                  onChange={(e) => setSettings({
+                    ...settings,
+                    systemPricing: {
+                      ...settings.systemPricing!,
+                      paymentGatewayFeePercent: parseFloat(e.target.value) || 0
+                    }
+                  })}
+                  className="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 outline-none text-gray-900"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Taxa cobrada pelo MercadoPago (~5%)
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.systemPricing?.paymentMethods?.pix ?? true}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      systemPricing: {
+                        ...settings.systemPricing!,
+                        paymentMethods: {
+                          ...settings.systemPricing!.paymentMethods,
+                          pix: e.target.checked
+                        }
+                      }
+                    })}
+                    className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
+                  />
+                  <span className="text-sm text-gray-700">PIX</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.systemPricing?.paymentMethods?.creditCard ?? true}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      systemPricing: {
+                        ...settings.systemPricing!,
+                        paymentMethods: {
+                          ...settings.systemPricing!.paymentMethods,
+                          creditCard: e.target.checked
+                        }
+                      }
+                    })}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Cartao de Credito</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={settings.systemPricing?.paymentMethods?.boleto ?? true}
+                    onChange={(e) => setSettings({
+                      ...settings,
+                      systemPricing: {
+                        ...settings.systemPricing!,
+                        paymentMethods: {
+                          ...settings.systemPricing!.paymentMethods,
+                          boleto: e.target.checked
+                        }
+                      }
+                    })}
+                    className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
+                  />
+                  <span className="text-sm text-gray-700">Boleto</span>
+                </label>
               </div>
             </div>
           </div>
