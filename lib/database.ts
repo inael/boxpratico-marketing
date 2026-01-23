@@ -29,6 +29,14 @@ import {
   ActivationCode,
   generateActivationCode,
   ACCOUNT_PLAN_LIMITS,
+  Tenant,
+  SalesAgent,
+  CommissionLedgerEntry,
+  ContractInvoice,
+  AffiliateSettings,
+  AffiliateLedgerEntry,
+  UserContext,
+  DEFAULT_AFFILIATE_SETTINGS,
 } from '@/types';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -802,6 +810,115 @@ export async function deleteUser(id: string): Promise<boolean> {
     const users = await readJsonFile<User>('users.json');
     const filtered = users.filter(u => u.id !== id);
     await writeJsonFile('users.json', filtered);
+  }
+
+  return true;
+}
+
+// ============================================
+// TENANTS (Multi-tenant SaaS)
+// ============================================
+
+export async function getTenants(): Promise<Tenant[]> {
+  if (isRedisConfigured()) {
+    return getAllEntities<Tenant>('tenants');
+  }
+  return readJsonFile<Tenant>('tenants.json');
+}
+
+export async function getTenantById(id: string): Promise<Tenant | null> {
+  if (isRedisConfigured()) {
+    return getEntity<Tenant>('tenants', id);
+  }
+  const tenants = await readJsonFile<Tenant>('tenants.json');
+  return tenants.find(t => t.id === id) || null;
+}
+
+export async function getTenantBySlug(slug: string): Promise<Tenant | null> {
+  if (isRedisConfigured()) {
+    const id = await getIdBySlug('tenants', slug);
+    if (!id) return null;
+    return getEntity<Tenant>('tenants', id);
+  }
+  const tenants = await readJsonFile<Tenant>('tenants.json');
+  return tenants.find(t => t.slug === slug) || null;
+}
+
+export async function createTenant(data: Omit<Tenant, 'id' | 'createdAt' | 'updatedAt'>): Promise<Tenant> {
+  const tenant: Tenant = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('tenants', tenant.id, tenant);
+    await setSlugMapping('tenants', tenant.slug, tenant.id);
+    if (tenant.referrerId) {
+      await addToIndex(`tenants:byReferrer:${tenant.referrerId}`, tenant.id);
+    }
+    await addToIndex(`tenants:byStatus:${tenant.status}`, tenant.id);
+    await addToIndex(`tenants:byType:${tenant.type}`, tenant.id);
+  } else {
+    const tenants = await readJsonFile<Tenant>('tenants.json');
+    tenants.push(tenant);
+    await writeJsonFile('tenants.json', tenants);
+  }
+
+  return tenant;
+}
+
+export async function updateTenant(id: string, updates: Partial<Tenant>): Promise<Tenant | null> {
+  const existing = await getTenantById(id);
+  if (!existing) return null;
+
+  const updated: Tenant = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    if (updates.slug && updates.slug !== existing.slug) {
+      await deleteSlugMapping('tenants', existing.slug);
+      await setSlugMapping('tenants', updates.slug, id);
+    }
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`tenants:byStatus:${existing.status}`, id);
+      await addToIndex(`tenants:byStatus:${updates.status}`, id);
+    }
+    await setEntity('tenants', id, updated);
+  } else {
+    const tenants = await readJsonFile<Tenant>('tenants.json');
+    const index = tenants.findIndex(t => t.id === id);
+    if (index !== -1) {
+      tenants[index] = updated;
+      await writeJsonFile('tenants.json', tenants);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteTenant(id: string): Promise<boolean> {
+  const existing = await getTenantById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await deleteSlugMapping('tenants', existing.slug);
+    await removeFromIndex(`tenants:byStatus:${existing.status}`, id);
+    await removeFromIndex(`tenants:byType:${existing.type}`, id);
+    if (existing.referrerId) {
+      await removeFromIndex(`tenants:byReferrer:${existing.referrerId}`, id);
+    }
+    await deleteEntity('tenants', id);
+  } else {
+    const tenants = await readJsonFile<Tenant>('tenants.json');
+    const filtered = tenants.filter(t => t.id !== id);
+    await writeJsonFile('tenants.json', filtered);
   }
 
   return true;
@@ -1638,4 +1755,841 @@ export async function cleanupExpiredActivationCodes(): Promise<number> {
   }
 
   return deletedCount;
+}
+
+// ============================================
+// SALES AGENTS (Vendedores)
+// ============================================
+
+export async function getSalesAgents(tenantId?: string): Promise<SalesAgent[]> {
+  if (isRedisConfigured()) {
+    const agents = await getAllEntities<SalesAgent>('sales-agents');
+    return tenantId ? agents.filter(a => a.tenantId === tenantId) : agents;
+  }
+  const agents = await readJsonFile<SalesAgent>('sales-agents.json');
+  return tenantId ? agents.filter(a => a.tenantId === tenantId) : agents;
+}
+
+export async function getSalesAgentById(id: string): Promise<SalesAgent | null> {
+  if (isRedisConfigured()) {
+    return getEntity<SalesAgent>('sales-agents', id);
+  }
+  const agents = await readJsonFile<SalesAgent>('sales-agents.json');
+  return agents.find(a => a.id === id) || null;
+}
+
+export async function getSalesAgentByEmail(tenantId: string, email: string): Promise<SalesAgent | null> {
+  const agents = await getSalesAgents(tenantId);
+  return agents.find(a => a.email === email) || null;
+}
+
+export async function createSalesAgent(
+  data: Omit<SalesAgent, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<SalesAgent> {
+  const agent: SalesAgent = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('sales-agents', agent.id, agent);
+    await addToIndex('sales-agents:all', agent.id);
+    await addToIndex(`sales-agents:byTenant:${agent.tenantId}`, agent.id);
+    if (agent.email) {
+      await addToIndex(`sales-agents:byEmail:${agent.tenantId}:${agent.email}`, agent.id);
+    }
+  } else {
+    const agents = await readJsonFile<SalesAgent>('sales-agents.json');
+    agents.push(agent);
+    await writeJsonFile('sales-agents.json', agents);
+  }
+
+  return agent;
+}
+
+export async function updateSalesAgent(
+  id: string,
+  updates: Partial<SalesAgent>
+): Promise<SalesAgent | null> {
+  const existing = await getSalesAgentById(id);
+  if (!existing) return null;
+
+  const updated: SalesAgent = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    tenantId: existing.tenantId,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('sales-agents', id, updated);
+    // Update email index if changed
+    if (updates.email && updates.email !== existing.email) {
+      if (existing.email) {
+        await removeFromIndex(`sales-agents:byEmail:${existing.tenantId}:${existing.email}`, id);
+      }
+      await addToIndex(`sales-agents:byEmail:${updated.tenantId}:${updates.email}`, id);
+    }
+  } else {
+    const agents = await readJsonFile<SalesAgent>('sales-agents.json');
+    const index = agents.findIndex(a => a.id === id);
+    if (index !== -1) {
+      agents[index] = updated;
+      await writeJsonFile('sales-agents.json', agents);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteSalesAgent(id: string): Promise<boolean> {
+  const existing = await getSalesAgentById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await deleteEntity('sales-agents', id);
+    await removeFromIndex('sales-agents:all', id);
+    await removeFromIndex(`sales-agents:byTenant:${existing.tenantId}`, id);
+    if (existing.email) {
+      await removeFromIndex(`sales-agents:byEmail:${existing.tenantId}:${existing.email}`, id);
+    }
+  } else {
+    const agents = await readJsonFile<SalesAgent>('sales-agents.json');
+    const filtered = agents.filter(a => a.id !== id);
+    await writeJsonFile('sales-agents.json', filtered);
+  }
+
+  return true;
+}
+
+// ============================================
+// INVOICES (Faturas)
+// ============================================
+
+export async function getInvoices(tenantId?: string): Promise<ContractInvoice[]> {
+  if (isRedisConfigured()) {
+    const invoices = await getAllEntities<ContractInvoice>('invoices');
+    return tenantId ? invoices.filter(i => i.tenantId === tenantId) : invoices;
+  }
+  const invoices = await readJsonFile<ContractInvoice>('invoices.json');
+  return tenantId ? invoices.filter(i => i.tenantId === tenantId) : invoices;
+}
+
+export async function getInvoiceById(id: string): Promise<ContractInvoice | null> {
+  if (isRedisConfigured()) {
+    return getEntity<ContractInvoice>('invoices', id);
+  }
+  const invoices = await readJsonFile<ContractInvoice>('invoices.json');
+  return invoices.find(i => i.id === id) || null;
+}
+
+export async function getInvoicesByContractId(contractId: string): Promise<ContractInvoice[]> {
+  const invoices = await getInvoices();
+  return invoices.filter(i => i.contractId === contractId);
+}
+
+export async function createInvoice(
+  data: Omit<ContractInvoice, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<ContractInvoice> {
+  const invoice: ContractInvoice = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('invoices', invoice.id, invoice);
+    await addToIndex('invoices:all', invoice.id);
+    await addToIndex(`invoices:byTenant:${invoice.tenantId}`, invoice.id);
+    await addToIndex(`invoices:byContract:${invoice.contractId}`, invoice.id);
+    await addToIndex(`invoices:byStatus:${invoice.status}`, invoice.id);
+  } else {
+    const invoices = await readJsonFile<ContractInvoice>('invoices.json');
+    invoices.push(invoice);
+    await writeJsonFile('invoices.json', invoices);
+  }
+
+  return invoice;
+}
+
+export async function updateInvoice(
+  id: string,
+  updates: Partial<ContractInvoice>
+): Promise<ContractInvoice | null> {
+  const existing = await getInvoiceById(id);
+  if (!existing) return null;
+
+  const updated: ContractInvoice = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    tenantId: existing.tenantId,
+    contractId: existing.contractId,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('invoices', id, updated);
+    // Update status index if changed
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`invoices:byStatus:${existing.status}`, id);
+      await addToIndex(`invoices:byStatus:${updates.status}`, id);
+    }
+  } else {
+    const invoices = await readJsonFile<ContractInvoice>('invoices.json');
+    const index = invoices.findIndex(i => i.id === id);
+    if (index !== -1) {
+      invoices[index] = updated;
+      await writeJsonFile('invoices.json', invoices);
+    }
+  }
+
+  return updated;
+}
+
+// ============================================
+// COMMISSION LEDGER (Extrato de Comissões)
+// ============================================
+
+export async function getCommissionLedgerEntries(tenantId?: string): Promise<CommissionLedgerEntry[]> {
+  if (isRedisConfigured()) {
+    const entries = await getAllEntities<CommissionLedgerEntry>('commission-ledger');
+    return tenantId ? entries.filter(e => e.tenantId === tenantId) : entries;
+  }
+  const entries = await readJsonFile<CommissionLedgerEntry>('commission-ledger.json');
+  return tenantId ? entries.filter(e => e.tenantId === tenantId) : entries;
+}
+
+export async function getCommissionLedgerEntryById(id: string): Promise<CommissionLedgerEntry | null> {
+  if (isRedisConfigured()) {
+    return getEntity<CommissionLedgerEntry>('commission-ledger', id);
+  }
+  const entries = await readJsonFile<CommissionLedgerEntry>('commission-ledger.json');
+  return entries.find(e => e.id === id) || null;
+}
+
+export async function getCommissionLedgerBySalesAgent(salesAgentId: string): Promise<CommissionLedgerEntry[]> {
+  const entries = await getCommissionLedgerEntries();
+  return entries.filter(e => e.salesAgentId === salesAgentId);
+}
+
+export async function getCommissionLedgerByInvoice(invoiceId: string): Promise<CommissionLedgerEntry | null> {
+  const entries = await getCommissionLedgerEntries();
+  return entries.find(e => e.invoiceId === invoiceId) || null;
+}
+
+export async function createCommissionLedgerEntry(
+  data: Omit<CommissionLedgerEntry, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<CommissionLedgerEntry> {
+  const entry: CommissionLedgerEntry = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('commission-ledger', entry.id, entry);
+    await addToIndex('commission-ledger:all', entry.id);
+    await addToIndex(`commission-ledger:byTenant:${entry.tenantId}`, entry.id);
+    await addToIndex(`commission-ledger:bySalesAgent:${entry.salesAgentId}`, entry.id);
+    await addToIndex(`commission-ledger:byContract:${entry.contractId}`, entry.id);
+    await addToIndex(`commission-ledger:byInvoice:${entry.invoiceId}`, entry.id);
+    await addToIndex(`commission-ledger:byStatus:${entry.status}`, entry.id);
+  } else {
+    const entries = await readJsonFile<CommissionLedgerEntry>('commission-ledger.json');
+    entries.push(entry);
+    await writeJsonFile('commission-ledger.json', entries);
+  }
+
+  return entry;
+}
+
+export async function updateCommissionLedgerEntry(
+  id: string,
+  updates: Partial<CommissionLedgerEntry>
+): Promise<CommissionLedgerEntry | null> {
+  const existing = await getCommissionLedgerEntryById(id);
+  if (!existing) return null;
+
+  const updated: CommissionLedgerEntry = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    tenantId: existing.tenantId,
+    salesAgentId: existing.salesAgentId,
+    contractId: existing.contractId,
+    invoiceId: existing.invoiceId,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('commission-ledger', id, updated);
+    // Update status index if changed
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`commission-ledger:byStatus:${existing.status}`, id);
+      await addToIndex(`commission-ledger:byStatus:${updates.status}`, id);
+    }
+  } else {
+    const entries = await readJsonFile<CommissionLedgerEntry>('commission-ledger.json');
+    const index = entries.findIndex(e => e.id === id);
+    if (index !== -1) {
+      entries[index] = updated;
+      await writeJsonFile('commission-ledger.json', entries);
+    }
+  }
+
+  return updated;
+}
+
+/**
+ * Marca uma comissão como paga
+ */
+export async function markCommissionAsPaid(
+  id: string,
+  paidBy: string
+): Promise<CommissionLedgerEntry | null> {
+  return updateCommissionLedgerEntry(id, {
+    status: 'PAID',
+    paidAt: new Date().toISOString(),
+    paidBy,
+  });
+}
+
+/**
+ * Processa o pagamento de uma fatura e gera entrada de comissão
+ * Deve ser chamado quando Invoice.status muda para PAID
+ */
+export async function processInvoicePayment(
+  invoiceId: string,
+  contractId: string,
+  salesAgentId: string
+): Promise<CommissionLedgerEntry | null> {
+  const invoice = await getInvoiceById(invoiceId);
+  if (!invoice) return null;
+
+  const contract = await getContractById(contractId);
+  if (!contract) return null;
+
+  const salesAgent = await getSalesAgentById(salesAgentId);
+  if (!salesAgent) return null;
+
+  // Verificar se já existe entrada para esta fatura
+  const existingEntry = await getCommissionLedgerByInvoice(invoiceId);
+  if (existingEntry) return existingEntry;
+
+  // Obter taxa de comissão do contrato (snapshot)
+  const commissionRate = (contract as any).commissionRateSnapshot || salesAgent.defaultCommissionRate;
+  const commissionAmount = (invoice.amount * commissionRate) / 100;
+
+  // Criar entrada no ledger
+  const entry = await createCommissionLedgerEntry({
+    tenantId: invoice.tenantId,
+    salesAgentId,
+    contractId,
+    invoiceId,
+    amount: Math.round(commissionAmount * 100) / 100,
+    rate: commissionRate,
+    baseAmount: invoice.amount,
+    referenceMonth: invoice.referenceMonth,
+    status: 'PENDING',
+  });
+
+  return entry;
+}
+
+// ============================================
+// PLATFORM SETTINGS (Configurações Globais)
+// ============================================
+
+interface PlatformSettingsData {
+  id: string;
+  platformName: string;
+  platformLogo?: string;
+  supportEmail?: string;
+  supportPhone?: string;
+  affiliateEnabled: boolean;
+  affiliateL1Percentage: number;
+  affiliateL2Percentage: number;
+  affiliateCookieDuration: number;
+  affiliateLockDays: number;
+  affiliateMinWithdrawal: number;
+  defaultTrialDays: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getPlatformSettings(): Promise<PlatformSettingsData> {
+  const defaultSettings: PlatformSettingsData = {
+    id: 'platform',
+    platformName: 'Box Prático',
+    affiliateEnabled: true,
+    affiliateL1Percentage: 20.0,
+    affiliateL2Percentage: 5.0,
+    affiliateCookieDuration: 60,
+    affiliateLockDays: 30,
+    affiliateMinWithdrawal: 50.0,
+    defaultTrialDays: 14,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    const settings = await getEntity<PlatformSettingsData>('platform-settings', 'platform');
+    return settings || defaultSettings;
+  }
+
+  const allSettings = await readJsonFile<PlatformSettingsData>('platform-settings.json');
+  return allSettings[0] || defaultSettings;
+}
+
+export async function updatePlatformSettings(
+  updates: Partial<PlatformSettingsData>
+): Promise<PlatformSettingsData> {
+  const existing = await getPlatformSettings();
+
+  const updated: PlatformSettingsData = {
+    ...existing,
+    ...updates,
+    id: 'platform',
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('platform-settings', 'platform', updated);
+  } else {
+    await writeJsonFile('platform-settings.json', [updated]);
+  }
+
+  return updated;
+}
+
+export async function getAffiliateSettings(): Promise<AffiliateSettings> {
+  const settings = await getPlatformSettings();
+  return {
+    affiliateEnabled: settings.affiliateEnabled,
+    affiliateL1Percentage: settings.affiliateL1Percentage,
+    affiliateL2Percentage: settings.affiliateL2Percentage,
+    affiliateCookieDuration: settings.affiliateCookieDuration,
+    affiliateLockDays: settings.affiliateLockDays,
+    affiliateMinWithdrawal: settings.affiliateMinWithdrawal,
+  };
+}
+
+export async function updateAffiliateSettings(
+  updates: Partial<AffiliateSettings>
+): Promise<AffiliateSettings> {
+  await updatePlatformSettings(updates);
+  return getAffiliateSettings();
+}
+
+// ============================================
+// AFFILIATE LEDGER (Extrato de Afiliados)
+// ============================================
+
+export async function getAffiliateLedgerEntries(affiliateId?: string): Promise<AffiliateLedgerEntry[]> {
+  if (isRedisConfigured()) {
+    const entries = await getAllEntities<AffiliateLedgerEntry>('affiliate-ledger');
+    return affiliateId ? entries.filter(e => e.affiliateId === affiliateId) : entries;
+  }
+  const entries = await readJsonFile<AffiliateLedgerEntry>('affiliate-ledger.json');
+  return affiliateId ? entries.filter(e => e.affiliateId === affiliateId) : entries;
+}
+
+export async function getAffiliateLedgerEntryById(id: string): Promise<AffiliateLedgerEntry | null> {
+  if (isRedisConfigured()) {
+    return getEntity<AffiliateLedgerEntry>('affiliate-ledger', id);
+  }
+  const entries = await readJsonFile<AffiliateLedgerEntry>('affiliate-ledger.json');
+  return entries.find(e => e.id === id) || null;
+}
+
+export async function getAffiliateLedgerBySourceUser(sourceUserId: string): Promise<AffiliateLedgerEntry[]> {
+  const entries = await getAffiliateLedgerEntries();
+  return entries.filter(e => e.sourceUserId === sourceUserId);
+}
+
+export async function getAffiliateLedgerByInvoice(invoiceId: string): Promise<AffiliateLedgerEntry[]> {
+  const entries = await getAffiliateLedgerEntries();
+  return entries.filter(e => e.subscriptionInvoiceId === invoiceId);
+}
+
+export async function createAffiliateLedgerEntry(
+  data: Omit<AffiliateLedgerEntry, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<AffiliateLedgerEntry> {
+  const entry: AffiliateLedgerEntry = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('affiliate-ledger', entry.id, entry);
+    await addToIndex('affiliate-ledger:all', entry.id);
+    await addToIndex(`affiliate-ledger:byAffiliate:${entry.affiliateId}`, entry.id);
+    await addToIndex(`affiliate-ledger:bySourceUser:${entry.sourceUserId}`, entry.id);
+    await addToIndex(`affiliate-ledger:byTenant:${entry.sourceTenantId}`, entry.id);
+    await addToIndex(`affiliate-ledger:byStatus:${entry.status}`, entry.id);
+    await addToIndex(`affiliate-ledger:byTier:${entry.tier}`, entry.id);
+  } else {
+    const entries = await readJsonFile<AffiliateLedgerEntry>('affiliate-ledger.json');
+    entries.push(entry);
+    await writeJsonFile('affiliate-ledger.json', entries);
+  }
+
+  return entry;
+}
+
+export async function updateAffiliateLedgerEntry(
+  id: string,
+  updates: Partial<AffiliateLedgerEntry>
+): Promise<AffiliateLedgerEntry | null> {
+  const existing = await getAffiliateLedgerEntryById(id);
+  if (!existing) return null;
+
+  const updated: AffiliateLedgerEntry = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    affiliateId: existing.affiliateId,
+    sourceUserId: existing.sourceUserId,
+    sourceTenantId: existing.sourceTenantId,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('affiliate-ledger', id, updated);
+    if (updates.status && updates.status !== existing.status) {
+      await removeFromIndex(`affiliate-ledger:byStatus:${existing.status}`, id);
+      await addToIndex(`affiliate-ledger:byStatus:${updates.status}`, id);
+    }
+  } else {
+    const entries = await readJsonFile<AffiliateLedgerEntry>('affiliate-ledger.json');
+    const index = entries.findIndex(e => e.id === id);
+    if (index !== -1) {
+      entries[index] = updated;
+      await writeJsonFile('affiliate-ledger.json', entries);
+    }
+  }
+
+  return updated;
+}
+
+/**
+ * Atualiza status de comissões pendentes que passaram do lock period
+ */
+export async function updatePendingAffiliateCommissions(): Promise<number> {
+  const entries = await getAffiliateLedgerEntries();
+  const now = new Date();
+  let updatedCount = 0;
+
+  for (const entry of entries) {
+    if (entry.status === 'PENDING' && entry.availableAt) {
+      if (new Date(entry.availableAt) <= now) {
+        await updateAffiliateLedgerEntry(entry.id, { status: 'AVAILABLE' });
+        updatedCount++;
+      }
+    }
+  }
+
+  return updatedCount;
+}
+
+/**
+ * Obtém estatísticas de um afiliado
+ */
+export async function getAffiliateStats(userId: string): Promise<{
+  affiliateCode: string;
+  totalReferrals: number;
+  tier1Earnings: number;
+  tier2Earnings: number;
+  totalEarnings: number;
+  pendingBalance: number;
+  availableBalance: number;
+  paidTotal: number;
+}> {
+  const user = await getUserById(userId);
+  const entries = await getAffiliateLedgerEntries(userId);
+  const allUsers = await getUsers();
+
+  // Contar referidos diretos
+  const referrals = allUsers.filter(u => (u as any).referrerId === userId);
+
+  // Calcular totais por tier
+  const tier1Entries = entries.filter(e => e.tier === 1);
+  const tier2Entries = entries.filter(e => e.tier === 2);
+
+  const tier1Earnings = tier1Entries.reduce((sum, e) => sum + e.amount, 0);
+  const tier2Earnings = tier2Entries.reduce((sum, e) => sum + e.amount, 0);
+
+  const pendingEntries = entries.filter(e => e.status === 'PENDING');
+  const availableEntries = entries.filter(e => e.status === 'AVAILABLE');
+  const paidEntries = entries.filter(e => e.status === 'PAID');
+
+  return {
+    affiliateCode: (user as any)?.affiliateCode || '',
+    totalReferrals: referrals.length,
+    tier1Earnings: Math.round(tier1Earnings * 100) / 100,
+    tier2Earnings: Math.round(tier2Earnings * 100) / 100,
+    totalEarnings: Math.round((tier1Earnings + tier2Earnings) * 100) / 100,
+    pendingBalance: Math.round(pendingEntries.reduce((sum, e) => sum + e.amount, 0) * 100) / 100,
+    availableBalance: Math.round(availableEntries.reduce((sum, e) => sum + e.amount, 0) * 100) / 100,
+    paidTotal: Math.round(paidEntries.reduce((sum, e) => sum + e.amount, 0) * 100) / 100,
+  };
+}
+
+/**
+ * Processa pagamento de assinatura SaaS e gera comissões de afiliados
+ * REGRA CRÍTICA: O sistema PARA no Nível 2 (não calcula Nível 3+)
+ */
+export async function processAffiliateSaaSPayment(
+  tenantId: string,
+  userId: string,
+  invoiceId: string,
+  invoiceAmount: number,
+  referenceMonth: string
+): Promise<AffiliateLedgerEntry[]> {
+  const createdEntries: AffiliateLedgerEntry[] = [];
+
+  // 1. Carregar configurações atuais
+  const settings = await getAffiliateSettings();
+
+  if (!settings.affiliateEnabled) {
+    return createdEntries;
+  }
+
+  // 2. Verificar se já processamos esta fatura
+  const existingEntries = await getAffiliateLedgerByInvoice(invoiceId);
+  if (existingEntries.length > 0) {
+    return existingEntries;
+  }
+
+  // 3. Buscar usuário que pagou
+  const payer = await getUserById(userId);
+  if (!payer) return createdEntries;
+
+  // Calcular data de disponibilidade
+  const availableAt = new Date();
+  availableAt.setDate(availableAt.getDate() + settings.affiliateLockDays);
+
+  // 4. NÍVEL 1: Verificar se o usuário tem referrer (Pai)
+  const payerReferrerId = (payer as any).referrerId;
+  if (!payerReferrerId) {
+    return createdEntries;
+  }
+
+  const level1Referrer = await getUserById(payerReferrerId);
+  if (!level1Referrer) return createdEntries;
+
+  // Calcular comissão nível 1
+  const tier1Amount = (invoiceAmount * settings.affiliateL1Percentage) / 100;
+
+  const tier1Entry = await createAffiliateLedgerEntry({
+    affiliateId: level1Referrer.id,
+    sourceUserId: userId,
+    sourceTenantId: tenantId,
+    subscriptionInvoiceId: invoiceId,
+    tier: 1,
+    percentageApplied: settings.affiliateL1Percentage,
+    baseAmount: invoiceAmount,
+    amount: Math.round(tier1Amount * 100) / 100,
+    referenceMonth,
+    status: 'PENDING',
+    availableAt: availableAt.toISOString(),
+  });
+  createdEntries.push(tier1Entry);
+
+  // 5. NÍVEL 2: Verificar se o "Pai" tem referrer (Avô)
+  const level1ReferrerId = (level1Referrer as any).referrerId;
+  if (!level1ReferrerId) {
+    return createdEntries;
+  }
+
+  const level2Referrer = await getUserById(level1ReferrerId);
+  if (!level2Referrer) return createdEntries;
+
+  // Calcular comissão nível 2
+  const tier2Amount = (invoiceAmount * settings.affiliateL2Percentage) / 100;
+
+  const tier2Entry = await createAffiliateLedgerEntry({
+    affiliateId: level2Referrer.id,
+    sourceUserId: userId,
+    sourceTenantId: tenantId,
+    subscriptionInvoiceId: invoiceId,
+    tier: 2,
+    percentageApplied: settings.affiliateL2Percentage,
+    baseAmount: invoiceAmount,
+    amount: Math.round(tier2Amount * 100) / 100,
+    referenceMonth,
+    status: 'PENDING',
+    availableAt: availableAt.toISOString(),
+  });
+  createdEntries.push(tier2Entry);
+
+  // TRAVA DE SEGURANÇA: NÃO calcular Nível 3+
+  // O loop para aqui propositalmente
+
+  return createdEntries;
+}
+
+// ============================================
+// USER CONTEXTS (Multi-Role Support)
+// ============================================
+
+export async function getUserContexts(userId: string): Promise<UserContext[]> {
+  if (isRedisConfigured()) {
+    const contexts = await getAllEntities<UserContext>('user-contexts');
+    return contexts.filter(c => c.userId === userId);
+  }
+  const contexts = await readJsonFile<UserContext>('user-contexts.json');
+  return contexts.filter(c => c.userId === userId);
+}
+
+export async function getUserContextById(id: string): Promise<UserContext | null> {
+  if (isRedisConfigured()) {
+    return getEntity<UserContext>('user-contexts', id);
+  }
+  const contexts = await readJsonFile<UserContext>('user-contexts.json');
+  return contexts.find(c => c.id === id) || null;
+}
+
+export async function getUserContextByRoleTenant(
+  userId: string,
+  role: string,
+  tenantId?: string
+): Promise<UserContext | null> {
+  const contexts = await getUserContexts(userId);
+  return contexts.find(c =>
+    c.role === role && (c.tenantId === tenantId || (!c.tenantId && !tenantId))
+  ) || null;
+}
+
+export async function createUserContext(
+  data: Omit<UserContext, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<UserContext> {
+  const context: UserContext = {
+    ...data,
+    id: Date.now().toString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('user-contexts', context.id, context);
+    await addToIndex('user-contexts:all', context.id);
+    await addToIndex(`user-contexts:byUser:${context.userId}`, context.id);
+    if (context.tenantId) {
+      await addToIndex(`user-contexts:byTenant:${context.tenantId}`, context.id);
+    }
+  } else {
+    const contexts = await readJsonFile<UserContext>('user-contexts.json');
+    contexts.push(context);
+    await writeJsonFile('user-contexts.json', contexts);
+  }
+
+  return context;
+}
+
+export async function updateUserContext(
+  id: string,
+  updates: Partial<UserContext>
+): Promise<UserContext | null> {
+  const existing = await getUserContextById(id);
+  if (!existing) return null;
+
+  const updated: UserContext = {
+    ...existing,
+    ...updates,
+    id: existing.id,
+    userId: existing.userId,
+    createdAt: existing.createdAt,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (isRedisConfigured()) {
+    await setEntity('user-contexts', id, updated);
+  } else {
+    const contexts = await readJsonFile<UserContext>('user-contexts.json');
+    const index = contexts.findIndex(c => c.id === id);
+    if (index !== -1) {
+      contexts[index] = updated;
+      await writeJsonFile('user-contexts.json', contexts);
+    }
+  }
+
+  return updated;
+}
+
+export async function deleteUserContext(id: string): Promise<boolean> {
+  const existing = await getUserContextById(id);
+  if (!existing) return false;
+
+  if (isRedisConfigured()) {
+    await deleteEntity('user-contexts', id);
+    await removeFromIndex('user-contexts:all', id);
+    await removeFromIndex(`user-contexts:byUser:${existing.userId}`, id);
+    if (existing.tenantId) {
+      await removeFromIndex(`user-contexts:byTenant:${existing.tenantId}`, id);
+    }
+  } else {
+    const contexts = await readJsonFile<UserContext>('user-contexts.json');
+    const filtered = contexts.filter(c => c.id !== id);
+    await writeJsonFile('user-contexts.json', filtered);
+  }
+
+  return true;
+}
+
+/**
+ * Troca o contexto ativo do usuário
+ */
+export async function switchUserContext(
+  userId: string,
+  targetRole: string,
+  targetTenantId?: string
+): Promise<UserContext | null> {
+  // Verificar se o contexto existe
+  const targetContext = await getUserContextByRoleTenant(userId, targetRole, targetTenantId);
+  if (!targetContext) return null;
+
+  // Desativar todos os contextos do usuário
+  const allContexts = await getUserContexts(userId);
+  for (const ctx of allContexts) {
+    if (ctx.isDefault) {
+      await updateUserContext(ctx.id, { isDefault: false });
+    }
+  }
+
+  // Ativar o contexto alvo
+  await updateUserContext(targetContext.id, { isDefault: true });
+
+  return getUserContextById(targetContext.id);
+}
+
+/**
+ * Obtém o contexto ativo/padrão do usuário
+ */
+export async function getActiveUserContext(userId: string): Promise<UserContext | null> {
+  const contexts = await getUserContexts(userId);
+
+  // Primeiro, tentar encontrar o contexto marcado como default
+  const defaultContext = contexts.find(c => c.isDefault);
+  if (defaultContext) return defaultContext;
+
+  // Se não houver default, retornar o primeiro contexto ativo
+  const activeContext = contexts.find(c => c.isActive);
+  if (activeContext) return activeContext;
+
+  // Se não houver contextos, retornar null
+  return contexts[0] || null;
 }

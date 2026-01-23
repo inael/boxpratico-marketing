@@ -1,0 +1,1051 @@
+// Box Prático - Schema Multi-Tenant SaaS
+// Digital Signage & Corporate TV Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  SUPER_ADMIN      // Platform owner - full access
+  TENANT_ADMIN     // Tenant administrator
+  TENANT_MANAGER   // Tenant manager (limited admin)
+  LOCATION_OWNER   // Location partner (limited access)
+  ADVERTISER       // Advertiser (read-only campaigns)
+  OPERATOR         // Content operator
+}
+
+enum TenantType {
+  COMMERCIAL  // Sells advertising
+  CORPORATE   // Internal communication
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum SubscriptionPlan {
+  STARTER     // Up to 5 screens
+  PROFESSIONAL // Up to 20 screens
+  ENTERPRISE  // Unlimited screens
+  CUSTOM      // Custom pricing
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  YOUTUBE
+  PDF
+  RTMP
+  WIDGET
+  HTML_TEMPLATE
+  QRCODE_WIFI
+  MENU_BOARD
+  QUEUE_CALLER
+}
+
+enum ScreenOrientation {
+  HORIZONTAL  // Landscape 1920x1080
+  VERTICAL    // Portrait 1080x1920 (Totem)
+}
+
+// Estratégia quando playlist excede duração alvo
+enum LoopViolationStrategy {
+  WARNING     // Apenas avisa o usuário
+  BLOCK       // Impede salvar a playlist
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+// Status do contrato
+enum ContractStatus {
+  DRAFT           // Rascunho
+  PENDING_SIGNATURE // Aguardando assinatura
+  ACTIVE          // Ativo
+  COMPLETED       // Concluído
+  CANCELLED       // Cancelado
+  SUSPENDED       // Suspenso
+}
+
+// Status do ledger de comissão (vendedor)
+enum CommissionLedgerStatus {
+  PENDING         // Aguardando pagamento
+  PAID            // Pago ao vendedor
+  CANCELLED       // Cancelado
+}
+
+// Status do ledger de afiliados (plataforma)
+enum AffiliateLedgerStatus {
+  PENDING         // Aguardando período de lock
+  AVAILABLE       // Disponível para saque
+  PAID            // Pago ao afiliado
+  CANCELLED       // Cancelado (chargeback, etc)
+}
+
+// ============================================
+// PLATFORM LEVEL (Global)
+// ============================================
+
+// Platform settings (singleton - key/value style for flexibility)
+model PlatformSettings {
+  id                    String   @id @default("platform")
+  platformName          String   @default("Box Prático")
+  platformLogo          String?
+  supportEmail          String?
+  supportPhone          String?
+
+  // ============================================
+  // AFFILIATE SETTINGS (Configurável pelo Super Admin)
+  // ============================================
+  affiliateEnabled          Boolean  @default(true)
+  affiliateL1Percentage     Float    @default(20.0)  // 20% para indicação direta
+  affiliateL2Percentage     Float    @default(5.0)   // 5% para indicação indireta
+  affiliateCookieDuration   Int      @default(60)    // Dias de validade do cookie
+  affiliateLockDays         Int      @default(30)    // Dias antes de comissão ficar disponível
+  affiliateMinWithdrawal    Float    @default(50.0)  // Valor mínimo para saque
+
+  // Default pricing
+  defaultTrialDays      Int      @default(14)
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+// ============================================
+// TENANT LEVEL
+// ============================================
+
+model Tenant {
+  id                String        @id @default(cuid())
+  name              String
+  slug              String        @unique
+  type              TenantType    @default(COMMERCIAL)
+  status            TenantStatus  @default(TRIAL)
+  plan              SubscriptionPlan @default(STARTER)
+
+  // Contact info
+  email             String
+  phone             String?
+  document          String?       // CNPJ/CPF
+
+  // Address
+  address           String?
+  city              String?
+  state             String?
+  zipCode           String?
+  country           String        @default("BR")
+
+  // Subscription
+  trialEndsAt       DateTime?
+  subscriptionStartedAt DateTime?
+  monthlyFee        Float         @default(0)
+
+  // White-label settings
+  customDomain      String?       @unique
+  logoUrl           String?
+  faviconUrl        String?
+  primaryColor      String        @default("#F59E0B")
+  secondaryColor    String        @default("#D97706")
+
+  // Feature toggles
+  isCorporate       Boolean       @default(false) // Alias for type check
+  featuresEnabled   Json?         // Custom feature flags
+
+  // Playlist validation settings
+  targetLoopDuration      Int       @default(1200)  // Duração alvo do ciclo em segundos (default: 20 min)
+  loopViolationStrategy   LoopViolationStrategy @default(WARNING)
+  defaultSlotDuration     Int       @default(15)    // Duração padrão de slot em segundos
+  minSlotDuration         Int       @default(5)     // Duração mínima de slot
+  maxSlotDuration         Int       @default(60)    // Duração máxima de slot
+
+  // Affiliate tracking
+  referrerId        String?       // User who referred this tenant
+  referrer          User?         @relation("ReferredTenants", fields: [referrerId], references: [id])
+  referralCode      String?       @unique // This tenant's referral code
+
+  // Timestamps
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  users             User[]
+  locations         Location[]
+  screens           Screen[]
+  playlists         Playlist[]
+  mediaItems        Media[]
+  advertisers       Advertiser[]
+  campaigns         Campaign[]
+  contracts         Contract[]
+  payments          Payment[]
+  internalComms     InternalComm[]
+  birthdays         Birthday[]
+  goals             Goal[]
+  salesAgents       SalesAgent[]
+  invoices          Invoice[]
+  commissionLedger  CommissionLedger[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([referrerId])
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id                String    @id @default(cuid())
+  email             String    @unique
+  name              String
+  passwordHash      String?
+  avatarUrl         String?
+  phone             String?
+
+  // Primary Role & Tenant (backward compatibility)
+  role              Role      @default(OPERATOR)
+  tenantId          String?
+  tenant            Tenant?   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Multi-Context: User can have multiple roles across tenants
+  contexts          UserContext[]
+
+  // For LOCATION_OWNER - which locations they own
+  ownedLocations    Location[]
+
+  // For ADVERTISER - which advertiser account
+  advertiserAccount Advertiser?
+
+  // OAuth
+  googleId          String?   @unique
+
+  // ============================================
+  // AFFILIATE SYSTEM
+  // ============================================
+  affiliateCode     String    @unique @default(cuid())  // Código único do afiliado (ex: "MARIA10")
+  referrerId        String?   // Quem indicou este usuário
+  referrer          User?     @relation("UserReferrals", fields: [referrerId], references: [id])
+  referrals         User[]    @relation("UserReferrals")
+  referredTenants   Tenant[]  @relation("ReferredTenants")
+
+  // Commissions earned from platform (SaaS subscriptions)
+  affiliateLedger       AffiliateLedger[] @relation("AffiliateEarner")
+  affiliateLedgerSource AffiliateLedger[] @relation("AffiliateSource")
+
+  // Legacy commission system
+  commissionsEarned Commission[] @relation("CommissionEarner")
+  commissionsSource Commission[] @relation("CommissionSource")
+
+  // Status
+  isActive          Boolean   @default(true)
+  emailVerified     Boolean   @default(false)
+  lastLoginAt       DateTime?
+
+  // Timestamps
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([role])
+  @@index([affiliateCode])
+  @@index([referrerId])
+}
+
+// ============================================
+// USER CONTEXT (Multi-Role Support)
+// ============================================
+// Permite que um usuário tenha múltiplos "chapéus" (roles)
+// em diferentes tenants ou no mesmo tenant
+
+model UserContext {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Role neste contexto
+  role            Role
+
+  // Tenant associado (null = contexto de plataforma/super admin)
+  tenantId        String?
+
+  // Label amigável para o usuário (ex: "Vendedor - Rede ABC")
+  label           String?
+
+  // Se este é o contexto padrão/ativo
+  isDefault       Boolean   @default(false)
+
+  // Contexto ativo na sessão atual
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Um usuário não pode ter o mesmo role+tenant duplicado
+  @@unique([userId, role, tenantId])
+  @@index([userId])
+  @@index([tenantId])
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  userId        String
+  token         String   @unique
+  userAgent     String?
+  ipAddress     String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([token])
+}
+
+// ============================================
+// LOCATIONS & SCREENS
+// ============================================
+
+model Location {
+  id                  String    @id @default(cuid())
+  tenantId            String
+  tenant              Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name                String
+  slug                String
+
+  // Owner (for LOCATION_OWNER role)
+  ownerId             String?
+  owner               User?     @relation(fields: [ownerId], references: [id])
+
+  // Address
+  address             String?
+  neighborhood        String?
+  city                String?
+  state               String?
+  zipCode             String?
+  latitude            Float?
+  longitude           Float?
+
+  // Business info
+  category            String?   // gym, clinic, restaurant, etc.
+  averageDailyTraffic Int?
+
+  // Contact
+  contactName         String?
+  contactPhone        String?
+  contactEmail        String?
+  whatsappPhone       String?
+
+  // Commission for location owner
+  commissionRate      Float     @default(0)
+
+  // Medal system (based on traffic)
+  medalType           String?   // bronze, silver, gold
+
+  // Status
+  isActive            Boolean   @default(true)
+
+  // Timestamps
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relations
+  screens             Screen[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@index([ownerId])
+}
+
+model Screen {
+  id                  String            @id @default(cuid())
+  tenantId            String
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  locationId          String
+  location            Location          @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  name                String
+  slug                String            @unique
+
+  // Screen settings
+  orientation         ScreenOrientation @default(HORIZONTAL)
+  resolution          String?           // e.g., "1920x1080"
+
+  // Operating schedule
+  is24h               Boolean           @default(true)
+  startTime           String?           // "08:00"
+  endTime             String?           // "22:00"
+  daysOfWeek          Int[]             @default([0, 1, 2, 3, 4, 5, 6])
+
+  // Player settings
+  updateCycleMinutes  Int               @default(10)
+  soundEnabled        Boolean           @default(false)
+  footerEnabled       Boolean           @default(false)
+  footerText          String?
+
+  // Current playlist
+  activePlaylistId    String?
+  activePlaylist      Playlist?         @relation("ActivePlaylist", fields: [activePlaylistId], references: [id])
+
+  // Status
+  isActive            Boolean           @default(true)
+  isOnline            Boolean           @default(false)
+  lastHeartbeat       DateTime?
+
+  // Timestamps
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  // Relations
+  playlists           Playlist[]        @relation("ScreenPlaylists")
+  analytics           ScreenAnalytics[]
+
+  @@index([tenantId])
+  @@index([locationId])
+  @@index([slug])
+}
+
+// ============================================
+// CONTENT
+// ============================================
+
+model Media {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name            String
+  type            MediaType
+  url             String?
+  thumbnailUrl    String?
+
+  // Orientation (obrigatório para validação de compatibilidade)
+  orientation     ScreenOrientation @default(HORIZONTAL)
+
+  // For different media types
+  youtubeId       String?   // YouTube video ID
+  rtmpUrl         String?   // RTMP stream URL
+  htmlContent     String?   // HTML template content
+  widgetConfig    Json?     // Widget configuration
+
+  // Metadata
+  duration        Int?      // Duration in seconds (slot duration)
+  fileSize        Int?      // Size in bytes
+  mimeType        String?
+  width           Int?      // Largura em pixels (ex: 1920 ou 1080)
+  height          Int?      // Altura em pixels (ex: 1080 ou 1920)
+
+  // Organization
+  folderId        String?
+  tags            String[]
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  playlistItems   PlaylistItem[]
+  campaignMedia   CampaignMedia[]
+
+  @@index([tenantId])
+  @@index([type])
+  @@index([orientation])
+}
+
+model Playlist {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String?
+
+  // Schedule
+  startDate       DateTime?
+  endDate         DateTime?
+  isDefault       Boolean   @default(false)
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  items           PlaylistItem[]
+  screens         Screen[]  @relation("ScreenPlaylists")
+  activeOnScreens Screen[]  @relation("ActivePlaylist")
+
+  @@index([tenantId])
+}
+
+model PlaylistItem {
+  id              String    @id @default(cuid())
+  playlistId      String
+  playlist        Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  mediaId         String
+  media           Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  // Display settings
+  order           Int       @default(0)
+  duration        Int?      // Override media duration
+
+  // Schedule within playlist
+  startTime       String?   // "08:00"
+  endTime         String?   // "18:00"
+  daysOfWeek      Int[]     @default([0, 1, 2, 3, 4, 5, 6])
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([playlistId])
+  @@index([mediaId])
+}
+
+// ============================================
+// ADVERTISING (Commercial Mode)
+// ============================================
+
+model Advertiser {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Link to user account (for ADVERTISER role)
+  userId          String?   @unique
+  user            User?     @relation(fields: [userId], references: [id])
+
+  name            String
+  document        String?   // CNPJ/CPF
+
+  // Contact
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+
+  // Business info
+  segment         String?
+  targetRadius    Int?      // Target radius in km
+  notes           String?
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  campaigns       Campaign[]
+  contracts       Contract[]
+
+  @@index([tenantId])
+}
+
+model Campaign {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  advertiserId    String
+  advertiser      Advertiser @relation(fields: [advertiserId], references: [id], onDelete: Cascade)
+
+  name            String
+  description     String?
+
+  // Schedule
+  startDate       DateTime
+  endDate         DateTime
+
+  // Targeting
+  targetLocations String[]  // Location IDs
+  targetScreens   String[]  // Screen IDs
+
+  // Budget
+  budget          Float?
+  impressionsGoal Int?
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  media           CampaignMedia[]
+  analytics       CampaignAnalytics[]
+
+  @@index([tenantId])
+  @@index([advertiserId])
+}
+
+model CampaignMedia {
+  id              String    @id @default(cuid())
+  campaignId      String
+  campaign        Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  mediaId         String
+  media           Media     @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+
+  // Display settings
+  order           Int       @default(0)
+  weight          Int       @default(1) // For rotation probability
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+
+  @@index([campaignId])
+  @@index([mediaId])
+}
+
+model Contract {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  advertiserId    String
+  advertiser      Advertiser @relation(fields: [advertiserId], references: [id])
+
+  // Sales Agent (Vendedor responsável)
+  salesAgentId    String?
+  salesAgent      SalesAgent? @relation(fields: [salesAgentId], references: [id])
+
+  // Contract details
+  title           String
+  description     String?
+  value           Float         // Valor mensal do contrato
+
+  // Commission snapshot (CRÍTICO: congelado no momento da criação)
+  // Esta taxa NÃO deve mudar mesmo se a taxa padrão do vendedor mudar
+  commissionRateSnapshot  Float?  // Ex: 30.00 = 30%
+
+  // Period
+  startDate       DateTime
+  endDate         DateTime
+
+  // Billing
+  billingDay      Int       @default(10)  // Dia do vencimento (1-28)
+  paymentMethod   String?   // pix, boleto, credit_card
+
+  // Document
+  documentUrl     String?
+  signedAt        DateTime?
+
+  // Status (usando enum agora)
+  status          ContractStatus @default(DRAFT)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  invoices        Invoice[]
+  commissionLedger CommissionLedger[]
+
+  @@index([tenantId])
+  @@index([advertiserId])
+  @@index([salesAgentId])
+  @@index([status])
+}
+
+// ============================================
+// SALES TEAM MANAGEMENT (Gestão de Vendedores)
+// ============================================
+
+model SalesAgent {
+  id                    String    @id @default(cuid())
+  tenantId              String
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Dados do vendedor
+  name                  String
+  email                 String?
+  phone                 String?
+  document              String?   // CPF
+
+  // Comissão padrão (usado como sugestão em novos contratos)
+  defaultCommissionRate Float     @default(30.0)  // Ex: 30.0 = 30%
+
+  // Dados de pagamento
+  paymentDetails        Json?     // { pixKey, pixType, bank, agency, account }
+
+  // Status
+  isActive              Boolean   @default(true)
+
+  // Timestamps
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Relations
+  contracts             Contract[]
+  commissions           CommissionLedger[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model Invoice {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  contractId      String
+  contract        Contract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  // Invoice details
+  invoiceNumber   String?   // Número sequencial da fatura
+  amount          Float     // Valor da fatura
+  dueDate         DateTime  // Data de vencimento
+  referenceMonth  DateTime  // Mês de referência (competência)
+
+  // Payment
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+  paidAmount      Float?
+  paymentMethod   String?
+
+  // External payment (MercadoPago, etc)
+  externalId      String?
+  pixQrCode       String?
+  pixCopiaECola   String?
+  boletoUrl       String?
+  boletoBarcode   String?
+
+  // Notes
+  notes           String?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  commissionLedger CommissionLedger[]
+
+  @@index([tenantId])
+  @@index([contractId])
+  @@index([status])
+  @@index([referenceMonth])
+}
+
+model CommissionLedger {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  salesAgentId    String
+  salesAgent      SalesAgent @relation(fields: [salesAgentId], references: [id])
+
+  contractId      String
+  contract        Contract  @relation(fields: [contractId], references: [id])
+
+  invoiceId       String
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id])
+
+  // Commission details
+  amount          Float     // Valor da comissão calculada
+  rate            Float     // Taxa usada (snapshot do contrato)
+  baseAmount      Float     // Valor base (valor da fatura)
+
+  // Reference
+  referenceMonth  DateTime  // Mês de competência
+
+  // Status
+  status          CommissionLedgerStatus @default(PENDING)
+  paidAt          DateTime?
+  paidBy          String?   // User ID de quem marcou como pago
+
+  // Notes
+  notes           String?
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([salesAgentId])
+  @@index([contractId])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([referenceMonth])
+}
+
+// ============================================
+// INTERNAL COMMUNICATION (Corporate Mode)
+// ============================================
+
+model InternalComm {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  title           String
+  content         String
+  type            String    // announcement, alert, news, event
+
+  // Display settings
+  priority        Int       @default(0)
+  backgroundColor String?
+  textColor       String?
+
+  // Schedule
+  startDate       DateTime?
+  endDate         DateTime?
+
+  // Targeting
+  targetScreens   String[]  // Screen IDs (empty = all)
+
+  // Status
+  isActive        Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+}
+
+model Birthday {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  name            String
+  department      String?
+  birthDate       DateTime
+  photoUrl        String?
+
+  // Display settings
+  showOnScreens   Boolean   @default(true)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+  @@index([birthDate])
+}
+
+model Goal {
+  id              String    @id @default(cuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  title           String
+  description     String?
+
+  // Metric
+  targetValue     Float
+  currentValue    Float     @default(0)
+  unit            String?   // %, R$, units, etc.
+
+  // Period
+  startDate       DateTime
+  endDate         DateTime
+
+  // Display
+  showOnScreens   Boolean   @default(true)
+  displayStyle    String    @default("progress") // progress, gauge, number
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([tenantId])
+}
+
+// ============================================
+// FINANCIAL
+// ============================================
+
+model Payment {
+  id              String        @id @default(cuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  // Payment details
+  amount          Float
+  currency        String        @default("BRL")
+  description     String?
+
+  // External payment
+  externalId      String?       // MercadoPago ID
+  paymentMethod   String?
+
+  // Status
+  status          PaymentStatus @default(PENDING)
+  paidAt          DateTime?
+
+  // Timestamps
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([externalId])
+}
+
+model Commission {
+  id              String          @id @default(cuid())
+
+  // Who earns
+  earnerId        String
+  earner          User            @relation("CommissionEarner", fields: [earnerId], references: [id])
+
+  // Source (the tenant whose subscription generated this)
+  sourceTenantId  String
+  sourceUserId    String
+  sourceUser      User            @relation("CommissionSource", fields: [sourceUserId], references: [id])
+
+  // Commission details
+  level           Int             // 1 = direct, 2 = indirect
+  rate            Float           // 0.10 = 10%
+  baseAmount      Float           // Original subscription value
+  amount          Float           // Commission amount
+
+  // Period
+  periodStart     DateTime
+  periodEnd       DateTime
+
+  // Status
+  status          CommissionStatus @default(PENDING)
+  approvedAt      DateTime?
+  paidAt          DateTime?
+
+  // Timestamps
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([earnerId])
+  @@index([sourceTenantId])
+  @@index([status])
+}
+
+// ============================================
+// AFFILIATE LEDGER (Extrato de Comissões de Afiliados)
+// ============================================
+// Registra todas as comissões geradas pelo sistema de indicação
+// quando uma fatura de assinatura SaaS é paga
+
+model AffiliateLedger {
+  id                    String                @id @default(cuid())
+
+  // Quem recebe a comissão (afiliado)
+  affiliateId           String
+  affiliate             User                  @relation("AffiliateEarner", fields: [affiliateId], references: [id])
+
+  // Quem pagou a fatura (dono do tenant)
+  sourceUserId          String
+  sourceUser            User                  @relation("AffiliateSource", fields: [sourceUserId], references: [id])
+
+  // Tenant de origem (quem pagou a assinatura)
+  sourceTenantId        String
+
+  // Fatura SaaS que gerou esta comissão
+  subscriptionInvoiceId String?               // ID da fatura de assinatura
+
+  // Detalhes da comissão
+  tier                  Int                   // 1 = indicação direta (Pai), 2 = indicação indireta (Avô)
+  percentageApplied     Float                 // Snapshot da taxa usada (ex: 20.0 = 20%)
+  baseAmount            Float                 // Valor da fatura paga
+  amount                Float                 // Valor calculado da comissão
+
+  // Período de referência
+  referenceMonth        DateTime              // Mês de competência
+
+  // Status do pagamento
+  status                AffiliateLedgerStatus @default(PENDING)
+  availableAt           DateTime?             // Quando ficará disponível (após lock period)
+  paidAt                DateTime?             // Quando foi pago
+  paidBy                String?               // Quem processou o pagamento
+
+  // Notas
+  notes                 String?
+
+  // Timestamps
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@index([affiliateId])
+  @@index([sourceUserId])
+  @@index([sourceTenantId])
+  @@index([status])
+  @@index([referenceMonth])
+  @@index([tier])
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+model ScreenAnalytics {
+  id              String    @id @default(cuid())
+  screenId        String
+  screen          Screen    @relation(fields: [screenId], references: [id], onDelete: Cascade)
+
+  date            DateTime  @db.Date
+
+  // Metrics
+  onlineMinutes   Int       @default(0)
+  impressions     Int       @default(0)
+  uniqueMedia     Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+
+  @@unique([screenId, date])
+  @@index([screenId])
+  @@index([date])
+}
+
+model CampaignAnalytics {
+  id              String    @id @default(cuid())
+  campaignId      String
+  campaign        Campaign  @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  date            DateTime  @db.Date
+
+  // Metrics
+  impressions     Int       @default(0)
+  uniqueScreens   Int       @default(0)
+  estimatedReach  Int       @default(0)
+
+  // Timestamps
+  createdAt       DateTime  @default(now())
+
+  @@unique([campaignId, date])
+  @@index([campaignId])
+  @@index([date])
+}

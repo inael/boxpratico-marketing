@@ -1,17 +1,21 @@
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/auth';
 import { NextRequest, NextResponse } from 'next/server';
-import { Permission, hasPermission, hasAllPermissions, hasAnyPermission, User, UserRole } from '@/types';
+import { Permission, hasPermission, hasAllPermissions, hasAnyPermission, User, UserRole, Role } from '@/types';
 import { getUserByEmail } from './database';
+
+// Tipo de role que suporta legado e novo RBAC
+type AnyRole = UserRole | Role;
 
 // Tipo da sessão autenticada
 export interface AuthenticatedUser {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  role: AnyRole;
   isAdmin: boolean;
   accountId?: string;
+  tenantId?: string;
   allowedTerminals?: string[];
   allowedAdvertisers?: string[];
   restrictContent?: boolean;

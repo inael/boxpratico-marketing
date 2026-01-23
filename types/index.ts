@@ -345,30 +345,173 @@ export interface NetworkPricingConfig {
   updatedAt: string;
 }
 
-// Tipo de usuario
+// ============================================
+// RBAC - ROLES E PERMISSÕES (NOVO SISTEMA MULTI-TENANT)
+// ============================================
+
+// Roles do sistema (novos)
+export type Role =
+  | 'SUPER_ADMIN'      // Dono da plataforma - acesso total
+  | 'TENANT_ADMIN'     // Administrador do tenant
+  | 'TENANT_MANAGER'   // Gerente do tenant (admin limitado)
+  | 'LOCATION_OWNER'   // Parceiro de local (acesso limitado)
+  | 'ADVERTISER'       // Anunciante (campanhas apenas)
+  | 'OPERATOR';        // Operador de conteúdo
+
+// Labels para roles
+export const ROLE_LABELS: Record<Role, string> = {
+  SUPER_ADMIN: 'Super Admin',
+  TENANT_ADMIN: 'Administrador',
+  TENANT_MANAGER: 'Gerente',
+  LOCATION_OWNER: 'Parceiro de Local',
+  ADVERTISER: 'Anunciante',
+  OPERATOR: 'Operador',
+};
+
+// Tipo de tenant
+export type TenantType = 'COMMERCIAL' | 'CORPORATE';
+
+// Labels para tipos de tenant
+export const TENANT_TYPE_LABELS: Record<TenantType, string> = {
+  COMMERCIAL: 'Comercial',
+  CORPORATE: 'Corporativo',
+};
+
+// Status do tenant
+export type TenantStatus = 'TRIAL' | 'ACTIVE' | 'SUSPENDED' | 'CANCELLED';
+
+// Planos de assinatura
+export type SubscriptionPlan = 'STARTER' | 'PROFESSIONAL' | 'ENTERPRISE' | 'CUSTOM';
+
+// Estratégia quando playlist excede duração alvo
+export type LoopViolationStrategy = 'WARNING' | 'BLOCK';
+
+// Configurações de playlist do tenant (declaração antecipada)
+export interface PlaylistValidationConfig {
+  targetLoopDuration: number;
+  loopViolationStrategy: LoopViolationStrategy;
+  defaultSlotDuration: number;
+  minSlotDuration: number;
+  maxSlotDuration: number;
+}
+
+// Valores padrão de validação de playlist
+export const DEFAULT_PLAYLIST_CONFIG: PlaylistValidationConfig = {
+  targetLoopDuration: 1200,  // 20 minutos
+  loopViolationStrategy: 'WARNING',
+  defaultSlotDuration: 15,   // 15 segundos
+  minSlotDuration: 5,        // Mínimo 5 segundos
+  maxSlotDuration: 60,       // Máximo 60 segundos
+};
+
+// Tenant (Cliente SaaS)
+export interface Tenant {
+  id: string;
+  name: string;
+  slug: string;
+  type: TenantType;
+  status: TenantStatus;
+  plan: SubscriptionPlan;
+
+  // Contato
+  email: string;
+  phone?: string;
+  document?: string; // CNPJ/CPF
+
+  // Endereço
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country: string;
+
+  // Assinatura
+  trialEndsAt?: string;
+  subscriptionStartedAt?: string;
+  monthlyFee: number;
+
+  // White-label
+  customDomain?: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  primaryColor: string;
+  secondaryColor: string;
+
+  // Feature toggles
+  featuresEnabled?: Record<string, boolean>;
+
+  // Configurações de validação de playlist
+  targetLoopDuration?: number;       // Duração alvo do ciclo em segundos (default: 1200 = 20min)
+  loopViolationStrategy?: LoopViolationStrategy; // WARNING ou BLOCK
+  defaultSlotDuration?: number;      // Duração padrão de slot (default: 15s)
+  minSlotDuration?: number;          // Duração mínima de slot (default: 5s)
+  maxSlotDuration?: number;          // Duração máxima de slot (default: 60s)
+
+  // Afiliado
+  referrerId?: string;
+  referralCode?: string;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Função helper para obter configuração de playlist do tenant
+export function getTenantPlaylistConfig(tenant: Tenant | null): PlaylistValidationConfig {
+  if (!tenant) {
+    return DEFAULT_PLAYLIST_CONFIG;
+  }
+
+  return {
+    targetLoopDuration: tenant.targetLoopDuration ?? DEFAULT_PLAYLIST_CONFIG.targetLoopDuration,
+    loopViolationStrategy: tenant.loopViolationStrategy ?? DEFAULT_PLAYLIST_CONFIG.loopViolationStrategy,
+    defaultSlotDuration: tenant.defaultSlotDuration ?? DEFAULT_PLAYLIST_CONFIG.defaultSlotDuration,
+    minSlotDuration: tenant.minSlotDuration ?? DEFAULT_PLAYLIST_CONFIG.minSlotDuration,
+    maxSlotDuration: tenant.maxSlotDuration ?? DEFAULT_PLAYLIST_CONFIG.maxSlotDuration,
+  };
+}
+
+// Tipo de usuario (legado - mantido para compatibilidade)
 export type UserRole = 'admin' | 'operator' | 'viewer';
 
 // Provedor de autenticação
 export type AuthProvider = 'credentials' | 'google';
 
-// Usuario do sistema
+// Usuario do sistema (atualizado para multi-tenant)
 export interface User {
   id: string;
   name: string;
   email: string;
   passwordHash?: string;
   avatarUrl?: string;
+  phone?: string;
 
   // Autenticação OAuth
   provider?: AuthProvider;
   providerId?: string; // ID do usuário no Google/etc
   emailVerified?: boolean;
 
-  // Conta vinculada (multi-tenant)
+  // Multi-tenant
+  tenantId?: string;
+  tenant?: Tenant;
+
+  // Role (suporta novo RBAC e legado)
+  role: Role | UserRole;
+
+  // Para LOCATION_OWNER - quais locations gerencia
+  ownedLocationIds?: string[];
+
+  // Para ADVERTISER - qual conta de anunciante
+  advertiserAccountId?: string;
+
+  // Sistema de afiliados
+  referralCode?: string;
+  referrerId?: string;
+  affiliateDepth?: number; // 0 = plataforma, 1 = direto, 2 = indireto
+
+  // Conta vinculada (legado - usar tenantId)
   accountId?: string;
 
-  // Permissoes
-  role: UserRole;
+  // Permissoes (legado)
   isAdmin: boolean;
   // Terminais que pode acessar (vazio = todos)
   allowedTerminals?: string[];
@@ -398,16 +541,22 @@ export interface User {
 
 // Permissões granulares por recurso
 export type Permission =
-  // Locais
-  | 'condominiums:read'
-  | 'condominiums:create'
-  | 'condominiums:update'
-  | 'condominiums:delete'
-  // Monitores
-  | 'monitors:read'
-  | 'monitors:create'
-  | 'monitors:update'
-  | 'monitors:delete'
+  // Plataforma (só SUPER_ADMIN)
+  | 'platform:manage'
+  | 'tenants:read'
+  | 'tenants:create'
+  | 'tenants:update'
+  | 'tenants:delete'
+  // Locais/Locations
+  | 'locations:read'
+  | 'locations:create'
+  | 'locations:update'
+  | 'locations:delete'
+  // Monitores/Screens
+  | 'screens:read'
+  | 'screens:create'
+  | 'screens:update'
+  | 'screens:delete'
   // Anunciantes
   | 'advertisers:read'
   | 'advertisers:create'
@@ -418,71 +567,172 @@ export type Permission =
   | 'media:create'
   | 'media:update'
   | 'media:delete'
-  // Playlists/Campanhas
+  // Playlists
+  | 'playlists:read'
+  | 'playlists:create'
+  | 'playlists:update'
+  | 'playlists:delete'
+  // Campanhas
   | 'campaigns:read'
   | 'campaigns:create'
   | 'campaigns:update'
   | 'campaigns:delete'
-  // Usuários
-  | 'users:read'
-  | 'users:create'
-  | 'users:update'
-  | 'users:delete'
-  // Contas
-  | 'accounts:read'
-  | 'accounts:create'
-  | 'accounts:update'
-  | 'accounts:delete'
   // Contratos
   | 'contracts:read'
   | 'contracts:create'
   | 'contracts:update'
   | 'contracts:delete'
+  // Usuários
+  | 'users:read'
+  | 'users:create'
+  | 'users:update'
+  | 'users:delete'
+  // Financeiro
+  | 'financial:read'
+  | 'financial:manage'
+  // Afiliados
+  | 'affiliates:read'
+  | 'affiliates:manage'
   // Configurações
   | 'settings:read'
   | 'settings:update'
   // Relatórios
   | 'reports:read'
-  | 'analytics:read';
+  | 'analytics:read'
+  // Comunicação interna (Corporativo)
+  | 'internal_comms:read'
+  | 'internal_comms:create'
+  | 'internal_comms:update'
+  | 'internal_comms:delete'
+  // Legados (para compatibilidade)
+  | 'condominiums:read'
+  | 'condominiums:create'
+  | 'condominiums:update'
+  | 'condominiums:delete'
+  | 'monitors:read'
+  | 'monitors:create'
+  | 'monitors:update'
+  | 'monitors:delete'
+  | 'accounts:read'
+  | 'accounts:create'
+  | 'accounts:update'
+  | 'accounts:delete';
 
-// Permissões por role
-export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  admin: [
-    'condominiums:read', 'condominiums:create', 'condominiums:update', 'condominiums:delete',
-    'monitors:read', 'monitors:create', 'monitors:update', 'monitors:delete',
+// Permissões por Role (novo sistema RBAC)
+export const NEW_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
+  SUPER_ADMIN: [
+    // Acesso total
+    'platform:manage',
+    'tenants:read', 'tenants:create', 'tenants:update', 'tenants:delete',
+    'locations:read', 'locations:create', 'locations:update', 'locations:delete',
+    'screens:read', 'screens:create', 'screens:update', 'screens:delete',
     'advertisers:read', 'advertisers:create', 'advertisers:update', 'advertisers:delete',
     'media:read', 'media:create', 'media:update', 'media:delete',
+    'playlists:read', 'playlists:create', 'playlists:update', 'playlists:delete',
     'campaigns:read', 'campaigns:create', 'campaigns:update', 'campaigns:delete',
-    'users:read', 'users:create', 'users:update', 'users:delete',
-    'accounts:read', 'accounts:create', 'accounts:update', 'accounts:delete',
     'contracts:read', 'contracts:create', 'contracts:update', 'contracts:delete',
+    'users:read', 'users:create', 'users:update', 'users:delete',
+    'financial:read', 'financial:manage',
+    'affiliates:read', 'affiliates:manage',
     'settings:read', 'settings:update',
     'reports:read', 'analytics:read',
+    'internal_comms:read', 'internal_comms:create', 'internal_comms:update', 'internal_comms:delete',
+    // Legados
+    'condominiums:read', 'condominiums:create', 'condominiums:update', 'condominiums:delete',
+    'monitors:read', 'monitors:create', 'monitors:update', 'monitors:delete',
+    'accounts:read', 'accounts:create', 'accounts:update', 'accounts:delete',
   ],
-  operator: [
-    'condominiums:read', 'condominiums:create', 'condominiums:update',
-    'monitors:read', 'monitors:create', 'monitors:update',
+  TENANT_ADMIN: [
+    // Admin do tenant - tudo exceto plataforma
+    'locations:read', 'locations:create', 'locations:update', 'locations:delete',
+    'screens:read', 'screens:create', 'screens:update', 'screens:delete',
+    'advertisers:read', 'advertisers:create', 'advertisers:update', 'advertisers:delete',
+    'media:read', 'media:create', 'media:update', 'media:delete',
+    'playlists:read', 'playlists:create', 'playlists:update', 'playlists:delete',
+    'campaigns:read', 'campaigns:create', 'campaigns:update', 'campaigns:delete',
+    'contracts:read', 'contracts:create', 'contracts:update', 'contracts:delete',
+    'users:read', 'users:create', 'users:update', 'users:delete',
+    'financial:read', 'financial:manage',
+    'affiliates:read', 'affiliates:manage',
+    'settings:read', 'settings:update',
+    'reports:read', 'analytics:read',
+    'internal_comms:read', 'internal_comms:create', 'internal_comms:update', 'internal_comms:delete',
+    // Legados
+    'condominiums:read', 'condominiums:create', 'condominiums:update', 'condominiums:delete',
+    'monitors:read', 'monitors:create', 'monitors:update', 'monitors:delete',
+  ],
+  TENANT_MANAGER: [
+    // Gerente - sem deletar, sem financeiro avançado
+    'locations:read', 'locations:create', 'locations:update',
+    'screens:read', 'screens:create', 'screens:update',
     'advertisers:read', 'advertisers:create', 'advertisers:update',
     'media:read', 'media:create', 'media:update',
+    'playlists:read', 'playlists:create', 'playlists:update',
     'campaigns:read', 'campaigns:create', 'campaigns:update',
-    'users:read',
     'contracts:read', 'contracts:create', 'contracts:update',
+    'users:read',
+    'financial:read',
+    'affiliates:read',
     'reports:read', 'analytics:read',
+    'internal_comms:read', 'internal_comms:create', 'internal_comms:update',
+    // Legados
+    'condominiums:read', 'condominiums:create', 'condominiums:update',
+    'monitors:read', 'monitors:create', 'monitors:update',
   ],
-  viewer: [
+  LOCATION_OWNER: [
+    // Parceiro de local - só suas telas e enviar avisos
+    'locations:read',
+    'screens:read',
+    'media:read', 'media:create',
+    'playlists:read',
+    'reports:read',
+    'internal_comms:read', 'internal_comms:create',
+    // Legados
     'condominiums:read',
     'monitors:read',
-    'advertisers:read',
+  ],
+  ADVERTISER: [
+    // Anunciante - só suas campanhas
+    'campaigns:read',
     'media:read',
+    'reports:read', 'analytics:read',
+  ],
+  OPERATOR: [
+    // Operador - conteúdo sem gestão financeira
+    'locations:read',
+    'screens:read', 'screens:update',
+    'media:read', 'media:create', 'media:update',
+    'playlists:read', 'playlists:create', 'playlists:update',
     'campaigns:read',
     'reports:read',
+    'internal_comms:read', 'internal_comms:create', 'internal_comms:update',
+    // Legados
+    'condominiums:read',
+    'monitors:read', 'monitors:update',
   ],
 };
 
-// Verificar se usuário tem permissão
+// Permissões por role (legado - mantido para compatibilidade)
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  admin: NEW_ROLE_PERMISSIONS.TENANT_ADMIN,
+  operator: NEW_ROLE_PERMISSIONS.OPERATOR,
+  viewer: NEW_ROLE_PERMISSIONS.LOCATION_OWNER,
+};
+
+// Verificar se usuário tem permissão (suporta Role novo e UserRole legado)
 export function hasPermission(user: User, permission: Permission): boolean {
-  if (user.isAdmin) return true;
-  const rolePermissions = ROLE_PERMISSIONS[user.role] || [];
+  // Super admin tem acesso total
+  if (user.role === 'SUPER_ADMIN' || user.isAdmin) return true;
+
+  // Novo sistema RBAC
+  if (user.role in NEW_ROLE_PERMISSIONS) {
+    const rolePermissions = NEW_ROLE_PERMISSIONS[user.role as Role] || [];
+    return rolePermissions.includes(permission);
+  }
+
+  // Legado
+  const legacyRole = user.role as unknown as UserRole;
+  const rolePermissions = ROLE_PERMISSIONS[legacyRole] || [];
   return rolePermissions.includes(permission);
 }
 
@@ -496,7 +746,7 @@ export function hasAnyPermission(user: User, permissions: Permission[]): boolean
   return permissions.some(p => hasPermission(user, p));
 }
 
-// Labels para roles
+// Labels para roles (legado)
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
   admin: 'Administrador',
   operator: 'Operador',
@@ -1481,5 +1731,1429 @@ export interface InvoiceItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+}
+
+// ============================================
+// SISTEMA DE MENUS DINÂMICOS
+// ============================================
+
+// Item de menu individual
+export interface MenuItem {
+  id: string;
+  label: string;
+  icon: string;           // Nome do ícone (heroicons)
+  path?: string;          // URL ou ID da aba
+  children?: MenuItem[];  // Submenus
+  badge?: string | number; // Badge de notificação
+  isNew?: boolean;        // Indicador de feature nova
+}
+
+// Grupo de menus (seção)
+export interface MenuGroup {
+  id: string;
+  label: string;
+  items: MenuItem[];
+}
+
+// Resposta da API /api/me/menu
+export interface UserMenuResponse {
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    role: Role;
+    avatarUrl?: string;
+  };
+  tenant: {
+    id: string;
+    name: string;
+    type: TenantType;
+    logoUrl?: string;
+    primaryColor: string;
+  } | null; // null para SUPER_ADMIN
+  menu: MenuGroup[];
+  permissions: Permission[];
+  features: Record<string, boolean>;
+}
+
+// Configuração de menus por role e tenant type
+export const MENU_CONFIG: Record<Role, {
+  commercial: MenuGroup[];
+  corporate: MenuGroup[];
+}> = {
+  SUPER_ADMIN: {
+    commercial: [
+      {
+        id: 'platform',
+        label: 'Plataforma',
+        items: [
+          { id: 'dashboard', label: 'Dashboard Global', icon: 'ChartBarIcon', path: '/admin' },
+          { id: 'tenants', label: 'Tenants', icon: 'BuildingOfficeIcon', path: '/admin/tenants' },
+          { id: 'platform-financial', label: 'Financeiro Global', icon: 'BanknotesIcon', path: '/admin/platform-financial' },
+          { id: 'platform-affiliates', label: 'Afiliados Global', icon: 'UserGroupIcon', path: '/admin/affiliates' },
+          { id: 'platform-settings', label: 'Configurações', icon: 'CogIcon', path: '/admin/platform-settings' },
+        ],
+      },
+    ],
+    corporate: [], // Super admin não usa modo corporativo diretamente
+  },
+  TENANT_ADMIN: {
+    commercial: [
+      {
+        id: 'main',
+        label: 'Principal',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: 'HomeIcon', path: 'dashboard' },
+        ],
+      },
+      {
+        id: 'network',
+        label: 'Rede',
+        items: [
+          { id: 'companies', label: 'Empresas', icon: 'BuildingOfficeIcon', path: 'companies' },
+          { id: 'monitors', label: 'Telas', icon: 'TvIcon', path: 'monitors' },
+        ],
+      },
+      {
+        id: 'content',
+        label: 'Conteúdo',
+        items: [
+          { id: 'media', label: 'Mídias', icon: 'PhotoIcon', path: 'media' },
+          { id: 'media-groups', label: 'Grupos de Mídias', icon: 'FolderIcon', path: 'media-groups' },
+          { id: 'library', label: 'Biblioteca', icon: 'CloudArrowUpIcon', path: 'library' },
+          { id: 'campaigns', label: 'Playlists', icon: 'MegaphoneIcon', path: 'campaigns' },
+        ],
+      },
+      {
+        id: 'advertising',
+        label: 'Gestão de Anúncios',
+        items: [
+          { id: 'advertisers', label: 'Anunciantes', icon: 'UserGroupIcon', path: 'advertisers' },
+          { id: 'contracts', label: 'Contratos', icon: 'DocumentTextIcon', path: 'contracts' },
+        ],
+      },
+      {
+        id: 'financial',
+        label: 'Financeiro',
+        items: [
+          { id: 'financial', label: 'Pagamentos', icon: 'BanknotesIcon', path: 'financial' },
+        ],
+      },
+      {
+        id: 'affiliates',
+        label: 'Afiliados',
+        items: [
+          { id: 'my-affiliate', label: 'Meu Link', icon: 'LinkIcon', path: 'my-affiliate' },
+          { id: 'my-network', label: 'Minha Rede', icon: 'UsersIcon', path: 'my-network' },
+          { id: 'affiliate-earnings', label: 'Extrato', icon: 'CurrencyDollarIcon', path: 'affiliate-earnings' },
+        ],
+      },
+      {
+        id: 'reports',
+        label: 'Relatórios',
+        items: [
+          { id: 'reports', label: 'Relatórios', icon: 'DocumentChartBarIcon', path: 'reports' },
+          { id: 'analytics', label: 'Analytics', icon: 'ChartBarIcon', path: 'analytics' },
+        ],
+      },
+      {
+        id: 'settings',
+        label: 'Configurações',
+        items: [
+          { id: 'accounts', label: 'Contas', icon: 'BuildingStorefrontIcon', path: 'accounts' },
+          { id: 'users', label: 'Usuários', icon: 'UsersIcon', path: 'users' },
+          { id: 'settings', label: 'Configurações', icon: 'CogIcon', path: 'settings' },
+        ],
+      },
+    ],
+    corporate: [
+      {
+        id: 'main',
+        label: 'Principal',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: 'HomeIcon', path: 'dashboard' },
+        ],
+      },
+      {
+        id: 'network',
+        label: 'Rede',
+        items: [
+          { id: 'companies', label: 'Unidades', icon: 'BuildingOfficeIcon', path: 'companies' },
+          { id: 'monitors', label: 'Telas', icon: 'TvIcon', path: 'monitors' },
+        ],
+      },
+      {
+        id: 'content',
+        label: 'Conteúdo',
+        items: [
+          { id: 'media', label: 'Mídias', icon: 'PhotoIcon', path: 'media' },
+          { id: 'media-groups', label: 'Grupos de Mídias', icon: 'FolderIcon', path: 'media-groups' },
+          { id: 'library', label: 'Biblioteca', icon: 'CloudArrowUpIcon', path: 'library' },
+          { id: 'campaigns', label: 'Playlists', icon: 'MegaphoneIcon', path: 'campaigns' },
+        ],
+      },
+      {
+        id: 'internal',
+        label: 'Comunicação Interna',
+        items: [
+          { id: 'mural', label: 'Mural Digital', icon: 'NewspaperIcon', path: 'mural' },
+          { id: 'announcements', label: 'Comunicados', icon: 'SpeakerWaveIcon', path: 'announcements' },
+          { id: 'birthdays', label: 'Aniversariantes', icon: 'CakeIcon', path: 'birthdays' },
+          { id: 'goals', label: 'Metas e KPIs', icon: 'TrophyIcon', path: 'goals' },
+        ],
+      },
+      {
+        id: 'affiliates',
+        label: 'Afiliados',
+        items: [
+          { id: 'my-affiliate', label: 'Meu Link', icon: 'LinkIcon', path: 'my-affiliate' },
+          { id: 'my-network', label: 'Minha Rede', icon: 'UsersIcon', path: 'my-network' },
+          { id: 'affiliate-earnings', label: 'Extrato', icon: 'CurrencyDollarIcon', path: 'affiliate-earnings' },
+        ],
+      },
+      {
+        id: 'settings',
+        label: 'Configurações',
+        items: [
+          { id: 'users', label: 'Usuários', icon: 'UsersIcon', path: 'users' },
+          { id: 'settings', label: 'Configurações', icon: 'CogIcon', path: 'settings' },
+        ],
+      },
+    ],
+  },
+  TENANT_MANAGER: {
+    commercial: [
+      {
+        id: 'main',
+        label: 'Principal',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: 'HomeIcon', path: 'dashboard' },
+        ],
+      },
+      {
+        id: 'network',
+        label: 'Rede',
+        items: [
+          { id: 'companies', label: 'Empresas', icon: 'BuildingOfficeIcon', path: 'companies' },
+          { id: 'monitors', label: 'Telas', icon: 'TvIcon', path: 'monitors' },
+        ],
+      },
+      {
+        id: 'content',
+        label: 'Conteúdo',
+        items: [
+          { id: 'media', label: 'Mídias', icon: 'PhotoIcon', path: 'media' },
+          { id: 'campaigns', label: 'Playlists', icon: 'MegaphoneIcon', path: 'campaigns' },
+        ],
+      },
+      {
+        id: 'advertising',
+        label: 'Gestão de Anúncios',
+        items: [
+          { id: 'advertisers', label: 'Anunciantes', icon: 'UserGroupIcon', path: 'advertisers' },
+          { id: 'contracts', label: 'Contratos', icon: 'DocumentTextIcon', path: 'contracts' },
+        ],
+      },
+      {
+        id: 'reports',
+        label: 'Relatórios',
+        items: [
+          { id: 'reports', label: 'Relatórios', icon: 'DocumentChartBarIcon', path: 'reports' },
+        ],
+      },
+    ],
+    corporate: [
+      {
+        id: 'main',
+        label: 'Principal',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: 'HomeIcon', path: 'dashboard' },
+        ],
+      },
+      {
+        id: 'network',
+        label: 'Rede',
+        items: [
+          { id: 'companies', label: 'Unidades', icon: 'BuildingOfficeIcon', path: 'companies' },
+          { id: 'monitors', label: 'Telas', icon: 'TvIcon', path: 'monitors' },
+        ],
+      },
+      {
+        id: 'content',
+        label: 'Conteúdo',
+        items: [
+          { id: 'media', label: 'Mídias', icon: 'PhotoIcon', path: 'media' },
+          { id: 'campaigns', label: 'Playlists', icon: 'MegaphoneIcon', path: 'campaigns' },
+        ],
+      },
+      {
+        id: 'internal',
+        label: 'Comunicação Interna',
+        items: [
+          { id: 'mural', label: 'Mural Digital', icon: 'NewspaperIcon', path: 'mural' },
+          { id: 'announcements', label: 'Comunicados', icon: 'SpeakerWaveIcon', path: 'announcements' },
+        ],
+      },
+    ],
+  },
+  LOCATION_OWNER: {
+    commercial: [
+      {
+        id: 'main',
+        label: 'Meu Ponto',
+        items: [
+          { id: 'my-screens', label: 'Minhas Telas', icon: 'TvIcon', path: 'my-screens' },
+          { id: 'send-notice', label: 'Enviar Aviso', icon: 'MegaphoneIcon', path: 'send-notice' },
+          { id: 'my-reports', label: 'Relatórios', icon: 'DocumentChartBarIcon', path: 'my-reports' },
+        ],
+      },
+    ],
+    corporate: [
+      {
+        id: 'main',
+        label: 'Minha Unidade',
+        items: [
+          { id: 'my-screens', label: 'Minhas Telas', icon: 'TvIcon', path: 'my-screens' },
+          { id: 'send-notice', label: 'Enviar Aviso', icon: 'MegaphoneIcon', path: 'send-notice' },
+        ],
+      },
+    ],
+  },
+  ADVERTISER: {
+    commercial: [
+      {
+        id: 'main',
+        label: 'Minhas Campanhas',
+        items: [
+          { id: 'my-campaigns', label: 'Campanhas', icon: 'MegaphoneIcon', path: 'my-campaigns' },
+          { id: 'proof-of-play', label: 'Proof of Play', icon: 'CheckCircleIcon', path: 'proof-of-play' },
+          { id: 'my-invoices', label: 'Faturas', icon: 'DocumentTextIcon', path: 'my-invoices' },
+        ],
+      },
+    ],
+    corporate: [], // Anunciantes não existem em modo corporativo
+  },
+  OPERATOR: {
+    commercial: [
+      {
+        id: 'main',
+        label: 'Principal',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: 'HomeIcon', path: 'dashboard' },
+        ],
+      },
+      {
+        id: 'content',
+        label: 'Conteúdo',
+        items: [
+          { id: 'media', label: 'Mídias', icon: 'PhotoIcon', path: 'media' },
+          { id: 'campaigns', label: 'Playlists', icon: 'MegaphoneIcon', path: 'campaigns' },
+          { id: 'monitors', label: 'Telas', icon: 'TvIcon', path: 'monitors' },
+        ],
+      },
+    ],
+    corporate: [
+      {
+        id: 'main',
+        label: 'Principal',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: 'HomeIcon', path: 'dashboard' },
+        ],
+      },
+      {
+        id: 'content',
+        label: 'Conteúdo',
+        items: [
+          { id: 'media', label: 'Mídias', icon: 'PhotoIcon', path: 'media' },
+          { id: 'campaigns', label: 'Playlists', icon: 'MegaphoneIcon', path: 'campaigns' },
+          { id: 'monitors', label: 'Telas', icon: 'TvIcon', path: 'monitors' },
+        ],
+      },
+      {
+        id: 'internal',
+        label: 'Comunicação Interna',
+        items: [
+          { id: 'mural', label: 'Mural Digital', icon: 'NewspaperIcon', path: 'mural' },
+          { id: 'announcements', label: 'Comunicados', icon: 'SpeakerWaveIcon', path: 'announcements' },
+        ],
+      },
+    ],
+  },
+};
+
+// Função para obter o menu do usuário
+export function getUserMenu(user: User, tenant: Tenant | null): MenuGroup[] {
+  const role = user.role as Role;
+  const tenantType = tenant?.type || 'COMMERCIAL';
+
+  const menuConfig = MENU_CONFIG[role];
+  if (!menuConfig) return [];
+
+  const menus = tenantType === 'CORPORATE' ? menuConfig.corporate : menuConfig.commercial;
+  return menus || [];
+}
+
+// Feature toggles por tipo de tenant
+export const FEATURE_TOGGLES: Record<TenantType, Record<string, boolean>> = {
+  COMMERCIAL: {
+    advertisers: true,
+    campaigns: true,
+    contracts: true,
+    pricing: true,
+    medals: true,
+    commissions: true,
+    mural: false,
+    birthdays: false,
+    goals: false,
+    internalComms: false,
+    library: true,
+    playlists: true,
+    widgets: true,
+    whitelabel: true,
+    affiliates: true,
+  },
+  CORPORATE: {
+    advertisers: false,
+    campaigns: false,
+    contracts: false,
+    pricing: false,
+    medals: false,
+    commissions: false,
+    mural: true,
+    birthdays: true,
+    goals: true,
+    internalComms: true,
+    library: true,
+    playlists: true,
+    widgets: true,
+    whitelabel: true,
+    affiliates: true,
+  },
+};
+
+// Verificar se feature está habilitada para o tenant
+export function isFeatureEnabled(feature: string, tenantType: TenantType): boolean {
+  return FEATURE_TOGGLES[tenantType]?.[feature] ?? false;
+}
+
+// ============================================
+// SISTEMA DE AFILIADOS
+// ============================================
+
+// Comissão de afiliado
+export interface AffiliateCommission {
+  id: string;
+  earnerId: string;        // Quem ganha a comissão
+  earnerName: string;
+  sourceTenantId: string;  // Tenant que gerou a comissão
+  sourceTenantName: string;
+  level: 1 | 2;            // Nível da comissão (1 = direto, 2 = indireto)
+  rate: number;            // Taxa (0.10 = 10%)
+  baseAmount: number;      // Valor base da assinatura
+  amount: number;          // Valor da comissão
+  periodStart: string;
+  periodEnd: string;
+  status: 'PENDING' | 'APPROVED' | 'PAID' | 'CANCELLED';
+  approvedAt?: string;
+  paidAt?: string;
+  createdAt: string;
+}
+
+// ============================================
+// SISTEMA DE AFILIADOS LEGADO (compatibilidade)
+// Mantido para backward compatibility
+// ============================================
+
+// Configurações legadas (mapeiam para as novas)
+export interface LegacyAffiliateSettings {
+  enabled: boolean;
+  level1Rate: number;      // 0.10 = 10%
+  level2Rate: number;      // 0.05 = 5%
+  maxDepth: number;        // 2
+  lockDays: number;        // 30 dias antes de liberar comissão
+}
+
+// Valores padrão legados
+export const LEGACY_AFFILIATE_SETTINGS: LegacyAffiliateSettings = {
+  enabled: true,
+  level1Rate: 0.10,
+  level2Rate: 0.05,
+  maxDepth: 2,
+  lockDays: 30,
+};
+
+// Cálculo de comissões de afiliado (legado)
+export interface LegacyAffiliateCommissionCalculation {
+  level1?: {
+    userId: string;
+    userName: string;
+    rate: number;
+    amount: number;
+  };
+  level2?: {
+    userId: string;
+    userName: string;
+    rate: number;
+    amount: number;
+  };
+  totalCommissions: number;
+  platformRetains: number;
+}
+
+// Função legada para calcular comissões de afiliado
+export function calculateLegacyAffiliateCommissions(
+  monthlyFee: number,
+  referrerChain: Array<{ id: string; name: string; depth: number }>,
+  settings: LegacyAffiliateSettings = LEGACY_AFFILIATE_SETTINGS
+): LegacyAffiliateCommissionCalculation {
+  const result: LegacyAffiliateCommissionCalculation = {
+    totalCommissions: 0,
+    platformRetains: monthlyFee,
+  };
+
+  if (!settings.enabled || referrerChain.length === 0) {
+    return result;
+  }
+
+  // Nível 1 - Indicador direto
+  const level1 = referrerChain.find(r => r.depth === 1);
+  if (level1) {
+    const amount = monthlyFee * settings.level1Rate;
+    result.level1 = {
+      userId: level1.id,
+      userName: level1.name,
+      rate: settings.level1Rate,
+      amount,
+    };
+    result.totalCommissions += amount;
+  }
+
+  // Nível 2 - Indicador do indicador (se permitido)
+  if (settings.maxDepth >= 2) {
+    const level2 = referrerChain.find(r => r.depth === 2);
+    if (level2) {
+      const amount = monthlyFee * settings.level2Rate;
+      result.level2 = {
+        userId: level2.id,
+        userName: level2.name,
+        rate: settings.level2Rate,
+        amount,
+      };
+      result.totalCommissions += amount;
+    }
+  }
+
+  // TRAVA: Não continua além do maxDepth
+  result.platformRetains = monthlyFee - result.totalCommissions;
+
+  return result;
+}
+
+// Estatísticas de afiliado (legado)
+export interface LegacyAffiliateStats {
+  referralCode: string;
+  referralLink: string;
+  totalReferrals: number;       // Total de indicados diretos
+  activeReferrals: number;      // Indicados ativos
+  totalNetwork: number;         // Total na rede (nível 1 + 2)
+  pendingCommissions: number;   // Comissões pendentes (R$)
+  paidCommissions: number;      // Comissões pagas (R$)
+  thisMonthCommissions: number; // Comissões este mês (R$)
+}
+
+// ============================================
+// VALIDAÇÃO DE PLAYLIST E ORIENTAÇÃO
+// ============================================
+
+// Orientação de mídia/tela (compatível com Prisma)
+export type MediaOrientation = 'HORIZONTAL' | 'VERTICAL';
+
+// Dimensões padrão por orientação
+export const ORIENTATION_DIMENSIONS: Record<MediaOrientation, { width: number; height: number; label: string }> = {
+  HORIZONTAL: { width: 1920, height: 1080, label: 'Paisagem (1920x1080)' },
+  VERTICAL: { width: 1080, height: 1920, label: 'Retrato/Totem (1080x1920)' },
+};
+
+// Labels para estratégias de violação de loop
+export const LOOP_VIOLATION_LABELS: Record<LoopViolationStrategy, string> = {
+  WARNING: 'Apenas Avisar',
+  BLOCK: 'Bloquear Salvamento',
+};
+
+// Item de playlist para validação
+export interface PlaylistItemForValidation {
+  id: string;
+  mediaId: string;
+  mediaName?: string;
+  mediaOrientation?: MediaOrientation;
+  duration: number; // Duração em segundos
+}
+
+// Resultado da validação de playlist
+export interface PlaylistValidationResult {
+  isValid: boolean;
+  totalDuration: number;           // Duração total em segundos
+  targetDuration: number;          // Duração alvo em segundos
+  exceedsTarget: boolean;          // Se excede o alvo
+  exceededBy: number;              // Quanto excede (em segundos)
+  percentageOfTarget: number;      // Porcentagem do alvo (ex: 120 = 120%)
+  strategy: LoopViolationStrategy; // Estratégia configurada
+  canSave: boolean;                // Se pode salvar (false se BLOCK e exceder)
+  warnings: string[];              // Lista de avisos
+  errors: string[];                // Lista de erros
+  itemsCount: number;              // Número de itens
+  averageSlotDuration: number;     // Duração média dos slots
+}
+
+/**
+ * Valida a duração total de uma playlist
+ * @param items Itens da playlist com duração
+ * @param config Configurações de validação do tenant
+ * @returns Resultado da validação
+ */
+export function validatePlaylistDuration(
+  items: PlaylistItemForValidation[],
+  config: PlaylistValidationConfig = DEFAULT_PLAYLIST_CONFIG
+): PlaylistValidationResult {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+
+  // Calcular duração total
+  const totalDuration = items.reduce((sum, item) => sum + (item.duration || config.defaultSlotDuration), 0);
+  const itemsCount = items.length;
+  const averageSlotDuration = itemsCount > 0 ? totalDuration / itemsCount : 0;
+
+  // Verificar se excede o alvo
+  const exceedsTarget = totalDuration > config.targetLoopDuration;
+  const exceededBy = exceedsTarget ? totalDuration - config.targetLoopDuration : 0;
+  const percentageOfTarget = config.targetLoopDuration > 0
+    ? Math.round((totalDuration / config.targetLoopDuration) * 100)
+    : 0;
+
+  // Verificar slots individuais
+  items.forEach((item, index) => {
+    const duration = item.duration || config.defaultSlotDuration;
+    if (duration < config.minSlotDuration) {
+      warnings.push(`Item ${index + 1} (${item.mediaName || item.mediaId}): duração de ${duration}s é menor que o mínimo de ${config.minSlotDuration}s`);
+    }
+    if (duration > config.maxSlotDuration) {
+      warnings.push(`Item ${index + 1} (${item.mediaName || item.mediaId}): duração de ${duration}s excede o máximo de ${config.maxSlotDuration}s`);
+    }
+  });
+
+  // Verificar excesso de duração
+  if (exceedsTarget) {
+    const message = `Playlist excede a duração alvo em ${formatDuration(exceededBy)} (${percentageOfTarget}% do alvo de ${formatDuration(config.targetLoopDuration)})`;
+
+    if (config.loopViolationStrategy === 'BLOCK') {
+      errors.push(message);
+    } else {
+      warnings.push(message);
+    }
+  }
+
+  // Determinar se pode salvar
+  const canSave = config.loopViolationStrategy === 'WARNING' || !exceedsTarget;
+  const isValid = errors.length === 0;
+
+  return {
+    isValid,
+    totalDuration,
+    targetDuration: config.targetLoopDuration,
+    exceedsTarget,
+    exceededBy,
+    percentageOfTarget,
+    strategy: config.loopViolationStrategy,
+    canSave,
+    warnings,
+    errors,
+    itemsCount,
+    averageSlotDuration: Math.round(averageSlotDuration),
+  };
+}
+
+/**
+ * Formata duração em segundos para string legível
+ * @param seconds Duração em segundos
+ * @returns String formatada (ex: "20min 30s")
+ */
+export function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) {
+    return `${minutes}min`;
+  }
+  return `${minutes}min ${remainingSeconds}s`;
+}
+
+// Resultado da validação de orientação
+export interface OrientationValidationResult {
+  isCompatible: boolean;
+  mediaOrientation: MediaOrientation;
+  screenOrientation: MediaOrientation;
+  warning?: string;
+  recommendation?: string;
+}
+
+/**
+ * Valida compatibilidade de orientação entre mídia e tela
+ * @param mediaOrientation Orientação da mídia
+ * @param screenOrientation Orientação da tela
+ * @returns Resultado da validação
+ */
+export function validateMediaScreenOrientation(
+  mediaOrientation: MediaOrientation,
+  screenOrientation: MediaOrientation
+): OrientationValidationResult {
+  const isCompatible = mediaOrientation === screenOrientation;
+
+  if (isCompatible) {
+    return {
+      isCompatible: true,
+      mediaOrientation,
+      screenOrientation,
+    };
+  }
+
+  // Mídia horizontal em tela vertical
+  if (mediaOrientation === 'HORIZONTAL' && screenOrientation === 'VERTICAL') {
+    return {
+      isCompatible: false,
+      mediaOrientation,
+      screenOrientation,
+      warning: 'Mídia horizontal (1920x1080) em tela vertical (1080x1920) causará distorção ou barras pretas',
+      recommendation: 'Use uma mídia vertical ou converta o arquivo para orientação retrato',
+    };
+  }
+
+  // Mídia vertical em tela horizontal
+  return {
+    isCompatible: false,
+    mediaOrientation,
+    screenOrientation,
+    warning: 'Mídia vertical (1080x1920) em tela horizontal (1920x1080) causará distorção ou barras pretas',
+    recommendation: 'Use uma mídia horizontal ou converta o arquivo para orientação paisagem',
+  };
+}
+
+/**
+ * Detecta orientação automaticamente baseado nas dimensões
+ * @param width Largura em pixels
+ * @param height Altura em pixels
+ * @returns Orientação detectada
+ */
+export function detectOrientation(width: number, height: number): MediaOrientation {
+  return width >= height ? 'HORIZONTAL' : 'VERTICAL';
+}
+
+/**
+ * Valida todos os itens de uma playlist quanto à orientação
+ * @param items Itens da playlist com orientação
+ * @param screenOrientation Orientação da tela de destino
+ * @returns Lista de incompatibilidades
+ */
+export function validatePlaylistOrientation(
+  items: PlaylistItemForValidation[],
+  screenOrientation: MediaOrientation
+): Array<{ item: PlaylistItemForValidation; validation: OrientationValidationResult }> {
+  return items
+    .filter(item => item.mediaOrientation && item.mediaOrientation !== screenOrientation)
+    .map(item => ({
+      item,
+      validation: validateMediaScreenOrientation(item.mediaOrientation!, screenOrientation),
+    }));
+}
+
+// Resultado completo de validação de playlist
+export interface FullPlaylistValidationResult {
+  duration: PlaylistValidationResult;
+  orientationIssues: Array<{ item: PlaylistItemForValidation; validation: OrientationValidationResult }>;
+  canSave: boolean;
+  hasWarnings: boolean;
+  hasErrors: boolean;
+  summary: string;
+}
+
+/**
+ * Validação completa de playlist (duração + orientação)
+ * @param items Itens da playlist
+ * @param screenOrientation Orientação da tela de destino
+ * @param config Configurações de validação
+ * @returns Resultado completo da validação
+ */
+export function validatePlaylist(
+  items: PlaylistItemForValidation[],
+  screenOrientation: MediaOrientation,
+  config: PlaylistValidationConfig = DEFAULT_PLAYLIST_CONFIG
+): FullPlaylistValidationResult {
+  const duration = validatePlaylistDuration(items, config);
+  const orientationIssues = validatePlaylistOrientation(items, screenOrientation);
+
+  const hasOrientationWarnings = orientationIssues.length > 0;
+  const hasWarnings = duration.warnings.length > 0 || hasOrientationWarnings;
+  const hasErrors = duration.errors.length > 0;
+  const canSave = duration.canSave; // Orientação não bloqueia, apenas avisa
+
+  // Gerar resumo
+  const summaryParts: string[] = [];
+
+  if (hasErrors) {
+    summaryParts.push(`${duration.errors.length} erro(s)`);
+  }
+  if (duration.warnings.length > 0) {
+    summaryParts.push(`${duration.warnings.length} aviso(s) de duração`);
+  }
+  if (hasOrientationWarnings) {
+    summaryParts.push(`${orientationIssues.length} mídia(s) com orientação incompatível`);
+  }
+
+  const summary = summaryParts.length > 0
+    ? `Playlist com ${summaryParts.join(', ')}`
+    : 'Playlist válida';
+
+  return {
+    duration,
+    orientationIssues,
+    canSave,
+    hasWarnings,
+    hasErrors,
+    summary,
+  };
+}
+
+// ============================================
+// GESTÃO DE EQUIPE COMERCIAL (Sales Team)
+// ============================================
+
+// Status do contrato
+export type ContractStatusType =
+  | 'DRAFT'
+  | 'PENDING_SIGNATURE'
+  | 'ACTIVE'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'SUSPENDED';
+
+// Labels para status do contrato
+export const CONTRACT_STATUS_TYPE_LABELS: Record<ContractStatusType, string> = {
+  DRAFT: 'Rascunho',
+  PENDING_SIGNATURE: 'Aguardando Assinatura',
+  ACTIVE: 'Ativo',
+  COMPLETED: 'Concluído',
+  CANCELLED: 'Cancelado',
+  SUSPENDED: 'Suspenso',
+};
+
+// Cores para status do contrato
+export const CONTRACT_STATUS_TYPE_COLORS: Record<ContractStatusType, { bg: string; text: string }> = {
+  DRAFT: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  PENDING_SIGNATURE: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  ACTIVE: { bg: 'bg-green-100', text: 'text-green-700' },
+  COMPLETED: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  CANCELLED: { bg: 'bg-red-100', text: 'text-red-700' },
+  SUSPENDED: { bg: 'bg-orange-100', text: 'text-orange-700' },
+};
+
+// Status do ledger de comissão
+export type CommissionLedgerStatusType = 'PENDING' | 'PAID' | 'CANCELLED';
+
+// Labels para status do ledger
+export const COMMISSION_LEDGER_STATUS_LABELS: Record<CommissionLedgerStatusType, string> = {
+  PENDING: 'Pendente',
+  PAID: 'Pago',
+  CANCELLED: 'Cancelado',
+};
+
+// Cores para status do ledger
+export const COMMISSION_LEDGER_STATUS_COLORS: Record<CommissionLedgerStatusType, { bg: string; text: string }> = {
+  PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  PAID: { bg: 'bg-green-100', text: 'text-green-700' },
+  CANCELLED: { bg: 'bg-red-100', text: 'text-red-700' },
+};
+
+// Dados de pagamento do vendedor
+export interface SalesAgentPaymentDetails {
+  pixKey?: string;
+  pixType?: 'cpf' | 'cnpj' | 'email' | 'phone' | 'random';
+  bankCode?: string;
+  bankName?: string;
+  agency?: string;
+  account?: string;
+  accountType?: 'checking' | 'savings';
+}
+
+// Vendedor/Agente de Vendas
+export interface SalesAgent {
+  id: string;
+  tenantId: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  document?: string; // CPF
+
+  // Comissão padrão (sugestão para novos contratos)
+  defaultCommissionRate: number; // Ex: 30.0 = 30%
+
+  // Dados de pagamento
+  paymentDetails?: SalesAgentPaymentDetails;
+
+  // Status
+  isActive: boolean;
+
+  createdAt: string;
+  updatedAt: string;
+
+  // Computed fields (para UI)
+  totalContracts?: number;
+  activeContracts?: number;
+  totalCommissionsPending?: number;
+  totalCommissionsPaid?: number;
+}
+
+// Contrato com vendedor (extensão do tipo Contract existente)
+export interface ContractWithSalesAgent extends Contract {
+  salesAgentId?: string;
+  salesAgent?: SalesAgent;
+  commissionRateSnapshot?: number; // CRÍTICO: taxa congelada no momento da criação
+  billingDay?: number;
+}
+
+// Fatura do contrato
+export interface ContractInvoice {
+  id: string;
+  tenantId: string;
+  contractId: string;
+  invoiceNumber?: string;
+  amount: number;
+  dueDate: string;
+  referenceMonth: string; // Mês de competência
+
+  status: PaymentStatus;
+  paidAt?: string;
+  paidAmount?: number;
+  paymentMethod?: string;
+
+  // External payment
+  externalId?: string;
+  pixQrCode?: string;
+  pixCopiaECola?: string;
+  boletoUrl?: string;
+  boletoBarcode?: string;
+
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Registro do ledger de comissão
+export interface CommissionLedgerEntry {
+  id: string;
+  tenantId: string;
+  salesAgentId: string;
+  salesAgent?: SalesAgent;
+  contractId: string;
+  contract?: ContractWithSalesAgent;
+  invoiceId: string;
+  invoice?: ContractInvoice;
+
+  // Detalhes da comissão
+  amount: number;       // Valor da comissão calculada
+  rate: number;         // Taxa usada (snapshot do contrato)
+  baseAmount: number;   // Valor base (valor da fatura)
+
+  referenceMonth: string; // Mês de competência
+
+  status: CommissionLedgerStatusType;
+  paidAt?: string;
+  paidBy?: string;
+
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Resumo de comissões por vendedor
+export interface SalesAgentCommissionSummary {
+  salesAgentId: string;
+  salesAgentName: string;
+  period: string; // YYYY-MM
+
+  // Totais
+  totalPending: number;
+  totalPaid: number;
+  totalCancelled: number;
+
+  // Contagem
+  pendingCount: number;
+  paidCount: number;
+
+  // Detalhes
+  entries: CommissionLedgerEntry[];
+}
+
+// Input para criar contrato com vendedor
+export interface CreateContractWithSalesAgentInput {
+  tenantId: string;
+  advertiserId: string;
+  salesAgentId?: string;
+
+  title: string;
+  description?: string;
+  value: number;
+
+  // Comissão (pode ser editada antes de salvar)
+  commissionRate?: number; // Se não informada, usa a padrão do vendedor
+
+  startDate: string;
+  endDate: string;
+  billingDay?: number;
+  paymentMethod?: string;
+}
+
+// Resultado do cálculo de comissão
+export interface CommissionCalculationResult {
+  invoiceAmount: number;
+  commissionRate: number;
+  commissionAmount: number;
+  salesAgentId: string;
+  salesAgentName: string;
+  contractId: string;
+  contractPartyBName: string; // Nome do cliente (partyB)
+}
+
+/**
+ * Calcula a comissão de uma fatura paga
+ * REGRA CRÍTICA: Usa SEMPRE o commissionRateSnapshot do contrato,
+ * NUNCA a taxa atual do vendedor (Direito Adquirido)
+ */
+export function calculateSalesCommission(
+  invoiceAmount: number,
+  contract: ContractWithSalesAgent,
+  salesAgent: SalesAgent
+): CommissionCalculationResult | null {
+  // Verificar se o contrato tem vendedor vinculado
+  if (!contract.salesAgentId || !contract.commissionRateSnapshot) {
+    return null;
+  }
+
+  // CRÍTICO: Usar a taxa do snapshot, não a taxa atual do vendedor
+  const commissionRate = contract.commissionRateSnapshot;
+  const commissionAmount = (invoiceAmount * commissionRate) / 100;
+
+  return {
+    invoiceAmount,
+    commissionRate,
+    commissionAmount: Math.round(commissionAmount * 100) / 100, // Arredondar para 2 casas
+    salesAgentId: contract.salesAgentId!,
+    salesAgentName: salesAgent.name,
+    contractId: contract.id,
+    contractPartyBName: contract.partyBName || '',
+  };
+}
+
+/**
+ * Processa o pagamento de uma fatura e gera entrada no ledger de comissão
+ * Deve ser chamado quando Invoice.status muda para PAID
+ */
+export interface ProcessInvoicePaidInput {
+  invoice: ContractInvoice;
+  contract: ContractWithSalesAgent;
+  salesAgent: SalesAgent;
+}
+
+export interface ProcessInvoicePaidResult {
+  success: boolean;
+  commissionEntry?: CommissionLedgerEntry;
+  error?: string;
+}
+
+/**
+ * Lógica de processamento quando uma fatura é paga
+ * Algoritmo:
+ * 1. Verificar se a Invoice pertence a um Contrato com sales_agent_id
+ * 2. Verificar se o Contrato está ACTIVE
+ * 3. Calcular: Invoice.amount * Contract.commission_rate_snapshot / 100
+ * 4. Inserir registro na tabela CommissionLedger com status 'PENDING'
+ */
+export function processInvoicePaid(input: ProcessInvoicePaidInput): ProcessInvoicePaidResult {
+  const { invoice, contract, salesAgent } = input;
+
+  // Verificar se o contrato tem vendedor vinculado
+  if (!contract.salesAgentId) {
+    return {
+      success: true, // Não é erro, apenas não tem vendedor
+      error: 'Contrato não possui vendedor vinculado',
+    };
+  }
+
+  // Verificar se o contrato está ativo (suporta lowercase e UPPERCASE)
+  const statusLower = contract.status?.toLowerCase();
+  if (statusLower !== 'active' && statusLower !== 'signed') {
+    return {
+      success: false,
+      error: 'Contrato não está ativo',
+    };
+  }
+
+  // Verificar se tem taxa de comissão
+  if (!contract.commissionRateSnapshot || contract.commissionRateSnapshot <= 0) {
+    return {
+      success: true,
+      error: 'Contrato não possui taxa de comissão definida',
+    };
+  }
+
+  // Calcular comissão
+  const calculation = calculateSalesCommission(invoice.amount, contract, salesAgent);
+
+  if (!calculation) {
+    return {
+      success: false,
+      error: 'Não foi possível calcular a comissão',
+    };
+  }
+
+  // Criar entrada do ledger (usa tenantId da invoice que já é obrigatório)
+  const commissionEntry: CommissionLedgerEntry = {
+    id: '', // Será gerado pelo banco
+    tenantId: invoice.tenantId,
+    salesAgentId: calculation.salesAgentId,
+    contractId: calculation.contractId,
+    invoiceId: invoice.id,
+    amount: calculation.commissionAmount,
+    rate: calculation.commissionRate,
+    baseAmount: invoice.amount,
+    referenceMonth: invoice.referenceMonth,
+    status: 'PENDING',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    success: true,
+    commissionEntry,
+  };
+}
+
+// Filtros para relatório de comissões
+export interface CommissionReportFilters {
+  tenantId: string;
+  salesAgentId?: string;
+  startMonth?: string; // YYYY-MM
+  endMonth?: string;   // YYYY-MM
+  status?: CommissionLedgerStatusType;
+}
+
+// Resumo do relatório de comissões
+export interface CommissionReportSummary {
+  filters: CommissionReportFilters;
+  totalPending: number;
+  totalPaid: number;
+  totalCancelled: number;
+  grandTotal: number;
+  entriesCount: number;
+  byAgent: SalesAgentCommissionSummary[];
+}
+
+/**
+ * Obtém a taxa de comissão para um novo contrato
+ * Se o vendedor for selecionado, usa a taxa padrão dele como sugestão
+ * Esta taxa pode ser editada pelo admin antes de salvar o contrato
+ */
+export function getDefaultCommissionRate(salesAgent: SalesAgent | null): number {
+  if (!salesAgent) {
+    return 0;
+  }
+  return salesAgent.defaultCommissionRate;
+}
+
+/**
+ * Valida se a taxa de comissão está dentro dos limites aceitáveis
+ */
+export function validateCommissionRate(rate: number): { valid: boolean; error?: string } {
+  if (rate < 0) {
+    return { valid: false, error: 'Taxa de comissão não pode ser negativa' };
+  }
+  if (rate > 100) {
+    return { valid: false, error: 'Taxa de comissão não pode ser maior que 100%' };
+  }
+  return { valid: true };
+}
+
+// ============================================
+// SISTEMA DE AFILIADOS (Growth/Referral)
+// ============================================
+
+// Status do ledger de afiliados
+export type AffiliateLedgerStatusType = 'PENDING' | 'AVAILABLE' | 'PAID' | 'CANCELLED';
+
+// Labels para status do ledger de afiliados
+export const AFFILIATE_LEDGER_STATUS_LABELS: Record<AffiliateLedgerStatusType, string> = {
+  PENDING: 'Aguardando',
+  AVAILABLE: 'Disponível',
+  PAID: 'Pago',
+  CANCELLED: 'Cancelado',
+};
+
+// Cores para status do ledger de afiliados
+export const AFFILIATE_LEDGER_STATUS_COLORS: Record<AffiliateLedgerStatusType, { bg: string; text: string }> = {
+  PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  AVAILABLE: { bg: 'bg-green-100', text: 'text-green-700' },
+  PAID: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  CANCELLED: { bg: 'bg-red-100', text: 'text-red-700' },
+};
+
+// Configurações de afiliados (armazenadas em PlatformSettings)
+export interface AffiliateSettings {
+  affiliateEnabled: boolean;
+  affiliateL1Percentage: number;  // Taxa nível 1 (indicação direta) - Ex: 20.0 = 20%
+  affiliateL2Percentage: number;  // Taxa nível 2 (indicação indireta) - Ex: 5.0 = 5%
+  affiliateCookieDuration: number; // Dias de validade do cookie
+  affiliateLockDays: number;      // Dias antes de comissão ficar disponível
+  affiliateMinWithdrawal: number; // Valor mínimo para saque
+}
+
+// Valores padrão das configurações de afiliados
+export const DEFAULT_AFFILIATE_SETTINGS: AffiliateSettings = {
+  affiliateEnabled: true,
+  affiliateL1Percentage: 20.0,
+  affiliateL2Percentage: 5.0,
+  affiliateCookieDuration: 60,
+  affiliateLockDays: 30,
+  affiliateMinWithdrawal: 50.0,
+};
+
+// Entrada no ledger de afiliados
+export interface AffiliateLedgerEntry {
+  id: string;
+  affiliateId: string;        // Quem recebe
+  sourceUserId: string;       // Quem pagou a fatura
+  sourceTenantId: string;     // Tenant de origem
+  subscriptionInvoiceId?: string;
+
+  tier: 1 | 2;                // 1 = Pai (direto), 2 = Avô (indireto)
+  percentageApplied: number;  // Snapshot da taxa usada
+  baseAmount: number;         // Valor da fatura
+  amount: number;             // Valor da comissão
+
+  referenceMonth: string;
+  status: AffiliateLedgerStatusType;
+  availableAt?: string;
+  paidAt?: string;
+  paidBy?: string;
+  notes?: string;
+
+  createdAt: string;
+  updatedAt: string;
+
+  // Campos computados para UI
+  affiliate?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  sourceUser?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+// Estatísticas do afiliado
+export interface AffiliateStats {
+  affiliateCode: string;
+  totalReferrals: number;       // Total de indicados diretos (Tier 1)
+  tier1Earnings: number;        // Total ganho como Pai
+  tier2Earnings: number;        // Total ganho como Avô
+  totalEarnings: number;        // Total geral
+  pendingBalance: number;       // Saldo pendente (em lock)
+  availableBalance: number;     // Saldo disponível para saque
+  paidTotal: number;            // Total já sacado
+  recentReferrals: Array<{
+    id: string;
+    name: string;
+    tenantName: string;
+    createdAt: string;
+  }>;
+}
+
+// Input para processar pagamento de assinatura SaaS
+export interface ProcessSaaSPaymentInput {
+  tenantId: string;
+  userId: string;              // Dono do tenant que pagou
+  invoiceId: string;
+  invoiceAmount: number;
+  referenceMonth: string;
+}
+
+// Resultado do processamento
+export interface ProcessSaaSPaymentResult {
+  success: boolean;
+  entriesCreated: AffiliateLedgerEntry[];
+  errors?: string[];
+}
+
+/**
+ * Calcula comissões de afiliados quando uma fatura SaaS é paga
+ * REGRA CRÍTICA: O sistema DEVE PARAR no Nível 2 (não calcular Nível 3+)
+ *
+ * Algoritmo:
+ * 1. Carregar configurações atuais de affiliate_l1_percentage e affiliate_l2_percentage
+ * 2. Verificar se o usuário que pagou tem referrer_id (Nível 1 - Pai)
+ * 3. Se sim, calcular: invoiceAmount * (l1_percentage / 100)
+ * 4. Verificar se o "Pai" tem referrer_id (Nível 2 - Avô)
+ * 5. Se sim, calcular: invoiceAmount * (l2_percentage / 100)
+ * 6. PARAR - não calcular Nível 3
+ */
+export function calculateAffiliateCommissions(
+  input: ProcessSaaSPaymentInput,
+  settings: AffiliateSettings,
+  userChain: {
+    payer: { id: string; referrerId?: string };
+    level1Referrer?: { id: string; referrerId?: string };
+    level2Referrer?: { id: string };
+  }
+): { tier1?: Omit<AffiliateLedgerEntry, 'id' | 'createdAt' | 'updatedAt'>; tier2?: Omit<AffiliateLedgerEntry, 'id' | 'createdAt' | 'updatedAt'> } {
+  const result: { tier1?: Omit<AffiliateLedgerEntry, 'id' | 'createdAt' | 'updatedAt'>; tier2?: Omit<AffiliateLedgerEntry, 'id' | 'createdAt' | 'updatedAt'> } = {};
+
+  // Verificar se o sistema de afiliados está habilitado
+  if (!settings.affiliateEnabled) {
+    return result;
+  }
+
+  // Calcular data de disponibilidade (após lock period)
+  const availableAt = new Date();
+  availableAt.setDate(availableAt.getDate() + settings.affiliateLockDays);
+
+  // NÍVEL 1: Indicação direta (Pai)
+  if (userChain.payer.referrerId && userChain.level1Referrer) {
+    const tier1Amount = (input.invoiceAmount * settings.affiliateL1Percentage) / 100;
+
+    result.tier1 = {
+      affiliateId: userChain.level1Referrer.id,
+      sourceUserId: userChain.payer.id,
+      sourceTenantId: input.tenantId,
+      subscriptionInvoiceId: input.invoiceId,
+      tier: 1,
+      percentageApplied: settings.affiliateL1Percentage,
+      baseAmount: input.invoiceAmount,
+      amount: Math.round(tier1Amount * 100) / 100,
+      referenceMonth: input.referenceMonth,
+      status: 'PENDING',
+      availableAt: availableAt.toISOString(),
+    };
+
+    // NÍVEL 2: Indicação indireta (Avô) - SOMENTE se tier 1 existe
+    if (userChain.level1Referrer.referrerId && userChain.level2Referrer) {
+      const tier2Amount = (input.invoiceAmount * settings.affiliateL2Percentage) / 100;
+
+      result.tier2 = {
+        affiliateId: userChain.level2Referrer.id,
+        sourceUserId: userChain.payer.id,
+        sourceTenantId: input.tenantId,
+        subscriptionInvoiceId: input.invoiceId,
+        tier: 2,
+        percentageApplied: settings.affiliateL2Percentage,
+        baseAmount: input.invoiceAmount,
+        amount: Math.round(tier2Amount * 100) / 100,
+        referenceMonth: input.referenceMonth,
+        status: 'PENDING',
+        availableAt: availableAt.toISOString(),
+      };
+    }
+    // TRAVA DE SEGURANÇA: NÃO calcular Nível 3+
+  }
+
+  return result;
+}
+
+/**
+ * Gera um código de afiliado amigável
+ * Formato: NOME + números aleatórios (ex: "MARIA10", "JOAO42")
+ */
+export function generateAffiliateCode(name: string): string {
+  const cleanName = name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^a-zA-Z]/g, '')       // Remove não-letras
+    .toUpperCase()
+    .slice(0, 6);                    // Max 6 letras
+
+  const numbers = Math.floor(Math.random() * 100).toString().padStart(2, '0');
+
+  return `${cleanName}${numbers}`;
+}
+
+/**
+ * Valida se um código de afiliado é válido
+ */
+export function validateAffiliateCode(code: string): boolean {
+  // Deve ter entre 4 e 10 caracteres, apenas letras e números
+  return /^[A-Z0-9]{4,10}$/i.test(code);
+}
+
+// ============================================
+// SISTEMA DE MULTI-CONTEXTO (Role Switcher)
+// ============================================
+
+// Contexto de usuário (um "chapéu" que o usuário pode usar)
+export interface UserContext {
+  id: string;
+  userId: string;
+  role: Role;
+  tenantId?: string;
+  label?: string;
+  isDefault: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+
+  // Campos computados para UI
+  tenant?: {
+    id: string;
+    name: string;
+    logoUrl?: string;
+  };
+}
+
+// Resposta do endpoint de troca de contexto
+export interface SwitchContextResponse {
+  success: boolean;
+  activeContext: UserContext;
+  newToken?: string;      // Novo JWT com as permissões atualizadas
+  menu: any[];            // Menu atualizado para o novo contexto
+  permissions: string[];  // Permissões do novo contexto
+  error?: string;
+}
+
+// Input para troca de contexto
+export interface SwitchContextInput {
+  targetRole: Role;
+  targetTenantId?: string;
+}
+
+// Labels para contextos (para exibição no Select)
+export function getContextLabel(context: UserContext): string {
+  if (context.label) return context.label;
+
+  const roleLabels: Record<Role, string> = {
+    SUPER_ADMIN: 'Super Admin',
+    TENANT_ADMIN: 'Administrador',
+    TENANT_MANAGER: 'Gerente',
+    LOCATION_OWNER: 'Parceiro Local',
+    ADVERTISER: 'Anunciante',
+    OPERATOR: 'Operador',
+  };
+
+  const roleLabel = roleLabels[context.role] || context.role;
+
+  if (context.tenant) {
+    return `${roleLabel} - ${context.tenant.name}`;
+  }
+
+  return roleLabel;
 }
 

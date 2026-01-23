@@ -3,7 +3,10 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import bcrypt from 'bcryptjs';
 import { getUserByEmail, createUser, updateUser } from './database';
-import { User, UserRole } from '@/types';
+import { User as AppUser, UserRole, Role } from '@/types';
+
+// Tipo de role que suporta legado e novo RBAC
+type AnyRole = UserRole | Role;
 
 // Estender tipos do NextAuth
 declare module 'next-auth' {
@@ -13,9 +16,10 @@ declare module 'next-auth' {
       name: string;
       email: string;
       image?: string;
-      role: UserRole;
+      role: AnyRole;
       isAdmin: boolean;
       accountId?: string;
+      tenantId?: string;
       allowedTerminals?: string[];
       allowedAdvertisers?: string[];
       restrictContent?: boolean;
@@ -24,9 +28,10 @@ declare module 'next-auth' {
 
   interface User {
     id: string;
-    role: UserRole;
+    role: AnyRole;
     isAdmin: boolean;
     accountId?: string;
+    tenantId?: string;
     allowedTerminals?: string[];
     allowedAdvertisers?: string[];
     restrictContent?: boolean;
@@ -36,9 +41,10 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
-    role: UserRole;
+    role: AnyRole;
     isAdmin: boolean;
     accountId?: string;
+    tenantId?: string;
     allowedTerminals?: string[];
     allowedAdvertisers?: string[];
     restrictContent?: boolean;

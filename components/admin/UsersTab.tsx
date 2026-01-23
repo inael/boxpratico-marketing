@@ -12,13 +12,36 @@ import {
   EnvelopeIcon,
   PhoneIcon,
 } from '@heroicons/react/24/outline';
-import { User, UserRole, USER_ROLE_LABELS, Monitor, Advertiser } from '@/types';
+import { User, UserRole, Role, USER_ROLE_LABELS, Monitor, Advertiser } from '@/types';
 import { LabelWithTooltip } from '@/components/ui/Tooltip';
 
-const ROLE_COLORS: Record<UserRole, { bg: string; text: string }> = {
+const ROLE_COLORS: Record<UserRole | Role, { bg: string; text: string }> = {
+  // Roles legados
   admin: { bg: 'bg-purple-100', text: 'text-purple-700' },
   operator: { bg: 'bg-blue-100', text: 'text-blue-700' },
   viewer: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  // Novas roles RBAC
+  SUPER_ADMIN: { bg: 'bg-red-100', text: 'text-red-700' },
+  TENANT_ADMIN: { bg: 'bg-purple-100', text: 'text-purple-700' },
+  TENANT_MANAGER: { bg: 'bg-indigo-100', text: 'text-indigo-700' },
+  LOCATION_OWNER: { bg: 'bg-amber-100', text: 'text-amber-700' },
+  ADVERTISER: { bg: 'bg-green-100', text: 'text-green-700' },
+  OPERATOR: { bg: 'bg-blue-100', text: 'text-blue-700' },
+};
+
+// Labels para todas as roles (legado + novo)
+const ALL_ROLE_LABELS: Record<UserRole | Role, string> = {
+  // Roles legados
+  admin: 'Administrador',
+  operator: 'Operador',
+  viewer: 'Visualizador',
+  // Novas roles RBAC
+  SUPER_ADMIN: 'Super Admin',
+  TENANT_ADMIN: 'Admin',
+  TENANT_MANAGER: 'Gerente',
+  LOCATION_OWNER: 'Parceiro',
+  ADVERTISER: 'Anunciante',
+  OPERATOR: 'Operador',
 };
 
 export default function UsersTab() {
@@ -33,7 +56,7 @@ export default function UsersTab() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole>('operator');
+  const [role, setRole] = useState<UserRole | Role>('operator');
   const [isActive, setIsActive] = useState(true);
   const [restrictContent, setRestrictContent] = useState(false);
   const [allowedTerminals, setAllowedTerminals] = useState<string[]>([]);
@@ -495,10 +518,10 @@ export default function UsersTab() {
                       </div>
                     </td>
                     <td className="px-4 py-4 hidden sm:table-cell">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[user.role].bg} ${ROLE_COLORS[user.role].text}`}>
-                        {user.role === 'admin' && <ShieldCheckIcon className="w-3 h-3" />}
-                        {user.role === 'viewer' && <EyeIcon className="w-3 h-3" />}
-                        {USER_ROLE_LABELS[user.role]}
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${ROLE_COLORS[user.role]?.bg || 'bg-gray-100'} ${ROLE_COLORS[user.role]?.text || 'text-gray-700'}`}>
+                        {(user.role === 'admin' || user.role === 'SUPER_ADMIN' || user.role === 'TENANT_ADMIN') && <ShieldCheckIcon className="w-3 h-3" />}
+                        {(user.role === 'viewer' || user.role === 'LOCATION_OWNER' || user.role === 'ADVERTISER') && <EyeIcon className="w-3 h-3" />}
+                        {ALL_ROLE_LABELS[user.role] || user.role}
                       </span>
                     </td>
                     <td className="px-4 py-4 hidden md:table-cell">
