@@ -539,9 +539,12 @@ export interface Contract {
   // Status
   status: ContractStatus;
 
-  // Relacionamentos
-  condominiumId?: string;  // Para contratos de cessão de espaço
-  advertiserId?: string;   // Para contratos de publicidade
+  // Relacionamentos (novo modelo unificado)
+  companyId?: string;      // ID da empresa (Company) - ponto de mídia ou anunciante
+
+  // Deprecated - mantidos para compatibilidade com dados antigos
+  condominiumId?: string;  // Use companyId
+  advertiserId?: string;   // Use companyId
 
   // Observações
   notes?: string;
@@ -1006,6 +1009,328 @@ export interface AdvertiserExposureReport {
   locationsCount: number;
   // Número de monitores onde aparece
   monitorsCount: number;
+}
+
+// ============================================
+// SISTEMA DE MEDALHAS (Classificação de Pontos)
+// ============================================
+
+// Tipos de medalha baseado no fluxo de pessoas
+export type MedalType = 'bronze' | 'silver' | 'gold';
+
+// Configuração de uma faixa de medalha
+export interface MedalTier {
+  type: MedalType;
+  label: string;
+  minTraffic: number;      // Fluxo mínimo de pessoas/dia
+  maxTraffic: number;      // Fluxo máximo (999999 = infinito)
+  priceMultiplier: number; // Multiplicador de preço (ex: 1.0, 1.5, 2.0)
+  color: string;           // Cor hex para exibição
+  icon: string;            // Emoji ou ícone
+}
+
+// Configuração global de medalhas
+export interface MedalConfig {
+  enabled: boolean;
+  tiers: MedalTier[];
+  updatedAt: string;
+}
+
+// Labels para medalhas
+export const MEDAL_LABELS: Record<MedalType, string> = {
+  bronze: 'Bronze',
+  silver: 'Prata',
+  gold: 'Ouro',
+};
+
+// Cores padrão para medalhas
+export const MEDAL_COLORS: Record<MedalType, { bg: string; text: string; border: string }> = {
+  bronze: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300' },
+  silver: { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300' },
+  gold: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-400' },
+};
+
+// Ícones/emojis para medalhas
+export const MEDAL_ICONS: Record<MedalType, string> = {
+  bronze: '🥉',
+  silver: '🥈',
+  gold: '🥇',
+};
+
+// Configuração padrão de medalhas
+export const DEFAULT_MEDAL_CONFIG: MedalConfig = {
+  enabled: true,
+  tiers: [
+    {
+      type: 'bronze',
+      label: 'Bronze',
+      minTraffic: 1,
+      maxTraffic: 199,
+      priceMultiplier: 1.0,
+      color: '#CD7F32',
+      icon: '🥉',
+    },
+    {
+      type: 'silver',
+      label: 'Prata',
+      minTraffic: 200,
+      maxTraffic: 299,
+      priceMultiplier: 1.5,
+      color: '#C0C0C0',
+      icon: '🥈',
+    },
+    {
+      type: 'gold',
+      label: 'Ouro',
+      minTraffic: 300,
+      maxTraffic: 999999,
+      priceMultiplier: 2.0,
+      color: '#FFD700',
+      icon: '🥇',
+    },
+  ],
+  updatedAt: new Date().toISOString(),
+};
+
+// Função para determinar a medalha de um ponto baseado no fluxo
+export function getMedalForTraffic(
+  dailyTraffic: number,
+  config: MedalConfig = DEFAULT_MEDAL_CONFIG
+): MedalTier | null {
+  if (!config.enabled || !dailyTraffic || dailyTraffic <= 0) {
+    return null;
+  }
+
+  return config.tiers.find(
+    tier => dailyTraffic >= tier.minTraffic && dailyTraffic <= tier.maxTraffic
+  ) || null;
+}
+
+// Função para calcular preço com multiplicador de medalha
+export function applyMedalMultiplier(
+  basePrice: number,
+  dailyTraffic: number,
+  config: MedalConfig = DEFAULT_MEDAL_CONFIG
+): { price: number; medal: MedalTier | null } {
+  const medal = getMedalForTraffic(dailyTraffic, config);
+  const multiplier = medal?.priceMultiplier || 1.0;
+  return {
+    price: Math.round(basePrice * multiplier * 100) / 100,
+    medal,
+  };
+}
+
+// ============================================
+// EMPRESA (Company) - Unificação de Locais e Anunciantes
+// ============================================
+
+// Tipo de pessoa (física ou jurídica)
+export type PersonType = 'individual' | 'company';
+
+// Papéis que uma empresa pode ter
+export interface CompanyRoles {
+  // É um ponto com telas (antigo Condominium/Local)
+  isScreenLocation: boolean;
+  // É um anunciante (compra publicidade)
+  isAdvertiser: boolean;
+}
+
+// Empresa unificada (substitui Condominium + Advertiser)
+export interface Company {
+  id: string;
+  name: string;
+  slug: string;
+
+  // Tipo de pessoa
+  personType: PersonType;
+
+  // Documento (CPF ou CNPJ)
+  document?: string;
+
+  // Papéis
+  roles: CompanyRoles;
+
+  // Dados de contato
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+
+  // Logo/Foto
+  logoUrl?: string;
+
+  // ====== ENDEREÇO ======
+  address?: string;
+  addressNumber?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+
+  // Geolocalização (preenchida automaticamente via geocoding)
+  latitude?: number;
+  longitude?: number;
+  geocodedAt?: string; // Data do último geocoding
+  geocodeSource?: 'google' | 'manual'; // Fonte das coordenadas
+
+  // ====== CAMPOS PARA PONTO DE TELA (isScreenLocation) ======
+  // Categoria/Segmento do local (para bloquear concorrentes)
+  category?: BusinessCategory;
+  // Categorias bloqueadas (não exibir anúncios dessas categorias)
+  blockedCategories?: BusinessCategory[];
+  // Bloquear automaticamente a própria categoria
+  blockOwnCategory?: boolean;
+  // Tráfego médio diário de pessoas
+  averageDailyTraffic?: number;
+  // Configuração de precificação (para anunciantes que exibem aqui)
+  pricing?: PricingConfig;
+  // Configuração de comissão do local
+  commission?: CommissionConfig;
+  // WhatsApp do local
+  whatsappPhone?: string;
+  // Exibir notícias
+  showNews?: boolean;
+
+  // ====== CAMPOS PARA ANUNCIANTE (isAdvertiser) ======
+  // Segmento de atuação
+  segment?: string;
+  // Configuração de raio de alcance (para sugerir locais próximos)
+  targetRadius?: TargetRadiusConfig;
+  // Observações gerais
+  notes?: string;
+
+  // ====== METADADOS ======
+  isActive: boolean;
+  // ID da conta vinculada (para multi-tenant)
+  accountId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Labels para tipo de pessoa
+export const PERSON_TYPE_LABELS: Record<PersonType, string> = {
+  individual: 'Pessoa Física',
+  company: 'Pessoa Jurídica',
+};
+
+// Função helper para verificar se empresa é ponto de tela
+export function isScreenLocation(company: Company): boolean {
+  return company.roles?.isScreenLocation === true;
+}
+
+// Função helper para verificar se empresa é anunciante
+export function isAdvertiser(company: Company): boolean {
+  return company.roles?.isAdvertiser === true;
+}
+
+// Converter Company para Condominium (compatibilidade)
+export function companyToCondominium(company: Company): Condominium | null {
+  if (!isScreenLocation(company)) return null;
+
+  return {
+    id: company.id,
+    name: company.name,
+    slug: company.slug,
+    cnpj: company.document,
+    address: company.address,
+    state: company.state,
+    city: company.city,
+    photoUrl: company.logoUrl,
+    whatsappPhone: company.whatsappPhone,
+    isActive: company.isActive,
+    showNews: company.showNews,
+    latitude: company.latitude,
+    longitude: company.longitude,
+    category: company.category,
+    blockedCategories: company.blockedCategories,
+    blockOwnCategory: company.blockOwnCategory,
+    averageDailyTraffic: company.averageDailyTraffic,
+    pricing: company.pricing,
+    commission: company.commission,
+    accountId: company.accountId,
+    createdAt: company.createdAt,
+    updatedAt: company.updatedAt,
+  };
+}
+
+// Converter Company para Advertiser (compatibilidade)
+export function companyToAdvertiser(company: Company): Advertiser | null {
+  if (!isAdvertiser(company)) return null;
+
+  return {
+    id: company.id,
+    name: company.name,
+    slug: company.slug,
+    contactName: company.contactName,
+    contactPhone: company.contactPhone,
+    contactEmail: company.contactEmail,
+    cnpj: company.document,
+    logoUrl: company.logoUrl,
+    segment: company.segment,
+    targetRadius: company.targetRadius,
+    notes: company.notes,
+    isActive: company.isActive,
+    createdAt: company.createdAt,
+    updatedAt: company.updatedAt,
+  };
+}
+
+// Converter Condominium para Company
+export function condominiumToCompany(condo: Condominium): Company {
+  return {
+    id: condo.id,
+    name: condo.name,
+    slug: condo.slug,
+    personType: 'company',
+    document: condo.cnpj,
+    roles: {
+      isScreenLocation: true,
+      isAdvertiser: false,
+    },
+    logoUrl: condo.photoUrl,
+    address: condo.address,
+    city: condo.city,
+    state: condo.state,
+    latitude: condo.latitude,
+    longitude: condo.longitude,
+    category: condo.category,
+    blockedCategories: condo.blockedCategories,
+    blockOwnCategory: condo.blockOwnCategory,
+    averageDailyTraffic: condo.averageDailyTraffic,
+    pricing: condo.pricing,
+    commission: condo.commission,
+    whatsappPhone: condo.whatsappPhone,
+    showNews: condo.showNews,
+    isActive: condo.isActive ?? true,
+    accountId: condo.accountId,
+    createdAt: condo.createdAt,
+    updatedAt: condo.updatedAt,
+  };
+}
+
+// Converter Advertiser para Company
+export function advertiserToCompany(adv: Advertiser): Company {
+  return {
+    id: adv.id,
+    name: adv.name,
+    slug: adv.slug,
+    personType: 'company',
+    document: adv.cnpj,
+    roles: {
+      isScreenLocation: false,
+      isAdvertiser: true,
+    },
+    contactName: adv.contactName,
+    contactPhone: adv.contactPhone,
+    contactEmail: adv.contactEmail,
+    logoUrl: adv.logoUrl,
+    segment: adv.segment,
+    targetRadius: adv.targetRadius,
+    notes: adv.notes,
+    isActive: adv.isActive,
+    createdAt: adv.createdAt,
+    updatedAt: adv.updatedAt,
+  };
 }
 
 // ============================================

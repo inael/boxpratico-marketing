@@ -17,6 +17,10 @@ import {
   SystemPricingConfig,
   DEFAULT_PRICING_CONFIG,
   VolumeDiscount,
+  MedalConfig,
+  MedalTier,
+  DEFAULT_MEDAL_CONFIG,
+  MedalType,
 } from '@/types';
 
 interface Settings {
@@ -99,9 +103,14 @@ export default function SettingsTab() {
   const [refreshingQR, setRefreshingQR] = useState(false);
   const [showInstructions, setShowInstructions] = useState(false);
 
+  // Medal config states
+  const [medalConfig, setMedalConfig] = useState<MedalConfig>(DEFAULT_MEDAL_CONFIG);
+  const [savingMedals, setSavingMedals] = useState(false);
+
   useEffect(() => {
     fetchSettings();
     fetchWhatsAppStatus();
+    fetchMedalConfig();
   }, []);
 
   // Auto refresh QR code every 15 seconds when waiting for scan
@@ -141,6 +150,50 @@ export default function SettingsTab() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function fetchMedalConfig() {
+    try {
+      const res = await fetch('/api/settings/medals');
+      if (res.ok) {
+        const data = await res.json();
+        setMedalConfig(data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch medal config:', error);
+    }
+  }
+
+  async function saveMedalConfig() {
+    setSavingMedals(true);
+    try {
+      const res = await fetch('/api/settings/medals', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(medalConfig),
+      });
+
+      if (res.ok) {
+        setMessage({ type: 'success', text: 'Configuração de medalhas salva!' });
+      } else {
+        const error = await res.json();
+        setMessage({ type: 'error', text: error.error || 'Erro ao salvar' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Erro ao salvar configuração de medalhas' });
+    } finally {
+      setSavingMedals(false);
+      setTimeout(() => setMessage(null), 3000);
+    }
+  }
+
+  function updateMedalTier(index: number, field: keyof MedalTier, value: string | number) {
+    const newTiers = [...medalConfig.tiers];
+    newTiers[index] = {
+      ...newTiers[index],
+      [field]: value,
+    };
+    setMedalConfig({ ...medalConfig, tiers: newTiers });
   }
 
   async function fetchWhatsAppStatus() {
@@ -1500,6 +1553,143 @@ export default function SettingsTab() {
               <strong>Atenção:</strong> Ao alterar as credenciais, você precisará fazer login novamente.
             </p>
           </div>
+        </div>
+
+        {/* Medal Configuration */}
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <span className="text-xl">🏅</span>
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                Classificação de Pontos (Medalhas)
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Configure as faixas de fluxo de pessoas para classificar os pontos
+              </p>
+            </div>
+          </div>
+
+          {/* Enable/Disable */}
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={medalConfig.enabled}
+                onChange={(e) => setMedalConfig({ ...medalConfig, enabled: e.target.checked })}
+                className="w-5 h-5 text-[#F59E0B] rounded focus:ring-[#F59E0B]"
+              />
+              <span className="text-sm font-medium text-gray-700">
+                Habilitar sistema de medalhas
+              </span>
+            </label>
+          </div>
+
+          {medalConfig.enabled && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 mb-4">
+                Defina as faixas de fluxo diário de pessoas para cada nível de medalha.
+                O multiplicador de preço é aplicado ao valor base por tela.
+              </p>
+
+              <div className="space-y-4">
+                {medalConfig.tiers.map((tier, index) => (
+                  <div
+                    key={tier.type}
+                    className="flex flex-wrap items-center gap-4 p-4 rounded-lg border border-gray-200"
+                    style={{ backgroundColor: `${tier.color}10` }}
+                  >
+                    {/* Icon and Label */}
+                    <div className="flex items-center gap-2 min-w-[120px]">
+                      <span className="text-2xl">{tier.icon}</span>
+                      <span className="font-bold text-gray-900">{tier.label}</span>
+                    </div>
+
+                    {/* Min Traffic */}
+                    <div className="flex-1 min-w-[140px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Fluxo Mínimo (pessoas/dia)
+                      </label>
+                      <input
+                        type="number"
+                        value={tier.minTraffic}
+                        onChange={(e) => updateMedalTier(index, 'minTraffic', parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* Max Traffic */}
+                    <div className="flex-1 min-w-[140px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Fluxo Máximo (pessoas/dia)
+                      </label>
+                      <input
+                        type="number"
+                        value={tier.maxTraffic === 999999 ? '' : tier.maxTraffic}
+                        onChange={(e) => updateMedalTier(index, 'maxTraffic', parseInt(e.target.value) || 999999)}
+                        placeholder="Ilimitado"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm"
+                        min="0"
+                      />
+                    </div>
+
+                    {/* Price Multiplier */}
+                    <div className="flex-1 min-w-[120px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Multiplicador de Preço
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          value={tier.priceMultiplier}
+                          onChange={(e) => updateMedalTier(index, 'priceMultiplier', parseFloat(e.target.value) || 1)}
+                          step="0.1"
+                          min="0.1"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm pr-8"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">x</span>
+                      </div>
+                    </div>
+
+                    {/* Color Picker */}
+                    <div className="min-w-[80px]">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Cor
+                      </label>
+                      <input
+                        type="color"
+                        value={tier.color}
+                        onChange={(e) => updateMedalTier(index, 'color', e.target.value)}
+                        className="w-full h-10 rounded-lg cursor-pointer border border-gray-300"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Info about price */}
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Exemplo:</strong> Se o preço base por tela for R$ 35 e o ponto tiver fluxo de 350 pessoas/dia (Ouro com multiplicador 2x),
+                  o valor da tela será R$ 70/mês.
+                </p>
+              </div>
+
+              {/* Save Button */}
+              <div className="flex justify-end pt-4">
+                <button
+                  type="button"
+                  onClick={saveMedalConfig}
+                  disabled={savingMedals}
+                  className="px-4 py-2 bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] disabled:opacity-50 transition-colors font-medium"
+                >
+                  {savingMedals ? 'Salvando...' : 'Salvar Medalhas'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Messages */}

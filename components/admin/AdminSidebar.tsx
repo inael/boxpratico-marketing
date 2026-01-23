@@ -18,6 +18,7 @@ import {
   FolderIcon,
   CloudArrowUpIcon,
   BuildingStorefrontIcon,
+  BanknotesIcon,
 } from '@heroicons/react/24/outline';
 import { useState, useEffect } from 'react';
 
@@ -31,14 +32,14 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
-    { id: 'condominiums', label: 'Locais', icon: BuildingOfficeIcon },
+    { id: 'companies', label: 'Empresas', icon: BuildingOfficeIcon },
     { id: 'monitors', label: 'Telas', icon: TvIcon },
-    { id: 'advertisers', label: 'Anunciantes', icon: UserGroupIcon },
     { id: 'media', label: 'Mídias', icon: PhotoIcon },
     { id: 'media-groups', label: 'Grupos de Mídias', icon: FolderIcon },
     { id: 'library', label: 'Biblioteca', icon: CloudArrowUpIcon },
     { id: 'campaigns', label: 'Playlists', icon: MegaphoneIcon },
     { id: 'contracts', label: 'Contratos', icon: DocumentTextIcon },
+    { id: 'financial', label: 'Financeiro', icon: BanknotesIcon },
     { id: 'accounts', label: 'Contas', icon: BuildingStorefrontIcon },
     { id: 'users', label: 'Usuários', icon: UsersIcon },
     { id: 'reports', label: 'Relatórios', icon: DocumentChartBarIcon },

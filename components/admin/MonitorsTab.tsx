@@ -881,182 +881,182 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
             </motion.div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            {filteredMonitors.map((monitor) => {
-              const monitorCampaigns = getMonitorCampaigns(monitor.id);
-              const activeCampaign = monitorCampaigns.find(c => c.isActive);
+          {/* Tabela de Telas */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Nome
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Orientacao
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Horario
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Playlist
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Ativa
+                    </th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Opcoes
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredMonitors.map((monitor) => {
+                    const monitorCampaigns = getMonitorCampaigns(monitor.id);
+                    const activeCampaign = monitorCampaigns.find(c => c.isActive);
+                    const mediaCount = activeCampaign ? getCampaignMediaCount(activeCampaign.id) : 0;
 
-              return (
-                <div
-                  key={monitor.id}
-                  className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100 hover:shadow-md transition-shadow"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex-shrink-0 flex items-center justify-center ${
-                        monitor.isOnline
-                          ? 'bg-gradient-to-br from-green-100 to-emerald-100'
-                          : 'bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20'
-                      }`}>
-                        <TvIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${monitor.isOnline ? 'text-green-600' : 'text-[#D97706]'}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-base sm:text-lg font-display font-bold text-gray-900 truncate">{monitor.name}</h3>
-                        {monitor.location && (
-                          <p className="text-sm text-gray-500 mt-1 truncate">{monitor.location}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {monitor.isOnline ? (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-green-100 rounded-full">
-                          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                          <span className="text-xs font-medium text-green-700">Online</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
-                          <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
-                          <span className="text-xs font-medium text-gray-500">Offline</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-                      <code className="text-xs text-gray-600 flex-1 truncate">/monitor/{monitor.slug}</code>
-                      <button
-                        onClick={() => copyToClipboard(monitor.slug)}
-                        className="p-1 hover:bg-gray-200 rounded transition-colors"
-                        title="Copiar URL"
-                      >
-                        <ClipboardDocumentIcon className="w-4 h-4 text-gray-500" />
-                      </button>
-                      {copiedSlug === monitor.slug && (
-                        <span className="text-xs text-green-600 font-medium">Copiado!</span>
-                      )}
-                    </div>
-
-                    {activeCampaign ? (
-                      <>
-                        <div className="text-xs bg-green-50 text-green-700 px-3 py-2 rounded-lg">
-                          <span className="font-semibold">Playlist ativa:</span> {activeCampaign.name}
-                          <span className="text-green-600 ml-1">
-                            ({getCampaignMediaCount(activeCampaign.id)} {getCampaignMediaCount(activeCampaign.id) === 1 ? 'mídia' : 'mídias'})
-                          </span>
-                        </div>
-                        {getCampaignMediaCount(activeCampaign.id) === 0 && (
-                          <div className="text-xs bg-amber-50 text-amber-700 px-3 py-2 rounded-lg flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            <span>Tela não exibirá conteúdo - adicione mídias à playlist</span>
+                    return (
+                      <tr key={monitor.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                              monitor.isOnline
+                                ? 'bg-gradient-to-br from-green-100 to-emerald-100'
+                                : 'bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20'
+                            }`}>
+                              <TvIcon className={`w-5 h-5 ${monitor.isOnline ? 'text-green-600' : 'text-[#D97706]'}`} />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">{monitor.name}</p>
+                              <div className="flex items-center gap-2">
+                                <code className="text-xs text-gray-500">/monitor/{monitor.slug}</code>
+                                <button
+                                  onClick={() => copyToClipboard(monitor.slug)}
+                                  className="p-0.5 hover:bg-gray-200 rounded transition-colors"
+                                  title="Copiar URL"
+                                >
+                                  <ClipboardDocumentIcon className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
+                                </button>
+                                {copiedSlug === monitor.slug && (
+                                  <span className="text-xs text-green-600 font-medium">Copiado!</span>
+                                )}
+                              </div>
+                              {monitor.location && (
+                                <p className="text-xs text-gray-400">{monitor.location}</p>
+                              )}
+                            </div>
                           </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-xs bg-yellow-50 text-yellow-700 px-3 py-2 rounded-lg">
-                        Nenhuma playlist ativa
-                      </div>
-                    )}
-
-                    {monitorCampaigns.length > 0 && (
-                      <div className="text-xs text-gray-500">
-                        {monitorCampaigns.length} playlist(s) associada(s)
-                      </div>
-                    )}
-
-                    {/* Orientação e Horário */}
-                    <div className="flex flex-wrap gap-2">
-                      {/* Orientação */}
-                      <div className={`flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg ${
-                        monitor.orientation === 'vertical'
-                          ? 'bg-purple-50 text-purple-700'
-                          : 'bg-indigo-50 text-indigo-700'
-                      }`}>
-                        <div className={`${monitor.orientation === 'vertical' ? 'w-3 h-4' : 'w-4 h-3'} border-2 rounded-sm ${
-                          monitor.orientation === 'vertical' ? 'border-purple-400' : 'border-indigo-400'
-                        }`}></div>
-                        <span className="font-medium">
-                          {monitor.orientation === 'vertical' ? 'Vertical' : 'Horizontal'}
-                        </span>
-                      </div>
-
-                      {/* Horário de Funcionamento */}
-                      <div className="flex items-center gap-2 text-xs text-gray-600 bg-blue-50 px-3 py-2 rounded-lg flex-1">
-                        <ClockIcon className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                        <span className="truncate">
-                          {formatOperatingSchedule(monitor)}
-                          {!monitor.operatingSchedule?.is24h && (
-                            <span className="text-blue-600 ml-1">
-                              ({getOperatingHoursPerDay(monitor).toFixed(1)}h/dia)
-                            </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          {monitor.isOnline ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                              <span className="text-xs font-medium text-green-700">Online</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 bg-gray-400 rounded-full"></span>
+                              <span className="text-xs font-medium text-gray-500">Offline</span>
+                            </div>
                           )}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <a
-                      href={`/monitor/${monitor.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex-1 min-w-[80px] flex items-center justify-center gap-1 px-2 sm:px-3 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all text-xs sm:text-sm font-medium"
-                      title="Abrir player"
-                    >
-                      <TvIcon className="w-4 h-4" />
-                      <span className="hidden xs:inline">Player</span>
-                    </a>
-
-                    <button
-                      onClick={() => toggleActive(monitor)}
-                      className={`flex items-center justify-center gap-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                        monitor.isActive
-                          ? 'bg-orange-50 text-orange-600 hover:bg-orange-100'
-                          : 'bg-green-50 text-green-600 hover:bg-green-100'
-                      }`}
-                    >
-                      {monitor.isActive ? (
-                        <XCircleIcon className="w-4 h-4" />
-                      ) : (
-                        <CheckCircleIcon className="w-4 h-4" />
-                      )}
-                    </button>
-
-                    <button
-                      onClick={() => handleOpenPreview(monitor)}
-                      className="px-2 sm:px-3 py-2 rounded-lg bg-cyan-50 text-cyan-600 hover:bg-cyan-100 transition-all"
-                      title="Visualizar player"
-                    >
-                      <EyeIcon className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => handleOpenCommands(monitor)}
-                      className="px-2 sm:px-3 py-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all"
-                      title="Comandos remotos"
-                    >
-                      <CommandLineIcon className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => handleEdit(monitor)}
-                      className="px-2 sm:px-3 py-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
-                    >
-                      <PencilIcon className="w-4 h-4" />
-                    </button>
-
-                    <button
-                      onClick={() => handleDelete(monitor.id)}
-                      className="px-2 sm:px-3 py-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded ${
+                            monitor.orientation === 'vertical'
+                              ? 'bg-purple-50 text-purple-700'
+                              : 'bg-indigo-50 text-indigo-700'
+                          }`}>
+                            <div className={`${monitor.orientation === 'vertical' ? 'w-2 h-3' : 'w-3 h-2'} border rounded-sm ${
+                              monitor.orientation === 'vertical' ? 'border-purple-400' : 'border-indigo-400'
+                            }`}></div>
+                            <span className="font-medium">
+                              {monitor.orientation === 'vertical' ? 'Vertical' : 'Horizontal'}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-600">
+                            <ClockIcon className="w-4 h-4 text-blue-500" />
+                            <span>{formatOperatingSchedule(monitor)}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          {activeCampaign ? (
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{activeCampaign.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {mediaCount} {mediaCount === 1 ? 'mídia' : 'mídias'}
+                              </p>
+                              {mediaCount === 0 && (
+                                <span className="text-xs text-amber-600">Sem conteúdo</span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-yellow-600">Nenhuma</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <button
+                            onClick={() => toggleActive(monitor)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                              monitor.isActive ? 'bg-green-500' : 'bg-gray-300'
+                            }`}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                monitor.isActive ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center justify-end gap-1">
+                            <a
+                              href={`/monitor/${monitor.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-2 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-all"
+                              title="Abrir player"
+                            >
+                              <TvIcon className="w-4 h-4" />
+                            </a>
+                            <button
+                              onClick={() => handleOpenPreview(monitor)}
+                              className="p-2 rounded-lg bg-cyan-50 text-cyan-600 hover:bg-cyan-100 transition-all"
+                              title="Visualizar player"
+                            >
+                              <EyeIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleOpenCommands(monitor)}
+                              className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-all"
+                              title="Comandos remotos"
+                            >
+                              <CommandLineIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleEdit(monitor)}
+                              className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-all"
+                              title="Editar"
+                            >
+                              <PencilIcon className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(monitor.id)}
+                              className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all"
+                              title="Excluir"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {filteredMonitors.length === 0 && !showForm && (

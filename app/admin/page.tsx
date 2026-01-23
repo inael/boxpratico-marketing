@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { Condominium, MediaItem, Campaign, AnalyticsView, Monitor, PricingModel, PricingConfig, CommissionConfig, Advertiser, BUSINESS_CATEGORIES, BusinessCategory } from '@/types';
+import { Condominium, MediaItem, Campaign, AnalyticsView, Monitor, PricingModel, PricingConfig, CommissionConfig, Advertiser, BUSINESS_CATEGORIES, BusinessCategory, Company } from '@/types';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminFooter from '@/components/admin/AdminFooter';
@@ -17,6 +17,8 @@ import AccountsTab from '@/components/admin/AccountsTab';
 import MediaGroupsTab from '@/components/admin/MediaGroupsTab';
 import LibraryTab from '@/components/admin/LibraryTab';
 import OnboardingWizard from '@/components/admin/OnboardingWizard';
+import CompaniesTab from '@/components/admin/CompaniesTab';
+import FinancialTab from '@/components/admin/FinancialTab';
 import dynamic from 'next/dynamic';
 import { brazilianStates, citiesByState } from '@/lib/brazilian-cities';
 
@@ -136,6 +138,8 @@ export default function AdminPage() {
   // Advertisers state
   const [advertisers, setAdvertisers] = useState<Advertiser[]>([]);
   const [selectedAdvertiserId, setSelectedAdvertiserId] = useState<string>('');
+  // Companies state (unified)
+  const [companies, setCompanies] = useState<Company[]>([]);
   // Loading state for dashboard
   const [isLoadingData, setIsLoadingData] = useState<boolean>(true);
 
@@ -147,6 +151,7 @@ export default function AdminPage() {
         loadMonitors(),
         loadAllCampaigns(),
         loadAdvertisers(),
+        loadCompanies(),
       ]).finally(() => {
         setIsLoadingData(false);
       });
@@ -287,6 +292,14 @@ export default function AdminPage() {
       const data = await res.json();
       // Only show active advertisers in the media form
       setAdvertisers(data.filter((a: Advertiser) => a.isActive));
+    }
+  }
+
+  async function loadCompanies() {
+    const res = await fetch('/api/companies');
+    if (res.ok) {
+      const data = await res.json();
+      setCompanies(data);
     }
   }
 
@@ -2082,7 +2095,12 @@ export default function AdminPage() {
             <MonitorsTab condominiums={condominiums} />
           )}
 
-          {/* Advertisers Tab */}
+          {/* Companies Tab (Unified) */}
+          {activeTab === 'companies' && (
+            <CompaniesTab companies={companies} onRefresh={loadCompanies} />
+          )}
+
+          {/* Advertisers Tab (Legacy - mantido para compatibilidade) */}
           {activeTab === 'advertisers' && (
             <AdvertisersTab />
           )}
@@ -2175,6 +2193,11 @@ export default function AdminPage() {
                 </div> */}
               </div>
             </div>
+          )}
+
+          {/* Financial Tab */}
+          {activeTab === 'financial' && (
+            <FinancialTab companies={companies} onRefresh={loadCompanies} />
           )}
 
           {/* Settings Tab */}
