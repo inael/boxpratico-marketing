@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Image from 'next/image';
 import {
   HomeIcon,
   CameraIcon,
@@ -13,17 +12,6 @@ import {
   ChevronLeftIcon,
   ChevronDownIcon,
   PlusIcon,
-  BuildingOfficeIcon,
-  DocumentTextIcon,
-  BanknotesIcon,
-  UsersIcon,
-  TvIcon,
-  PhotoIcon,
-  FolderIcon,
-  CloudArrowUpIcon,
-  MegaphoneIcon,
-  ChartBarIcon,
-  DocumentChartBarIcon,
 } from '@heroicons/react/24/outline';
 
 interface MenuItem {
@@ -97,13 +85,104 @@ const quickActions = [
   { id: 'new-invoice', label: 'Nova Cobrança' },
 ];
 
+// Menu Item Component - memoizado para evitar re-renders
+const MenuItemComponent = memo(function MenuItemComponent({
+  item,
+  isActive,
+  isSubmenuOpen,
+  isExpanded,
+  activeTab,
+  onItemClick,
+  onSubmenuClick,
+}: {
+  item: MenuItem;
+  isActive: boolean;
+  isSubmenuOpen: boolean;
+  isExpanded: boolean;
+  activeTab: string;
+  onItemClick: (item: MenuItem) => void;
+  onSubmenuClick: (subId: string) => void;
+}) {
+  const IconComponent = item.icon;
+
+  return (
+    <div className="mb-1">
+      <button
+        onClick={() => onItemClick(item)}
+        className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
+          isActive
+            ? 'bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] text-[#D97706]'
+            : 'text-gray-600 hover:bg-gray-50'
+        }`}
+      >
+        <div className="relative flex-shrink-0">
+          <IconComponent className="w-6 h-6" />
+          {item.badge && !isExpanded && (
+            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+              {item.badgeCount || '!'}
+            </span>
+          )}
+        </div>
+
+        {isExpanded && (
+          <div className="flex-1 flex items-center justify-between overflow-hidden">
+            <span className="font-medium whitespace-nowrap">{item.label}</span>
+            <div className="flex items-center gap-2">
+              {item.badge && (
+                <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                  {item.badgeCount || '!'}
+                </span>
+              )}
+              {item.submenu && (
+                <ChevronRightIcon
+                  className={`w-4 h-4 transition-transform duration-200 ${
+                    isSubmenuOpen ? 'rotate-90' : ''
+                  }`}
+                />
+              )}
+            </div>
+          </div>
+        )}
+      </button>
+
+      {/* Submenu */}
+      {item.submenu && isSubmenuOpen && isExpanded && (
+        <div className="ml-6 pl-4 border-l-2 border-gray-200 mt-1 space-y-1">
+          {item.submenu.map((sub) => (
+            <button
+              key={sub.id}
+              onClick={() => onSubmenuClick(sub.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                activeTab === sub.id
+                  ? 'bg-[#F59E0B]/10 text-[#D97706] font-medium'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              {sub.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
 export default function AdminSidebarV2({
   activeTab,
   onTabChange,
   isExpanded,
   onExpandChange,
 }: AdminSidebarV2Props) {
-  const [openSubmenus, setOpenSubmenus] = useState<string[]>([]);
+  const [openSubmenus, setOpenSubmenus] = useState<string[]>(() => {
+    // Inicializar com o submenu ativo já aberto
+    const initialOpen: string[] = [];
+    menuStructure.forEach((item) => {
+      if (item.submenu?.some((sub) => sub.id === activeTab)) {
+        initialOpen.push(item.id);
+      }
+    });
+    return initialOpen;
+  });
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -120,70 +199,63 @@ export default function AdminSidebarV2({
   useEffect(() => {
     menuStructure.forEach((item) => {
       if (item.submenu?.some((sub) => sub.id === activeTab)) {
-        if (!openSubmenus.includes(item.id)) {
-          setOpenSubmenus((prev) => [...prev, item.id]);
-        }
+        setOpenSubmenus((prev) => {
+          if (!prev.includes(item.id)) {
+            return [...prev, item.id];
+          }
+          return prev;
+        });
       }
     });
   }, [activeTab]);
 
-  const toggleSubmenu = (menuId: string) => {
+  const toggleSubmenu = useCallback((menuId: string) => {
     setOpenSubmenus((prev) =>
       prev.includes(menuId) ? prev.filter((id) => id !== menuId) : [...prev, menuId]
     );
-  };
+  }, []);
 
-  const handleItemClick = (item: MenuItem) => {
+  const handleItemClick = useCallback((item: MenuItem) => {
     if (item.submenu) {
       toggleSubmenu(item.id);
     } else {
       onTabChange(item.id);
       if (isMobile) setIsMobileMenuOpen(false);
     }
-  };
+  }, [toggleSubmenu, onTabChange, isMobile]);
 
-  const handleSubmenuClick = (subId: string) => {
+  const handleSubmenuClick = useCallback((subId: string) => {
     onTabChange(subId);
     if (isMobile) setIsMobileMenuOpen(false);
-  };
+  }, [onTabChange, isMobile]);
 
-  const handleQuickAction = (actionId: string) => {
+  const handleQuickAction = useCallback((actionId: string) => {
     setShowQuickActions(false);
-    // Mapear ações para tabs
     if (actionId === 'new-company') onTabChange('companies');
     if (actionId === 'new-contract') onTabChange('contracts');
     if (actionId === 'new-invoice') onTabChange('financial');
-  };
+  }, [onTabChange]);
 
-  const isItemActive = (item: MenuItem) => {
+  const isItemActive = useCallback((item: MenuItem) => {
     if (item.id === activeTab) return true;
     if (item.submenu?.some((sub) => sub.id === activeTab)) return true;
     return false;
-  };
+  }, [activeTab]);
 
-  // Sidebar content
-  const SidebarContent = () => (
+  // Sidebar content - inline para evitar re-criação de componente
+  const sidebarContent = (
     <>
       {/* Logo */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-xl flex items-center justify-center shadow-lg shadow-[#F59E0B]/20">
+          <div className="w-10 h-10 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-xl flex items-center justify-center shadow-lg shadow-[#F59E0B]/20 flex-shrink-0">
             <span className="text-white font-bold text-lg">BP</span>
           </div>
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                className="overflow-hidden"
-              >
-                <span className="font-bold text-gray-900 text-lg whitespace-nowrap">
-                  BoxPratico
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {isExpanded && (
+            <span className="font-bold text-gray-900 text-lg whitespace-nowrap">
+              BoxPratico
+            </span>
+          )}
         </div>
       </div>
 
@@ -192,27 +264,18 @@ export default function AdminSidebarV2({
         <div className="relative">
           <button
             onClick={() => setShowQuickActions(!showQuickActions)}
-            className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-xl transition-all hover:shadow-lg hover:shadow-[#F59E0B]/30 ${
+            className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-xl transition-shadow hover:shadow-lg hover:shadow-[#F59E0B]/30 ${
               isExpanded ? 'px-4 py-3' : 'p-3'
             }`}
           >
-            <PlusIcon className="w-5 h-5" />
-            <AnimatePresence>
-              {isExpanded && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  className="font-semibold whitespace-nowrap overflow-hidden"
-                >
-                  Criar
-                </motion.span>
-              )}
-            </AnimatePresence>
+            <PlusIcon className="w-5 h-5 flex-shrink-0" />
             {isExpanded && (
-              <ChevronDownIcon
-                className={`w-4 h-4 transition-transform ${showQuickActions ? 'rotate-180' : ''}`}
-              />
+              <>
+                <span className="font-semibold whitespace-nowrap">Criar</span>
+                <ChevronDownIcon
+                  className={`w-4 h-4 transition-transform duration-200 ${showQuickActions ? 'rotate-180' : ''}`}
+                />
+              </>
             )}
           </button>
 
@@ -223,6 +286,7 @@ export default function AdminSidebarV2({
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
                 className={`absolute top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 ${
                   isExpanded ? 'left-0 right-0' : 'left-0 w-48'
                 }`}
@@ -245,82 +309,16 @@ export default function AdminSidebarV2({
       {/* Menu Items */}
       <nav className="flex-1 px-3 py-2 overflow-y-auto">
         {menuStructure.map((item) => (
-          <div key={item.id} className="mb-1">
-            {/* Item principal */}
-            <button
-              onClick={() => handleItemClick(item)}
-              className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
-                isItemActive(item)
-                  ? 'bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] text-[#D97706]'
-                  : 'text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              <div className="relative">
-                <item.icon className="w-6 h-6 flex-shrink-0" />
-                {item.badge && !isExpanded && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                    {item.badgeCount || '!'}
-                  </span>
-                )}
-              </div>
-
-              <AnimatePresence>
-                {isExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    className="flex-1 flex items-center justify-between overflow-hidden"
-                  >
-                    <span className="font-medium whitespace-nowrap">{item.label}</span>
-                    <div className="flex items-center gap-2">
-                      {item.badge && (
-                        <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                          {item.badgeCount || '!'}
-                        </span>
-                      )}
-                      {item.submenu && (
-                        <ChevronRightIcon
-                          className={`w-4 h-4 transition-transform ${
-                            openSubmenus.includes(item.id) ? 'rotate-90' : ''
-                          }`}
-                        />
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </button>
-
-            {/* Submenu */}
-            <AnimatePresence>
-              {item.submenu && openSubmenus.includes(item.id) && isExpanded && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="ml-6 pl-4 border-l-2 border-gray-200 mt-1 space-y-1">
-                    {item.submenu.map((sub) => (
-                      <button
-                        key={sub.id}
-                        onClick={() => handleSubmenuClick(sub.id)}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                          activeTab === sub.id
-                            ? 'bg-[#F59E0B]/10 text-[#D97706] font-medium'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {sub.label}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <MenuItemComponent
+            key={item.id}
+            item={item}
+            isActive={isItemActive(item)}
+            isSubmenuOpen={openSubmenus.includes(item.id)}
+            isExpanded={isExpanded}
+            activeTab={activeTab}
+            onItemClick={handleItemClick}
+            onSubmenuClick={handleSubmenuClick}
+          />
         ))}
       </nav>
 
@@ -346,13 +344,12 @@ export default function AdminSidebarV2({
   // Desktop Sidebar
   if (!isMobile) {
     return (
-      <motion.aside
-        animate={{ width: isExpanded ? 280 : 80 }}
-        transition={{ duration: 0.3, ease: 'easeInOut' }}
-        className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col z-40"
+      <aside
+        className="fixed left-0 top-0 h-screen bg-white border-r border-gray-200 flex flex-col z-40 transition-[width] duration-300 ease-in-out"
+        style={{ width: isExpanded ? 280 : 80 }}
       >
-        <SidebarContent />
-      </motion.aside>
+        {sidebarContent}
+      </aside>
     );
   }
 
@@ -387,7 +384,7 @@ export default function AdminSidebarV2({
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col z-50"
             >
-              <SidebarContent />
+              {sidebarContent}
             </motion.aside>
           </>
         )}
