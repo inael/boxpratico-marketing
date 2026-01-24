@@ -3,16 +3,22 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  BellIcon,
-  ChevronRightIcon,
-  UserCircleIcon,
-  Cog6ToothIcon,
-  ArrowRightOnRectangleIcon,
-  GiftIcon,
-  CreditCardIcon,
-  QuestionMarkCircleIcon,
-} from '@heroicons/react/24/outline';
+  Bell,
+  ChevronRight,
+  ChevronDown,
+  User,
+  Settings,
+  LogOut,
+  Gift,
+  CreditCard,
+  HelpCircle,
+  Building2,
+  Eye,
+  Check,
+} from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
+import { useAuth } from '@/contexts/AuthContext';
+import { ROLE_LABELS } from '@/types';
 
 interface Breadcrumb {
   label: string;
@@ -60,12 +66,22 @@ export default function AdminHeaderV2({
   sidebarExpanded,
 }: AdminHeaderV2Props) {
   const { data: session } = useSession();
+  const {
+    activeContext,
+    availableContexts,
+    switchContext,
+    isSuperAdmin,
+    isViewingAsTenant,
+  } = useAuth();
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showContextSwitcher, setShowContextSwitcher] = useState(false);
   const [notifications, setNotifications] = useState(mockNotifications);
 
   const notificationsRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const contextSwitcherRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -77,6 +93,9 @@ export default function AdminHeaderV2({
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setShowUserMenu(false);
+      }
+      if (contextSwitcherRef.current && !contextSwitcherRef.current.contains(event.target as Node)) {
+        setShowContextSwitcher(false);
       }
     };
 
@@ -98,6 +117,11 @@ export default function AdminHeaderV2({
     await signOut({ callbackUrl: '/login' });
   };
 
+  const handleContextSwitch = async (contextId: string) => {
+    await switchContext(contextId);
+    setShowContextSwitcher(false);
+  };
+
   return (
     <header
       className={`fixed top-0 right-0 h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 z-30 transition-all duration-300 left-0 lg:left-[var(--sidebar-width)]`}
@@ -105,36 +129,123 @@ export default function AdminHeaderV2({
         '--sidebar-width': sidebarExpanded ? '280px' : '80px',
       } as React.CSSProperties}
     >
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-sm">
-        {breadcrumbs.map((crumb, index) => (
-          <div key={index} className="flex items-center gap-2">
-            {index > 0 && <ChevronRightIcon className="w-4 h-4 text-gray-400" />}
-            {crumb.id && onNavigate ? (
-              <button
-                onClick={() => onNavigate(crumb.id!)}
-                className={`hover:text-[#F59E0B] transition-colors ${
-                  index === breadcrumbs.length - 1
-                    ? 'text-gray-900 font-medium'
-                    : 'text-gray-500'
-                }`}
-              >
-                {crumb.label}
-              </button>
-            ) : (
-              <span
-                className={
-                  index === breadcrumbs.length - 1
-                    ? 'text-gray-900 font-medium'
-                    : 'text-gray-500'
-                }
-              >
-                {crumb.label}
+      {/* Left Side - Breadcrumbs + Context Switcher */}
+      <div className="flex items-center gap-4">
+        {/* Context Switcher (apenas para Super Admin com múltiplos contextos) */}
+        {isSuperAdmin() && availableContexts.length > 1 && (
+          <div className="relative" ref={contextSwitcherRef}>
+            <button
+              onClick={() => setShowContextSwitcher(!showContextSwitcher)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-colors ${
+                isViewingAsTenant()
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-indigo-50 border-indigo-200 text-indigo-700'
+              }`}
+            >
+              {isViewingAsTenant() ? (
+                <Eye className="w-4 h-4" />
+              ) : (
+                <Building2 className="w-4 h-4" />
+              )}
+              <span className="text-sm font-medium max-w-[150px] truncate">
+                {activeContext?.label || 'Selecionar Contexto'}
               </span>
-            )}
+              <ChevronDown className={`w-4 h-4 transition-transform ${showContextSwitcher ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Context Switcher Dropdown */}
+            <AnimatePresence>
+              {showContextSwitcher && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute left-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50"
+                >
+                  <div className="p-3 border-b border-gray-100">
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Trocar Contexto de Visualização
+                    </p>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto py-1">
+                    {availableContexts.map((ctx) => (
+                      <button
+                        key={ctx.id}
+                        onClick={() => handleContextSwitch(ctx.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors ${
+                          activeContext?.id === ctx.id ? 'bg-indigo-50' : ''
+                        }`}
+                      >
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          ctx.role === 'SUPER_ADMIN'
+                            ? 'bg-indigo-100 text-indigo-600'
+                            : 'bg-amber-100 text-amber-600'
+                        }`}>
+                          {ctx.role === 'SUPER_ADMIN' ? (
+                            <Building2 className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">
+                            {ctx.label}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {ctx.role === 'SUPER_ADMIN' ? 'Acesso global' : ROLE_LABELS[ctx.role]}
+                          </p>
+                        </div>
+                        {activeContext?.id === ctx.id && (
+                          <Check className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                  {isViewingAsTenant() && (
+                    <div className="p-3 border-t border-gray-100 bg-amber-50">
+                      <p className="text-xs text-amber-700">
+                        Você está visualizando como outro tenant. Os dados exibidos são filtrados.
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
-        ))}
-      </nav>
+        )}
+
+        {/* Breadcrumbs */}
+        <nav className="flex items-center gap-2 text-sm">
+          {breadcrumbs.map((crumb, index) => (
+            <div key={index} className="flex items-center gap-2">
+              {index > 0 && <ChevronRight className="w-4 h-4 text-gray-400" />}
+              {crumb.id && onNavigate ? (
+                <button
+                  onClick={() => onNavigate(crumb.id!)}
+                  className={`hover:text-indigo-600 transition-colors ${
+                    index === breadcrumbs.length - 1
+                      ? 'text-gray-900 font-medium'
+                      : 'text-gray-500'
+                  }`}
+                >
+                  {crumb.label}
+                </button>
+              ) : (
+                <span
+                  className={
+                    index === breadcrumbs.length - 1
+                      ? 'text-gray-900 font-medium'
+                      : 'text-gray-500'
+                  }
+                >
+                  {crumb.label}
+                </span>
+              )}
+            </div>
+          ))}
+        </nav>
+      </div>
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-4">
@@ -144,11 +255,11 @@ export default function AdminHeaderV2({
             onClick={() => setShowNotifications(!showNotifications)}
             className={`relative p-2 rounded-full transition-colors ${
               showNotifications
-                ? 'bg-[#FEF3C7] text-[#D97706]'
+                ? 'bg-indigo-50 text-indigo-600'
                 : 'hover:bg-gray-100 text-gray-600'
             }`}
           >
-            <BellIcon className="w-6 h-6" />
+            <Bell className="w-6 h-6" />
             {unreadCount > 0 && (
               <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-medium">
                 {unreadCount}
@@ -171,7 +282,7 @@ export default function AdminHeaderV2({
                   {unreadCount > 0 && (
                     <button
                       onClick={markAllAsRead}
-                      className="text-sm text-[#F59E0B] hover:text-[#D97706]"
+                      className="text-sm text-indigo-600 hover:text-indigo-700"
                     >
                       Marcar todas como lidas
                     </button>
@@ -189,7 +300,7 @@ export default function AdminHeaderV2({
                         key={notification.id}
                         onClick={() => markAsRead(notification.id)}
                         className={`w-full p-4 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${
-                          !notification.read ? 'bg-[#FFFBEB]' : ''
+                          !notification.read ? 'bg-indigo-50/50' : ''
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -202,7 +313,7 @@ export default function AdminHeaderV2({
                                 : 'bg-blue-100 text-blue-600'
                             }`}
                           >
-                            <BellIcon className="w-5 h-5" />
+                            <Bell className="w-5 h-5" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-gray-900 text-sm">
@@ -216,7 +327,7 @@ export default function AdminHeaderV2({
                             </p>
                           </div>
                           {!notification.read && (
-                            <div className="w-2 h-2 bg-[#F59E0B] rounded-full flex-shrink-0 mt-2" />
+                            <div className="w-2 h-2 bg-indigo-500 rounded-full flex-shrink-0 mt-2" />
                           )}
                         </div>
                       </button>
@@ -234,7 +345,7 @@ export default function AdminHeaderV2({
             onClick={() => setShowUserMenu(!showUserMenu)}
             className={`flex items-center gap-2 p-1.5 rounded-full transition-colors ${
               showUserMenu
-                ? 'bg-[#FEF3C7]'
+                ? 'bg-indigo-50'
                 : 'hover:bg-gray-100'
             }`}
           >
@@ -245,7 +356,7 @@ export default function AdminHeaderV2({
                 className="w-8 h-8 rounded-full object-cover"
               />
             ) : (
-              <div className="w-8 h-8 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-medium text-sm">
                   {session?.user?.name?.charAt(0) || 'U'}
                 </span>
@@ -266,33 +377,39 @@ export default function AdminHeaderV2({
                 {/* User Info */}
                 <div className="p-4 border-b border-gray-100">
                   <p className="font-medium text-gray-900 truncate">
-                    {session?.user?.email || 'usuario@email.com'}
+                    {session?.user?.name || session?.user?.email || 'usuario@email.com'}
                   </p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {session?.user?.role === 'SUPER_ADMIN' ? 'Super Admin' : 'Usuário'}
+                    {activeContext?.role ? ROLE_LABELS[activeContext.role] || activeContext.role : 'Usuário'}
                   </p>
+                  {isViewingAsTenant() && (
+                    <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-xs font-medium">
+                      <Eye className="w-3 h-3" />
+                      Visualizando como Tenant
+                    </span>
+                  )}
                 </div>
 
                 {/* Menu Items */}
                 <div className="py-2">
                   <button className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors">
-                    <UserCircleIcon className="w-5 h-5 text-gray-400" />
+                    <User className="w-5 h-5 text-gray-400" />
                     <span className="text-sm">Minha conta</span>
                   </button>
                   <button className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors">
-                    <GiftIcon className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm">Meus Beneficios</span>
+                    <Gift className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm">Meus Benefícios</span>
                   </button>
                   <button className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors">
-                    <CreditCardIcon className="w-5 h-5 text-gray-400" />
+                    <CreditCard className="w-5 h-5 text-gray-400" />
                     <span className="text-sm">Planos</span>
                   </button>
                   <button className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors">
-                    <Cog6ToothIcon className="w-5 h-5 text-gray-400" />
+                    <Settings className="w-5 h-5 text-gray-400" />
                     <span className="text-sm">Configurações</span>
                   </button>
                   <button className="w-full flex items-center gap-3 px-4 py-2.5 text-gray-700 hover:bg-gray-50 transition-colors">
-                    <QuestionMarkCircleIcon className="w-5 h-5 text-gray-400" />
+                    <HelpCircle className="w-5 h-5 text-gray-400" />
                     <span className="text-sm">Ajuda</span>
                   </button>
                 </div>
@@ -303,7 +420,7 @@ export default function AdminHeaderV2({
                     onClick={handleLogout}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-red-600 hover:bg-red-50 transition-colors"
                   >
-                    <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                    <LogOut className="w-5 h-5" />
                     <span className="text-sm">Sair</span>
                   </button>
                 </div>

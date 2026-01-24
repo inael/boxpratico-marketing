@@ -199,7 +199,7 @@ export default function AccountsTab() {
     switch (plan) {
       case 'trial': return 'bg-purple-100 text-purple-700';
       case 'basic': return 'bg-blue-100 text-blue-700';
-      case 'pro': return 'bg-[#F59E0B]/10 text-[#D97706]';
+      case 'pro': return 'bg-indigo-600/10 text-indigo-700';
       case 'enterprise': return 'bg-gray-900 text-white';
       default: return 'bg-gray-100 text-gray-700';
     }
@@ -208,7 +208,7 @@ export default function AccountsTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <ArrowPathIcon className="w-8 h-8 text-[#F59E0B] animate-spin" />
+        <ArrowPathIcon className="w-8 h-8 text-indigo-600 animate-spin" />
       </div>
     );
   }
@@ -296,7 +296,7 @@ export default function AccountsTab() {
 
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
         >
           <PlusIcon className="w-5 h-5" />
           Nova Conta
@@ -328,7 +328,7 @@ export default function AccountsTab() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] outline-none"
+                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                     required
                   />
                 </div>
@@ -343,7 +343,7 @@ export default function AccountsTab() {
                     type="text"
                     value={formData.ownerName}
                     onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] outline-none"
+                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                     required
                   />
                 </div>
@@ -358,7 +358,7 @@ export default function AccountsTab() {
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] outline-none"
+                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                     required
                   />
                 </div>
@@ -372,7 +372,7 @@ export default function AccountsTab() {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] outline-none"
+                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
 
@@ -385,7 +385,7 @@ export default function AccountsTab() {
                   <select
                     value={formData.plan}
                     onChange={(e) => setFormData({ ...formData, plan: e.target.value as AccountPlan })}
-                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] outline-none"
+                    className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                   >
                     <option value="trial">Trial ({ACCOUNT_PLAN_LIMITS.trial.monitors} monitor)</option>
                     <option value="basic">Básico ({ACCOUNT_PLAN_LIMITS.basic.monitors} monitores)</option>
@@ -407,7 +407,7 @@ export default function AccountsTab() {
                       max={30}
                       value={formData.trialDays}
                       onChange={(e) => setFormData({ ...formData, trialDays: parseInt(e.target.value) || 7 })}
-                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] outline-none"
+                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 )}
@@ -425,7 +425,7 @@ export default function AccountsTab() {
                       value={formData.extendDays}
                       onChange={(e) => setFormData({ ...formData, extendDays: parseInt(e.target.value) || 0 })}
                       placeholder="Dias a adicionar"
-                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] outline-none"
+                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
                     />
                   </div>
                 )}
@@ -434,7 +434,7 @@ export default function AccountsTab() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                  className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                 >
                   {editingAccount ? 'Salvar Alterações' : 'Criar Conta'}
                 </button>

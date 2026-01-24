@@ -195,7 +195,7 @@ export default function MediaEditModal({
                       type="text"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                       placeholder="Ex: Promocao de Verao"
                     />
                   </div>
@@ -211,7 +211,7 @@ export default function MediaEditModal({
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
                       rows={2}
-                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none resize-none"
+                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
                       placeholder="Anotacoes sobre esta midia..."
                     />
                   </div>
@@ -230,7 +230,7 @@ export default function MediaEditModal({
                         max={300}
                         value={durationSeconds}
                         onChange={(e) => setDurationSeconds(parseInt(e.target.value) || 10)}
-                        className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                        className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                       />
                     </div>
                   )}
@@ -241,7 +241,7 @@ export default function MediaEditModal({
                         type="checkbox"
                         checked={isActive}
                         onChange={(e) => setIsActive(e.target.checked)}
-                        className="w-5 h-5 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+                        className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-sm text-gray-700">Midia ativa</span>
                     </label>
@@ -251,7 +251,7 @@ export default function MediaEditModal({
                         type="checkbox"
                         checked={trackStatistics}
                         onChange={(e) => setTrackStatistics(e.target.checked)}
-                        className="w-5 h-5 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+                        className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       <span className="text-sm text-gray-700 flex items-center gap-1">
                         <ChartBarIcon className="w-4 h-4" />
@@ -265,7 +265,7 @@ export default function MediaEditModal({
                 <div className="border-t border-gray-200 pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2">
-                      <CalendarDaysIcon className="w-5 h-5 text-[#F59E0B]" />
+                      <CalendarDaysIcon className="w-5 h-5 text-indigo-600" />
                       <LabelWithTooltip
                         label="Agendamento"
                         tooltip="Define quando esta midia deve aparecer. Fora do agendamento, ela nao sera exibida."
@@ -278,7 +278,7 @@ export default function MediaEditModal({
                         onChange={(e) => setScheduleEnabled(e.target.checked)}
                         className="sr-only peer"
                       />
-                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#F59E0B]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F59E0B]"></div>
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                     </label>
                   </div>
 
@@ -302,7 +302,7 @@ export default function MediaEditModal({
                             type="date"
                             value={scheduleStartDate}
                             onChange={(e) => setScheduleStartDate(e.target.value)}
-                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                           />
                         </div>
                         <div>
@@ -316,7 +316,7 @@ export default function MediaEditModal({
                             type="date"
                             value={scheduleEndDate}
                             onChange={(e) => setScheduleEndDate(e.target.value)}
-                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                           />
                         </div>
                       </div>
@@ -336,7 +336,7 @@ export default function MediaEditModal({
                               type="time"
                               value={scheduleStartTime}
                               onChange={(e) => setScheduleStartTime(e.target.value)}
-                              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                             />
                           </div>
                         </div>
@@ -353,7 +353,7 @@ export default function MediaEditModal({
                               type="time"
                               value={scheduleEndTime}
                               onChange={(e) => setScheduleEndTime(e.target.value)}
-                              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                             />
                           </div>
                         </div>
@@ -373,7 +373,7 @@ export default function MediaEditModal({
                               onClick={() => handleDayToggle(day.value)}
                               className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                                 scheduleDays.includes(day.value)
-                                  ? 'bg-[#F59E0B] text-white'
+                                  ? 'bg-indigo-600 text-white'
                                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                               }`}
                               title={day.fullLabel}
@@ -386,7 +386,7 @@ export default function MediaEditModal({
                           <button
                             type="button"
                             onClick={handleSelectAllDays}
-                            className="text-xs text-[#F59E0B] hover:underline"
+                            className="text-xs text-indigo-600 hover:underline"
                           >
                             Todos os dias
                           </button>
@@ -394,7 +394,7 @@ export default function MediaEditModal({
                           <button
                             type="button"
                             onClick={handleSelectWeekdays}
-                            className="text-xs text-[#F59E0B] hover:underline"
+                            className="text-xs text-indigo-600 hover:underline"
                           >
                             Seg a Sex
                           </button>
@@ -402,7 +402,7 @@ export default function MediaEditModal({
                           <button
                             type="button"
                             onClick={handleSelectWeekend}
-                            className="text-xs text-[#F59E0B] hover:underline"
+                            className="text-xs text-indigo-600 hover:underline"
                           >
                             Fim de semana
                           </button>
@@ -452,7 +452,7 @@ export default function MediaEditModal({
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+                className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
               >
                 Salvar
               </button>

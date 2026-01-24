@@ -12,6 +12,9 @@ import {
   CurrencyDollarIcon,
   BuildingStorefrontIcon,
   UserGroupIcon,
+  ChevronDownIcon,
+  RssIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline';
 import {
   SystemPricingConfig,
@@ -106,6 +109,23 @@ export default function SettingsTab() {
   // Medal config states
   const [medalConfig, setMedalConfig] = useState<MedalConfig>(DEFAULT_MEDAL_CONFIG);
   const [savingMedals, setSavingMedals] = useState(false);
+
+  // Collapsible sections state - all collapsed by default
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    whatsapp: false,
+    networkPricing: false,
+    systemPricing: false,
+    rss: false,
+    auth: false,
+    medals: false,
+  });
+
+  const toggleSection = useCallback((section: string) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
+  }, []);
 
   useEffect(() => {
     fetchSettings();
@@ -414,13 +434,17 @@ export default function SettingsTab() {
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* WhatsApp Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('whatsapp')}
+            className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
                 <DevicePhoneMobileIcon className="w-6 h-6 text-green-600" />
               </div>
-              <div>
+              <div className="text-left">
                 <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
                   WhatsApp
                 </h2>
@@ -429,7 +453,21 @@ export default function SettingsTab() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor()}`}>
+                {getStatusText()}
+              </span>
+              <ChevronDownIcon
+                className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                  expandedSections.whatsapp ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
+          </button>
+
+          {expandedSections.whatsapp && (
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-4 mb-4">
               {/* Quick access to Evolution Manager */}
               {(settings.evolution?.managerUrl || settings.evolution?.apiUrl) && (
                 <a
@@ -446,17 +484,13 @@ export default function SettingsTab() {
               )}
               <button
                 type="button"
-                onClick={() => setShowInstructions(true)}
+                onClick={(e) => { e.stopPropagation(); setShowInstructions(true); }}
                 className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
               >
                 <QuestionMarkCircleIcon className="w-5 h-5" />
                 Como configurar?
               </button>
-              <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${getStatusColor()}`}>
-                {getStatusText()}
-              </span>
             </div>
-          </div>
 
           {/* Instructions Modal */}
           {showInstructions && (
@@ -919,25 +953,40 @@ export default function SettingsTab() {
               </div>
             </div>
           )}
+          </div>
+          )}
         </div>
 
         {/* Network Pricing Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <CurrencyDollarIcon className="w-6 h-6 text-amber-600" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('networkPricing')}
+            className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <CurrencyDollarIcon className="w-6 h-6 text-amber-600" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                  Precos da Rede
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Configure os precos e parametros para calculo de orcamento
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
-                Precos da Rede
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Configure os precos e parametros para calculo de orcamento
-              </p>
-            </div>
-          </div>
+            <ChevronDownIcon
+              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                expandedSections.networkPricing ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          {expandedSections.networkPricing && (
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pt-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Preco por Display (R$/mes)
@@ -951,7 +1000,7 @@ export default function SettingsTab() {
                   ...settings,
                   networkPricing: { ...settings.networkPricing, pricePerDisplayMonth: parseFloat(e.target.value) || 0 }
                 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="20.00"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -971,7 +1020,7 @@ export default function SettingsTab() {
                   ...settings,
                   networkPricing: { ...settings.networkPricing, insertionsPerHour: parseInt(e.target.value) || 1 }
                 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="4"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -991,7 +1040,7 @@ export default function SettingsTab() {
                   ...settings,
                   networkPricing: { ...settings.networkPricing, avgInsertionDurationSeconds: parseInt(e.target.value) || 5 }
                 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="15"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -1012,7 +1061,7 @@ export default function SettingsTab() {
                   ...settings,
                   networkPricing: { ...settings.networkPricing, operatingHoursPerDay: parseInt(e.target.value) || 1 }
                 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="12"
               />
               <p className="text-xs text-gray-500 mt-1">
@@ -1051,24 +1100,39 @@ export default function SettingsTab() {
               </div>
             </div>
           </div>
+          </div>
+          )}
         </div>
 
         {/* System Pricing Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <BuildingStorefrontIcon className="w-6 h-6 text-green-600" />
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('systemPricing')}
+            className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <BuildingStorefrontIcon className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                  Precos do Sistema
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Configuracao de precos para operadores e anunciantes
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
-                Precos do Sistema
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Configuracao de precos para operadores e anunciantes
-              </p>
-            </div>
-          </div>
+            <ChevronDownIcon
+              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                expandedSections.systemPricing ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
 
+          {expandedSections.systemPricing && (
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
           {/* Operadores (Whitelabel) */}
           <div className="mb-6">
             <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -1403,14 +1467,39 @@ export default function SettingsTab() {
               </div>
             </div>
           </div>
+          </div>
+          )}
         </div>
 
         {/* RSS Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-          <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900 mb-4">
-            Configurações de RSS
-          </h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('rss')}
+            className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <RssIcon className="w-6 h-6 text-orange-600" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                  Configurações de RSS
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Configure feeds RSS para importar conteúdo
+                </p>
+              </div>
+            </div>
+            <ChevronDownIcon
+              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                expandedSections.rss ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
 
+          {expandedSections.rss && (
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1423,7 +1512,7 @@ export default function SettingsTab() {
                   ...settings,
                   rss: { ...settings.rss, url: e.target.value }
                 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="https://exemplo.com/feed.xml"
                 required
               />
@@ -1453,7 +1542,7 @@ export default function SettingsTab() {
                       ...settings,
                       rss: { ...settings.rss, imageTag: e.target.value }
                     })}
-                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                     placeholder="enclosure.url"
                     required
                   />
@@ -1474,7 +1563,7 @@ export default function SettingsTab() {
                       ...settings,
                       rss: { ...settings.rss, titleTag: e.target.value }
                     })}
-                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                     placeholder="title"
                     required
                   />
@@ -1495,7 +1584,7 @@ export default function SettingsTab() {
                       ...settings,
                       rss: { ...settings.rss, descriptionTag: e.target.value }
                     })}
-                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                     placeholder="description"
                     required
                   />
@@ -1504,14 +1593,39 @@ export default function SettingsTab() {
               </div>
             </div>
           </div>
+          </div>
+          )}
         </div>
 
         {/* Auth Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-          <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900 mb-4">
-            Credenciais de Administrador
-          </h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('auth')}
+            className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <LockClosedIcon className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                  Credenciais de Administrador
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Configure usuário e senha do administrador
+                </p>
+              </div>
+            </div>
+            <ChevronDownIcon
+              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                expandedSections.auth ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
 
+          {expandedSections.auth && (
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1524,7 +1638,7 @@ export default function SettingsTab() {
                   ...settings,
                   auth: { ...settings.auth, username: e.target.value }
                 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="admin"
                 required
               />
@@ -1541,7 +1655,7 @@ export default function SettingsTab() {
                   ...settings,
                   auth: { ...settings.auth, password: e.target.value }
                 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="••••••••"
                 required
               />
@@ -1553,24 +1667,39 @@ export default function SettingsTab() {
               <strong>Atenção:</strong> Ao alterar as credenciais, você precisará fazer login novamente.
             </p>
           </div>
+          </div>
+          )}
         </div>
 
         {/* Medal Configuration */}
-        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 border border-gray-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
-              <span className="text-xl">🏅</span>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('medals')}
+            className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <span className="text-xl">🏅</span>
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                  Classificação de Pontos (Medalhas)
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Configure as faixas de fluxo de pessoas para classificar os pontos
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
-                Classificação de Pontos (Medalhas)
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Configure as faixas de fluxo de pessoas para classificar os pontos
-              </p>
-            </div>
-          </div>
+            <ChevronDownIcon
+              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                expandedSections.medals ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
 
+          {expandedSections.medals && (
+          <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
           {/* Enable/Disable */}
           <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
             <label className="flex items-center gap-3 cursor-pointer">
@@ -1578,7 +1707,7 @@ export default function SettingsTab() {
                 type="checkbox"
                 checked={medalConfig.enabled}
                 onChange={(e) => setMedalConfig({ ...medalConfig, enabled: e.target.checked })}
-                className="w-5 h-5 text-[#F59E0B] rounded focus:ring-[#F59E0B]"
+                className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
               />
               <span className="text-sm font-medium text-gray-700">
                 Habilitar sistema de medalhas
@@ -1615,7 +1744,7 @@ export default function SettingsTab() {
                         type="number"
                         value={tier.minTraffic}
                         onChange={(e) => updateMedalTier(index, 'minTraffic', parseInt(e.target.value) || 0)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
                         min="0"
                       />
                     </div>
@@ -1630,7 +1759,7 @@ export default function SettingsTab() {
                         value={tier.maxTraffic === 999999 ? '' : tier.maxTraffic}
                         onChange={(e) => updateMedalTier(index, 'maxTraffic', parseInt(e.target.value) || 999999)}
                         placeholder="Ilimitado"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
                         min="0"
                       />
                     </div>
@@ -1647,7 +1776,7 @@ export default function SettingsTab() {
                           onChange={(e) => updateMedalTier(index, 'priceMultiplier', parseFloat(e.target.value) || 1)}
                           step="0.1"
                           min="0.1"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm pr-8"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm pr-8"
                         />
                         <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">x</span>
                       </div>
@@ -1683,12 +1812,14 @@ export default function SettingsTab() {
                   type="button"
                   onClick={saveMedalConfig}
                   disabled={savingMedals}
-                  className="px-4 py-2 bg-[#F59E0B] text-white rounded-lg hover:bg-[#D97706] disabled:opacity-50 transition-colors font-medium"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors font-medium"
                 >
                   {savingMedals ? 'Salvando...' : 'Salvar Medalhas'}
                 </button>
               </div>
             </div>
+          )}
+          </div>
           )}
         </div>
 
@@ -1712,7 +1843,7 @@ export default function SettingsTab() {
           <button
             type="submit"
             disabled={saving}
-            className="px-6 py-3 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-[0_0_30px_rgba(245,158,11,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+            className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-[0_0_30px_rgba(99,102,241,0.3)] disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
           >
             {saving ? 'Salvando...' : 'Salvar Configurações'}
           </button>

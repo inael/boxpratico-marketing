@@ -297,7 +297,7 @@ export default function ContractsTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F59E0B]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
@@ -322,7 +322,7 @@ export default function ContractsTab() {
             resetForm();
             setShowForm(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
         >
           <PlusIcon className="w-5 h-5" />
           Novo Contrato
@@ -419,7 +419,7 @@ export default function ContractsTab() {
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as ContractType | '')}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             >
               <option value="">Todos</option>
               {(Object.keys(CONTRACT_TYPE_LABELS) as ContractType[]).map(t => (
@@ -433,7 +433,7 @@ export default function ContractsTab() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as ContractStatus | '')}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
             >
               <option value="">Todos</option>
               {(Object.keys(CONTRACT_STATUS_LABELS) as ContractStatus[]).map(s => (
@@ -465,7 +465,7 @@ export default function ContractsTab() {
                 <select
                   value={type}
                   onChange={(e) => setType(e.target.value as ContractType)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 >
                   {(Object.keys(CONTRACT_TYPE_LABELS) as ContractType[]).map(t => (
                     <option key={t} value={t}>{CONTRACT_TYPE_LABELS[t]}</option>
@@ -480,7 +480,7 @@ export default function ContractsTab() {
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as ContractStatus)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                 >
                   {(Object.keys(CONTRACT_STATUS_LABELS) as ContractStatus[]).map(s => (
                     <option key={s} value={s}>{CONTRACT_STATUS_LABELS[s]}</option>
@@ -500,7 +500,7 @@ export default function ContractsTab() {
                     value={partyAName}
                     onChange={(e) => setPartyAName(e.target.value)}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="Nome da sua empresa"
                   />
                 </div>
@@ -510,7 +510,7 @@ export default function ContractsTab() {
                     type="text"
                     value={partyACnpj}
                     onChange={(e) => setPartyACnpj(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="00.000.000/0000-00"
                   />
                 </div>
@@ -528,7 +528,7 @@ export default function ContractsTab() {
                     value={partyBName}
                     onChange={(e) => setPartyBName(e.target.value)}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="Nome do cliente"
                   />
                 </div>
@@ -538,7 +538,7 @@ export default function ContractsTab() {
                     type="text"
                     value={partyBDocument}
                     onChange={(e) => setPartyBDocument(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="CPF ou CNPJ"
                   />
                 </div>
@@ -548,7 +548,7 @@ export default function ContractsTab() {
                     type="email"
                     value={partyBEmail}
                     onChange={(e) => setPartyBEmail(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="email@exemplo.com"
                   />
                 </div>
@@ -558,7 +558,7 @@ export default function ContractsTab() {
                     type="text"
                     value={partyBPhone}
                     onChange={(e) => setPartyBPhone(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="(00) 00000-0000"
                   />
                 </div>
@@ -575,7 +575,7 @@ export default function ContractsTab() {
                     <select
                       value={condominiumId}
                       onChange={(e) => setCondominiumId(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     >
                       <option value="">Selecione um local</option>
                       {condominiums.map(c => (
@@ -590,7 +590,7 @@ export default function ContractsTab() {
                     <select
                       value={advertiserId}
                       onChange={(e) => setAdvertiserId(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     >
                       <option value="">Selecione um anunciante</option>
                       {advertisers.map(a => (
@@ -614,7 +614,7 @@ export default function ContractsTab() {
                     min="0"
                     value={monthlyValue}
                     onChange={(e) => setMonthlyValue(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="0,00"
                   />
                 </div>
@@ -626,7 +626,7 @@ export default function ContractsTab() {
                     min="0"
                     value={totalValue}
                     onChange={(e) => setTotalValue(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="0,00"
                   />
                 </div>
@@ -638,7 +638,7 @@ export default function ContractsTab() {
                     max="31"
                     value={paymentDay}
                     onChange={(e) => setPaymentDay(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                     placeholder="10"
                   />
                 </div>
@@ -656,7 +656,7 @@ export default function ContractsTab() {
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   />
                 </div>
                 <div>
@@ -666,7 +666,7 @@ export default function ContractsTab() {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                     required
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   />
                 </div>
               </div>
@@ -701,7 +701,7 @@ export default function ContractsTab() {
                 ) : (
                   <div
                     onClick={() => fileInputRef.current?.click()}
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-[#F59E0B] transition-colors"
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-indigo-500 transition-colors"
                   >
                     <ArrowUpTrayIcon className="w-8 h-8 mx-auto text-gray-400 mb-2" />
                     <p className="text-sm text-gray-600">
@@ -726,7 +726,7 @@ export default function ContractsTab() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none resize-none"
                 placeholder="Anotacoes sobre este contrato..."
               />
             </div>
@@ -746,7 +746,7 @@ export default function ContractsTab() {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+                className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
               >
                 {editingContract ? 'Salvar Alteracoes' : 'Criar Contrato'}
               </button>
@@ -769,7 +769,7 @@ export default function ContractsTab() {
             {contracts.length === 0 && (
               <button
                 onClick={() => setShowForm(true)}
-                className="px-4 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
               >
                 Criar primeiro contrato
               </button>

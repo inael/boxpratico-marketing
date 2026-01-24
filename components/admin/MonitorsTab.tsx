@@ -494,7 +494,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
         {selectedCondominium && !showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base w-full sm:w-auto"
           >
             <PlusIcon className="w-5 h-5" />
             Nova Tela
@@ -592,17 +592,17 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                       onClick={() => setOrientation('horizontal')}
                       className={`flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-all ${
                         orientation === 'horizontal'
-                          ? 'border-[#F59E0B] bg-[#FFFBEB]'
+                          ? 'border-indigo-500 bg-indigo-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className={`w-12 h-8 rounded border-2 flex items-center justify-center ${
-                        orientation === 'horizontal' ? 'border-[#F59E0B] bg-[#F59E0B]/20' : 'border-gray-300'
+                        orientation === 'horizontal' ? 'border-indigo-500 bg-indigo-600/20' : 'border-gray-300'
                       }`}>
-                        <TvIcon className={`w-5 h-4 ${orientation === 'horizontal' ? 'text-[#D97706]' : 'text-gray-400'}`} />
+                        <TvIcon className={`w-5 h-4 ${orientation === 'horizontal' ? 'text-indigo-700' : 'text-gray-400'}`} />
                       </div>
                       <div className="text-left">
-                        <p className={`font-medium ${orientation === 'horizontal' ? 'text-[#D97706]' : 'text-gray-700'}`}>
+                        <p className={`font-medium ${orientation === 'horizontal' ? 'text-indigo-700' : 'text-gray-700'}`}>
                           Horizontal
                         </p>
                         <p className="text-xs text-gray-500">Paisagem (16:9)</p>
@@ -613,17 +613,17 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                       onClick={() => setOrientation('vertical')}
                       className={`flex items-center justify-center gap-3 p-4 rounded-lg border-2 transition-all ${
                         orientation === 'vertical'
-                          ? 'border-[#F59E0B] bg-[#FFFBEB]'
+                          ? 'border-indigo-500 bg-indigo-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
                       <div className={`w-8 h-12 rounded border-2 flex items-center justify-center ${
-                        orientation === 'vertical' ? 'border-[#F59E0B] bg-[#F59E0B]/20' : 'border-gray-300'
+                        orientation === 'vertical' ? 'border-indigo-500 bg-indigo-600/20' : 'border-gray-300'
                       }`}>
-                        <TvIcon className={`w-4 h-5 rotate-90 ${orientation === 'vertical' ? 'text-[#D97706]' : 'text-gray-400'}`} />
+                        <TvIcon className={`w-4 h-5 rotate-90 ${orientation === 'vertical' ? 'text-indigo-700' : 'text-gray-400'}`} />
                       </div>
                       <div className="text-left">
-                        <p className={`font-medium ${orientation === 'vertical' ? 'text-[#D97706]' : 'text-gray-700'}`}>
+                        <p className={`font-medium ${orientation === 'vertical' ? 'text-indigo-700' : 'text-gray-700'}`}>
                           Vertical
                         </p>
                         <p className="text-xs text-gray-500">Retrato (9:16)</p>
@@ -643,7 +643,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                         name="schedule"
                         checked={is24h}
                         onChange={() => setIs24h(true)}
-                        className="w-4 h-4 text-[#F59E0B] border-gray-300 focus:ring-[#F59E0B]"
+                        className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
                       />
                       <span className="text-sm text-gray-700">24 horas</span>
                     </label>
@@ -653,7 +653,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                         name="schedule"
                         checked={!is24h}
                         onChange={() => setIs24h(false)}
-                        className="w-4 h-4 text-[#F59E0B] border-gray-300 focus:ring-[#F59E0B]"
+                        className="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
                       />
                       <span className="text-sm text-gray-700">Horário personalizado</span>
                     </label>
@@ -668,7 +668,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             type="time"
                             value={startTime}
                             onChange={(e) => setStartTime(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white text-gray-900"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white text-gray-900"
                           />
                         </div>
                         <div>
@@ -677,7 +677,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             type="time"
                             value={endTime}
                             onChange={(e) => setEndTime(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white text-gray-900"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white text-gray-900"
                           />
                         </div>
                       </div>
@@ -698,8 +698,8 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                               }}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                                 daysOfWeek.includes(index)
-                                  ? 'bg-[#F59E0B] text-white'
-                                  : 'bg-white border border-gray-300 text-gray-600 hover:border-[#F59E0B]'
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'bg-white border border-gray-300 text-gray-600 hover:border-indigo-500'
                               }`}
                             >
                               {day}
@@ -720,7 +720,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                   <button
                     type="button"
                     onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="flex items-center gap-2 text-sm font-medium text-[#F59E0B] hover:text-[#D97706]"
+                    className="flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700"
                   >
                     {showAdvanced ? '▼' : '▶'} Configuracoes Avancadas
                   </button>
@@ -746,7 +746,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             min={0}
                             value={averageMonthlyTraffic}
                             onChange={(e) => setAverageMonthlyTraffic(e.target.value ? parseInt(e.target.value) : '')}
-                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white"
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
                             placeholder="Ex: 5000"
                           />
                         </div>
@@ -762,7 +762,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             min={0}
                             value={averagePeoplePerHour}
                             onChange={(e) => setAveragePeoplePerHour(e.target.value ? parseInt(e.target.value) : '')}
-                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white"
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
                             placeholder="Ex: 30"
                           />
                         </div>
@@ -780,8 +780,8 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                               onClick={() => setSocialClass(socialClass === cls ? '' : cls)}
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                 socialClass === cls
-                                  ? 'bg-[#F59E0B] text-white'
-                                  : 'bg-white border border-gray-300 text-gray-600 hover:border-[#F59E0B]'
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'bg-white border border-gray-300 text-gray-600 hover:border-indigo-500'
                               }`}
                             >
                               Classe {cls}
@@ -808,7 +808,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             max={60}
                             value={updateCycleMinutes}
                             onChange={(e) => setUpdateCycleMinutes(parseInt(e.target.value) || 10)}
-                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white"
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
                           />
                         </div>
                         <div className="flex items-center">
@@ -817,7 +817,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                               type="checkbox"
                               checked={soundEnabled}
                               onChange={(e) => setSoundEnabled(e.target.checked)}
-                              className="w-5 h-5 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+                              className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                             />
                             <span className="text-sm text-gray-700">Som do terminal ligado</span>
                           </label>
@@ -838,7 +838,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             onChange={(e) => setFooterEnabled(e.target.checked)}
                             className="sr-only peer"
                           />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#F59E0B]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F59E0B]"></div>
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                         </label>
                       </div>
                       {footerEnabled && (
@@ -853,7 +853,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             value={footerText}
                             onChange={(e) => setFooterText(e.target.value)}
                             rows={2}
-                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none bg-white resize-none"
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white resize-none"
                             placeholder="Ex: Bem-vindo ao Condominio! WiFi: condominio123 | Proibido fumar nas areas comuns"
                           />
                         </div>
@@ -865,7 +865,7 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                    className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
                     {editingMonitor ? 'Atualizar' : 'Criar'} Tela
                   </button>
@@ -923,9 +923,9 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                             <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
                               monitor.isOnline
                                 ? 'bg-gradient-to-br from-green-100 to-emerald-100'
-                                : 'bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20'
+                                : 'bg-gradient-to-br from-indigo-400/20 to-indigo-500/20'
                             }`}>
-                              <TvIcon className={`w-5 h-5 ${monitor.isOnline ? 'text-green-600' : 'text-[#D97706]'}`} />
+                              <TvIcon className={`w-5 h-5 ${monitor.isOnline ? 'text-green-600' : 'text-indigo-700'}`} />
                             </div>
                             <div>
                               <p className="text-sm font-semibold text-gray-900">{monitor.name}</p>

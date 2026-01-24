@@ -141,7 +141,7 @@ export default function FinancialTab({ companies, onRefresh }: FinancialTabProps
           onClick={() => setActiveSection('payments')}
           className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
             activeSection === 'payments'
-              ? 'border-[#F59E0B] text-[#F59E0B]'
+              ? 'border-indigo-500 text-indigo-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -151,7 +151,7 @@ export default function FinancialTab({ companies, onRefresh }: FinancialTabProps
           onClick={() => setActiveSection('commissions')}
           className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
             activeSection === 'commissions'
-              ? 'border-[#F59E0B] text-[#F59E0B]'
+              ? 'border-indigo-500 text-indigo-600'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -164,7 +164,7 @@ export default function FinancialTab({ companies, onRefresh }: FinancialTabProps
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {isLoading ? (
             <div className="p-12 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-[#F59E0B] border-t-transparent rounded-full mx-auto"></div>
+              <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto"></div>
               <p className="text-gray-500 mt-4">Carregando pagamentos...</p>
             </div>
           ) : payments.length === 0 ? (
@@ -271,7 +271,7 @@ export default function FinancialTab({ companies, onRefresh }: FinancialTabProps
                             {/* Nome */}
                             <td className="px-4 py-3">
                               <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#F59E0B] to-[#D97706] flex items-center justify-center text-white font-bold text-sm">
+                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
                                   {company.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
@@ -317,7 +317,7 @@ export default function FinancialTab({ companies, onRefresh }: FinancialTabProps
                                   placeholder="0"
                                   min="0"
                                   max="100"
-                                  className="w-20 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm"
+                                  className="w-20 px-2 py-1 text-center border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
                                 />
                               ) : (
                                 <span className={`text-sm font-medium ${company.commission?.percentage ? 'text-green-600' : 'text-gray-400'}`}>
@@ -334,7 +334,7 @@ export default function FinancialTab({ companies, onRefresh }: FinancialTabProps
                                   value={commissionForm.notes}
                                   onChange={(e) => setCommissionForm({ ...commissionForm, notes: e.target.value })}
                                   placeholder="Observações..."
-                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B] text-sm"
+                                  className="w-full px-2 py-1 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-sm"
                                 />
                               ) : (
                                 <span className="text-sm text-gray-500">
@@ -364,7 +364,7 @@ export default function FinancialTab({ companies, onRefresh }: FinancialTabProps
                               ) : (
                                 <button
                                   onClick={() => handleEditCommission(company)}
-                                  className="p-2 text-gray-500 hover:text-[#F59E0B] hover:bg-[#F59E0B]/10 rounded-lg transition-colors"
+                                  className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-600/10 rounded-lg transition-colors"
                                   title="Editar comissão"
                                 >
                                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

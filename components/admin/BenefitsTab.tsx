@@ -117,7 +117,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#F59E0B]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500" />
       </div>
     );
   }
@@ -128,7 +128,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-gradient-to-r from-[#F59E0B] to-[#D97706] rounded-2xl p-6 md:p-8 text-white relative overflow-hidden"
+        className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden"
       >
         <div className="absolute right-0 top-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
         <div className="absolute right-20 bottom-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2" />
@@ -157,7 +157,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
           onClick={() => setActiveTab('indicar')}
           className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
             activeTab === 'indicar'
-              ? 'border-[#F59E0B] text-[#D97706]'
+              ? 'border-indigo-500 text-indigo-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -167,7 +167,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
           onClick={() => setActiveTab('comissoes')}
           className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
             activeTab === 'comissoes'
-              ? 'border-[#F59E0B] text-[#D97706]'
+              ? 'border-indigo-500 text-indigo-700'
               : 'border-transparent text-gray-500 hover:text-gray-700'
           }`}
         >
@@ -208,7 +208,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
               </div>
               <button
                 onClick={shareLink}
-                className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
               >
                 <ShareIcon className="w-5 h-5" />
                 Indicar amigos
@@ -295,8 +295,8 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
           >
             <div className="bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-[#FEF3C7] rounded-xl flex items-center justify-center">
-                  <CurrencyDollarIcon className="w-5 h-5 text-[#D97706]" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <CurrencyDollarIcon className="w-5 h-5 text-indigo-700" />
                 </div>
                 <h4 className="font-semibold text-gray-900">Saldo Disponível</h4>
               </div>
@@ -306,7 +306,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
               <p className="text-sm text-gray-500 mt-1">
                 Disponível para saque
               </p>
-              <button className="mt-4 text-[#F59E0B] text-sm font-medium flex items-center gap-1 hover:text-[#D97706]">
+              <button className="mt-4 text-indigo-600 text-sm font-medium flex items-center gap-1 hover:text-indigo-700">
                 Solicitar saque
                 <ChevronRightIcon className="w-4 h-4" />
               </button>
@@ -340,7 +340,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
               <p className="text-sm text-gray-500 mt-1">
                 Total de indicações diretas
               </p>
-              <button className="mt-4 text-[#F59E0B] text-sm font-medium flex items-center gap-1 hover:text-[#D97706]">
+              <button className="mt-4 text-indigo-600 text-sm font-medium flex items-center gap-1 hover:text-indigo-700">
                 Ver indicados
                 <ChevronRightIcon className="w-4 h-4" />
               </button>

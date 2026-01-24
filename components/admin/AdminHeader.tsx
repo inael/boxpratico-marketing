@@ -16,7 +16,7 @@ export default function AdminHeader() {
         {/* Logo - hidden on mobile since menu button is there */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 pl-10 lg:pl-0">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-xl flex items-center justify-center shadow-md">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
               <span className="text-black font-bold text-sm sm:text-lg">BP</span>
             </div>
             <div className="hidden sm:block">

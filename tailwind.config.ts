@@ -9,19 +9,32 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // BoxPrático Design System
+        // Asaas Design System (Blue Theme)
         primary: {
-          50: '#FFFBEB',
-          100: '#FEF3C7',
-          200: '#FDE68A',
-          300: '#FCD34D',
-          400: '#FBBF24',
-          500: '#FFCE00', // Amarelo BoxPrático principal
-          600: '#F59E0B', // Laranja (usado em gradientes)
-          700: '#D97706', // Laranja escuro (gradiente end)
-          800: '#B45309',
-          900: '#92400E',
-          950: '#78350F',
+          50: '#EEF2FF',
+          100: '#E0E7FF',
+          200: '#C7D2FE',
+          300: '#A5B4FC',
+          400: '#818CF8',
+          500: '#6366F1', // Asaas indigo principal
+          600: '#4F46E5', // Asaas indigo (gradiente)
+          700: '#4338CA', // Asaas indigo escuro
+          800: '#3730A3',
+          900: '#312E81',
+          950: '#1E1B4B',
+        },
+        // Asaas secondary colors
+        asaas: {
+          50: '#F0F9FF',
+          100: '#E0F2FE',
+          200: '#BAE6FD',
+          300: '#7DD3FC',
+          400: '#38BDF8',
+          500: '#0EA5E9', // Asaas sky blue
+          600: '#0284C7',
+          700: '#0369A1',
+          800: '#075985',
+          900: '#0C4A6E',
         },
         secondary: {
           50: '#F9FAFB',
@@ -37,10 +50,10 @@ const config: Config = {
           950: '#030712',
         },
         accent: {
-          yellow: '#FFCE00',
-          'yellow-hover': '#FFD700',
-          orange: '#F59E0B',
-          'orange-dark': '#D97706',
+          indigo: '#6366F1',
+          'indigo-hover': '#4F46E5',
+          sky: '#0EA5E9',
+          'sky-dark': '#0284C7',
         },
         // Cores semânticas
         success: {
@@ -53,9 +66,9 @@ const config: Config = {
         warning: {
           50: '#FFFBEB',
           100: '#FEF3C7',
-          500: '#F59E0B',
-          600: '#D97706',
-          700: '#B45309',
+          500: '#EAB308',
+          600: '#CA8A04',
+          700: '#A16207',
         },
         error: {
           50: '#FEF2F2',
@@ -80,16 +93,16 @@ const config: Config = {
         'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
         'medium': '0 4px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 30px -5px rgba(0, 0, 0, 0.04)',
         'large': '0 20px 60px -15px rgba(0, 0, 0, 0.3)',
-        'glow': '0 0 30px rgba(245, 158, 11, 0.3)',
-        'glow-lg': '0 0 30px rgba(245, 158, 11, 0.5)',
+        'glow': '0 0 30px rgba(99, 102, 241, 0.3)',
+        'glow-lg': '0 0 30px rgba(99, 102, 241, 0.5)',
       },
       backgroundImage: {
-        'gradient-primary': 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-        'gradient-warm': 'linear-gradient(135deg, #FFCE00 0%, #F59E0B 100%)',
+        'gradient-primary': 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+        'gradient-asaas': 'linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)',
         'gradient-success': 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
         'gradient-subtle': 'linear-gradient(to bottom right, #F9FAFB, #F3F4F6)',
         'gradient-card': 'linear-gradient(to bottom right, #FFFFFF, #F9FAFB)',
-        'gradient-highlight': 'linear-gradient(to bottom right, #FFF9E6, #FFFFFF)',
+        'gradient-highlight': 'linear-gradient(to bottom right, #EEF2FF, #FFFFFF)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',

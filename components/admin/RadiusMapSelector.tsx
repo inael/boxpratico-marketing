@@ -122,13 +122,13 @@ export default function RadiusMapSelector({ value, onChange }: RadiusMapSelector
           onChange={(e) => setSearchAddress(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && searchLocation()}
           placeholder="Buscar endereço (ex: Rua Augusta, São Paulo)"
-          className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900 text-sm"
+          className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900 text-sm"
         />
         <button
           type="button"
           onClick={searchLocation}
           disabled={isSearching}
-          className="px-4 py-2.5 bg-[#F59E0B] text-white rounded-lg font-medium text-sm hover:bg-[#D97706] transition-colors disabled:opacity-50"
+          className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-medium text-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
         >
           {isSearching ? 'Buscando...' : 'Buscar'}
         </button>
@@ -168,8 +168,8 @@ export default function RadiusMapSelector({ value, onChange }: RadiusMapSelector
             center={center}
             radius={radiusKm * 1000} // km to meters
             pathOptions={{
-              color: '#F59E0B',
-              fillColor: '#F59E0B',
+              color: '#6366F1',
+              fillColor: '#6366F1',
               fillOpacity: 0.15,
               weight: 2,
             }}
@@ -186,7 +186,7 @@ export default function RadiusMapSelector({ value, onChange }: RadiusMapSelector
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-700">Raio de alcance</label>
-          <span className="text-sm font-bold text-[#F59E0B]">{radiusKm} km</span>
+          <span className="text-sm font-bold text-indigo-600">{radiusKm} km</span>
         </div>
         <input
           type="range"
@@ -194,7 +194,7 @@ export default function RadiusMapSelector({ value, onChange }: RadiusMapSelector
           max="100"
           value={radiusKm}
           onChange={(e) => setRadiusKm(parseInt(e.target.value))}
-          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#F59E0B]"
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
         />
         <div className="flex justify-between text-xs text-gray-400 mt-1">
           <span>1 km</span>
@@ -213,7 +213,7 @@ export default function RadiusMapSelector({ value, onChange }: RadiusMapSelector
           value={centerName}
           onChange={(e) => setCenterName(e.target.value)}
           placeholder="Ex: Sede da empresa, Loja principal"
-          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900 text-sm"
+          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900 text-sm"
         />
       </div>
 

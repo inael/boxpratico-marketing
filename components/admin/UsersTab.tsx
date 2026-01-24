@@ -225,7 +225,7 @@ export default function UsersTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#F59E0B]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500"></div>
       </div>
     );
   }
@@ -249,7 +249,7 @@ export default function UsersTab() {
             resetForm();
             setShowForm(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
         >
           <PlusIcon className="w-5 h-5" />
           <span className="hidden sm:inline">Novo Usuario</span>
@@ -284,7 +284,7 @@ export default function UsersTab() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                  className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   placeholder="Ex: Joao Silva"
                 />
               </div>
@@ -301,7 +301,7 @@ export default function UsersTab() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                  className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   placeholder="joao@empresa.com"
                 />
               </div>
@@ -321,7 +321,7 @@ export default function UsersTab() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required={!editingUser}
-                  className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                  className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   placeholder={editingUser ? "Deixe vazio para manter" : "********"}
                 />
               </div>
@@ -339,7 +339,7 @@ export default function UsersTab() {
                       onClick={() => setRole(r)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         role === r
-                          ? 'bg-[#F59E0B] text-white'
+                          ? 'bg-indigo-600 text-white'
                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                       }`}
                     >
@@ -361,7 +361,7 @@ export default function UsersTab() {
                       type="checkbox"
                       checked={restrictContent}
                       onChange={(e) => setRestrictContent(e.target.checked)}
-                      className="w-5 h-5 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+                      className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-gray-700">
                       Restringir conteudo (so ve o que ele criou)
@@ -377,7 +377,7 @@ export default function UsersTab() {
                       multiple
                       value={allowedTerminals}
                       onChange={(e) => setAllowedTerminals(Array.from(e.target.selectedOptions, o => o.value))}
-                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none min-h-[100px]"
+                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-h-[100px]"
                     >
                       {monitors.map(m => (
                         <option key={m.id} value={m.id}>{m.name}</option>
@@ -395,7 +395,7 @@ export default function UsersTab() {
                       multiple
                       value={allowedAdvertisers}
                       onChange={(e) => setAllowedAdvertisers(Array.from(e.target.selectedOptions, o => o.value))}
-                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none min-h-[100px]"
+                      className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none min-h-[100px]"
                     >
                       {advertisers.map(a => (
                         <option key={a.id} value={a.id}>{a.name}</option>
@@ -416,7 +416,7 @@ export default function UsersTab() {
                     type="checkbox"
                     checked={emailNotifications}
                     onChange={(e) => setEmailNotifications(e.target.checked)}
-                    className="w-5 h-5 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+                    className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   <span className="text-sm text-gray-700">Receber por email</span>
                 </label>
@@ -425,7 +425,7 @@ export default function UsersTab() {
                   <select
                     value={emailFrequency}
                     onChange={(e) => setEmailFrequency(e.target.value as 'daily' | 'weekly' | 'monthly')}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   >
                     <option value="daily">Diario</option>
                     <option value="weekly">Semanal</option>
@@ -442,7 +442,7 @@ export default function UsersTab() {
                   type="checkbox"
                   checked={isActive}
                   onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 text-[#F59E0B] focus:ring-[#F59E0B]"
+                  className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <span className="text-sm text-gray-700">Usuario ativo</span>
               </label>
@@ -459,7 +459,7 @@ export default function UsersTab() {
               </button>
               <button
                 type="submit"
-                className="px-6 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+                className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
               >
                 {editingUser ? 'Salvar Alteracoes' : 'Criar Usuario'}
               </button>
@@ -479,7 +479,7 @@ export default function UsersTab() {
             </p>
             <button
               onClick={() => setShowForm(true)}
-              className="px-4 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all"
+              className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
             >
               Criar primeiro usuario
             </button>
@@ -508,7 +508,7 @@ export default function UsersTab() {
                   <tr key={user.id} className="hover:bg-gray-50">
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-full flex items-center justify-center text-white font-bold">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold">
                           {user.name.charAt(0).toUpperCase()}
                         </div>
                         <div>

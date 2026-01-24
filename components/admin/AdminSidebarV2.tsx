@@ -1,26 +1,58 @@
 'use client';
 
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  HomeIcon,
-  CameraIcon,
-  CreditCardIcon,
-  GiftIcon,
-  Cog6ToothIcon,
-  ChevronRightIcon,
-  ChevronLeftIcon,
-  ChevronDownIcon,
-  PlusIcon,
-} from '@heroicons/react/24/outline';
+  LayoutDashboard,
+  Briefcase,
+  Users,
+  FileSignature,
+  Megaphone,
+  Banknote,
+  Receipt,
+  TrendingUp,
+  BadgePercent,
+  Tv,
+  Monitor,
+  ListVideo,
+  FolderOpen,
+  Gift,
+  UserPlus,
+  ScrollText,
+  Settings,
+  ShieldCheck,
+  Sliders,
+  BarChart3,
+  ChevronRight,
+  ChevronLeft,
+  ChevronDown,
+  Plus,
+  Database,
+  Building2,
+  CreditCard,
+  UsersRound,
+  Rocket,
+  type LucideIcon,
+} from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import type { Role, Permission } from '@/types';
+
+interface SubMenuItem {
+  id: string;
+  label: string;
+  icon?: LucideIcon;
+  permission?: Permission;
+}
 
 interface MenuItem {
   id: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   label: string;
   badge?: boolean;
   badgeCount?: number;
-  submenu?: { id: string; label: string }[];
+  submenu?: SubMenuItem[];
+  permission?: Permission;
+  roles?: Role[]; // Papéis que podem ver este item
 }
 
 interface AdminSidebarV2Props {
@@ -30,59 +62,98 @@ interface AdminSidebarV2Props {
   onExpandChange: (expanded: boolean) => void;
 }
 
-const menuStructure: MenuItem[] = [
-  { id: 'dashboard', icon: HomeIcon, label: 'Inicio' },
+// Menu base - visível para todos os papéis autorizados
+const baseMenuStructure: MenuItem[] = [
+  // DASHBOARD - Visão geral
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
+
+  // COMERCIAL - Vendedor (prospecção, contratos, campanhas de venda)
   {
-    id: 'receber',
-    icon: CameraIcon,
-    label: 'Receber',
+    id: 'comercial',
+    icon: Briefcase,
+    label: 'Comercial',
+    permission: 'advertisers:read',
     submenu: [
-      { id: 'companies', label: 'Meus Clientes' },
-      { id: 'contracts', label: 'Contratos' },
-      { id: 'financial', label: 'Cobranças' },
-      { id: 'campaigns', label: 'Campanhas' },
+      { id: 'companies', label: 'Meus Clientes', icon: Users, permission: 'advertisers:read' },
+      { id: 'contracts', label: 'Contratos', icon: FileSignature, permission: 'contracts:read' },
+      { id: 'campaigns', label: 'Campanhas', icon: Megaphone, permission: 'campaigns:read' },
     ],
   },
+
+  // FINANCEIRO - Gestor (cobranças, recebíveis, comissões)
   {
-    id: 'conta',
-    icon: CreditCardIcon,
-    label: 'Conta',
+    id: 'financeiro',
+    icon: Banknote,
+    label: 'Financeiro',
+    permission: 'financial:read',
     submenu: [
-      { id: 'monitors', label: 'Telas' },
-      { id: 'media', label: 'Midias' },
-      { id: 'media-groups', label: 'Grupos de Midias' },
-      { id: 'library', label: 'Biblioteca' },
+      { id: 'financial', label: 'Cobranças', icon: Receipt, permission: 'financial:read' },
+      { id: 'receivables', label: 'Recebíveis', icon: TrendingUp, permission: 'financial:read' },
+      { id: 'sales-commissions', label: 'Comissões de Venda', icon: BadgePercent, permission: 'financial:manage' },
     ],
   },
+
+  // OPERAÇÃO - Técnico (telas, grades/playlists, biblioteca de mídia)
   {
-    id: 'beneficios',
-    icon: GiftIcon,
-    label: 'Beneficios',
+    id: 'operacao',
+    icon: Tv,
+    label: 'Operação',
+    permission: 'screens:read',
+    submenu: [
+      { id: 'monitors', label: 'Minhas Telas', icon: Monitor, permission: 'screens:read' },
+      { id: 'playlists', label: 'Grades', icon: ListVideo, permission: 'playlists:read' },
+      { id: 'library', label: 'Biblioteca de Mídia', icon: FolderOpen, permission: 'media:read' },
+    ],
+  },
+
+  // GROWTH/PARCERIAS - Afiliados (indicação, comissões de afiliado)
+  {
+    id: 'growth',
+    icon: Rocket,
+    label: 'Parcerias',
     badge: true,
     badgeCount: 1,
+    permission: 'affiliates:read',
     submenu: [
-      { id: 'affiliate', label: 'Indicar Amigo' },
-      { id: 'affiliate-earnings', label: 'Minhas Comissões' },
+      { id: 'affiliate', label: 'Indicar Amigo', icon: UserPlus, permission: 'affiliates:read' },
+      { id: 'affiliate-earnings', label: 'Extrato Afiliado', icon: ScrollText, permission: 'affiliates:read' },
     ],
   },
+
+  // ADMINISTRAÇÃO - Configurações do sistema (Tenant)
   {
     id: 'admin',
-    icon: Cog6ToothIcon,
+    icon: Settings,
     label: 'Administração',
+    permission: 'users:read',
     submenu: [
-      { id: 'users', label: 'Usuários' },
-      { id: 'accounts', label: 'Contas' },
-      { id: 'reports', label: 'Relatórios' },
-      { id: 'analytics', label: 'Analytics' },
-      { id: 'settings', label: 'Configurações' },
+      { id: 'team', label: 'Minha Equipe', icon: ShieldCheck, permission: 'users:read' },
+      { id: 'accounts', label: 'Contas', icon: Users, permission: 'users:read' },
+      { id: 'settings', label: 'Configurações', icon: Sliders, permission: 'settings:read' },
+      { id: 'reports', label: 'Relatórios', icon: BarChart3, permission: 'financial:read' },
     ],
   },
 ];
 
-const quickActions = [
-  { id: 'new-company', label: 'Nova Empresa' },
-  { id: 'new-contract', label: 'Novo Contrato' },
-  { id: 'new-invoice', label: 'Nova Cobrança' },
+// Menu exclusivo SUPER ADMIN - Gestão da Plataforma
+const superAdminMenu: MenuItem = {
+  id: 'platform',
+  icon: Database,
+  label: 'Gestão da Plataforma',
+  roles: ['SUPER_ADMIN'],
+  submenu: [
+    { id: 'tenants', label: 'Tenants / Filiados', icon: Building2 },
+    { id: 'subscription-plans', label: 'Planos de Assinatura', icon: CreditCard },
+    { id: 'global-users', label: 'Usuários Globais', icon: UsersRound },
+  ],
+};
+
+// Ações rápidas baseadas em permissões
+const quickActionsConfig = [
+  { id: 'new-company', label: 'Novo Cliente', permission: 'advertisers:create' as Permission },
+  { id: 'new-contract', label: 'Novo Contrato', permission: 'contracts:create' as Permission },
+  { id: 'new-invoice', label: 'Nova Cobrança', permission: 'financial:manage' as Permission },
+  { id: 'new-playlist', label: 'Nova Grade', permission: 'playlists:create' as Permission },
 ];
 
 // Menu Item Component - memoizado para evitar re-renders
@@ -94,6 +165,7 @@ const MenuItemComponent = memo(function MenuItemComponent({
   activeTab,
   onItemClick,
   onSubmenuClick,
+  hasPermission,
 }: {
   item: MenuItem;
   isActive: boolean;
@@ -102,8 +174,14 @@ const MenuItemComponent = memo(function MenuItemComponent({
   activeTab: string;
   onItemClick: (item: MenuItem) => void;
   onSubmenuClick: (subId: string) => void;
+  hasPermission: (permission: Permission) => boolean;
 }) {
   const IconComponent = item.icon;
+
+  // Filtrar submenus baseado em permissões
+  const visibleSubmenu = item.submenu?.filter(
+    (sub) => !sub.permission || hasPermission(sub.permission)
+  );
 
   return (
     <div className="mb-1">
@@ -111,7 +189,7 @@ const MenuItemComponent = memo(function MenuItemComponent({
         onClick={() => onItemClick(item)}
         className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${
           isActive
-            ? 'bg-gradient-to-r from-[#FEF3C7] to-[#FDE68A] text-[#D97706]'
+            ? 'bg-gradient-to-r from-indigo-50 to-indigo-100 text-indigo-700'
             : 'text-gray-600 hover:bg-gray-50'
         }`}
       >
@@ -133,8 +211,8 @@ const MenuItemComponent = memo(function MenuItemComponent({
                   {item.badgeCount || '!'}
                 </span>
               )}
-              {item.submenu && (
-                <ChevronRightIcon
+              {visibleSubmenu && visibleSubmenu.length > 0 && (
+                <ChevronRight
                   className={`w-4 h-4 transition-transform duration-200 ${
                     isSubmenuOpen ? 'rotate-90' : ''
                   }`}
@@ -146,21 +224,25 @@ const MenuItemComponent = memo(function MenuItemComponent({
       </button>
 
       {/* Submenu */}
-      {item.submenu && isSubmenuOpen && isExpanded && (
+      {visibleSubmenu && visibleSubmenu.length > 0 && isSubmenuOpen && isExpanded && (
         <div className="ml-6 pl-4 border-l-2 border-gray-200 mt-1 space-y-1">
-          {item.submenu.map((sub) => (
-            <button
-              key={sub.id}
-              onClick={() => onSubmenuClick(sub.id)}
-              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeTab === sub.id
-                  ? 'bg-[#F59E0B]/10 text-[#D97706] font-medium'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-              }`}
-            >
-              {sub.label}
-            </button>
-          ))}
+          {visibleSubmenu.map((sub) => {
+            const SubIcon = sub.icon;
+            return (
+              <button
+                key={sub.id}
+                onClick={() => onSubmenuClick(sub.id)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activeTab === sub.id
+                    ? 'bg-indigo-50 text-indigo-700 font-medium'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                {SubIcon && <SubIcon className="w-4 h-4 flex-shrink-0" />}
+                <span>{sub.label}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -173,8 +255,37 @@ export default function AdminSidebarV2({
   isExpanded,
   onExpandChange,
 }: AdminSidebarV2Props) {
+  const { activeContext, hasPermission, isSuperAdmin, isViewingAsTenant } = useAuth();
+
+  // Construir menu baseado nas permissões do contexto ativo
+  const menuStructure = useMemo(() => {
+    const menu: MenuItem[] = [];
+
+    // Filtrar menu base por permissões
+    baseMenuStructure.forEach((item) => {
+      // Se não tem permissão requerida, não mostra
+      if (item.permission && !hasPermission(item.permission)) return;
+
+      // Se tem restrição de papel, verificar
+      if (item.roles && activeContext && !item.roles.includes(activeContext.role)) return;
+
+      menu.push(item);
+    });
+
+    // Adicionar menu de Super Admin se aplicável
+    if (isSuperAdmin() && !isViewingAsTenant()) {
+      menu.push(superAdminMenu);
+    }
+
+    return menu;
+  }, [activeContext, hasPermission, isSuperAdmin, isViewingAsTenant]);
+
+  // Ações rápidas filtradas por permissão
+  const quickActions = useMemo(() => {
+    return quickActionsConfig.filter((action) => hasPermission(action.permission));
+  }, [hasPermission]);
+
   const [openSubmenus, setOpenSubmenus] = useState<string[]>(() => {
-    // Inicializar com o submenu ativo já aberto
     const initialOpen: string[] = [];
     menuStructure.forEach((item) => {
       if (item.submenu?.some((sub) => sub.id === activeTab)) {
@@ -207,7 +318,7 @@ export default function AdminSidebarV2({
         });
       }
     });
-  }, [activeTab]);
+  }, [activeTab, menuStructure]);
 
   const toggleSubmenu = useCallback((menuId: string) => {
     setOpenSubmenus((prev) =>
@@ -216,7 +327,7 @@ export default function AdminSidebarV2({
   }, []);
 
   const handleItemClick = useCallback((item: MenuItem) => {
-    if (item.submenu) {
+    if (item.submenu && item.submenu.length > 0) {
       toggleSubmenu(item.id);
     } else {
       onTabChange(item.id);
@@ -234,6 +345,7 @@ export default function AdminSidebarV2({
     if (actionId === 'new-company') onTabChange('companies');
     if (actionId === 'new-contract') onTabChange('contracts');
     if (actionId === 'new-invoice') onTabChange('financial');
+    if (actionId === 'new-playlist') onTabChange('playlists');
   }, [onTabChange]);
 
   const isItemActive = useCallback((item: MenuItem) => {
@@ -248,63 +360,72 @@ export default function AdminSidebarV2({
       {/* Logo */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-xl flex items-center justify-center shadow-lg shadow-[#F59E0B]/20 flex-shrink-0">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 flex-shrink-0">
             <span className="text-white font-bold text-lg">BP</span>
           </div>
           {isExpanded && (
-            <span className="font-bold text-gray-900 text-lg whitespace-nowrap">
-              BoxPratico
-            </span>
+            <div className="overflow-hidden">
+              <span className="font-bold text-gray-900 text-lg whitespace-nowrap block">
+                BoxPratico
+              </span>
+              {activeContext && isViewingAsTenant() && (
+                <span className="text-xs text-indigo-600 truncate block">
+                  Visualizando: {activeContext.tenant?.name || 'Tenant'}
+                </span>
+              )}
+            </div>
           )}
         </div>
       </div>
 
       {/* Botão de Ação Rápida */}
-      <div className="p-4">
-        <div className="relative">
-          <button
-            onClick={() => setShowQuickActions(!showQuickActions)}
-            className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-xl transition-shadow hover:shadow-lg hover:shadow-[#F59E0B]/30 ${
-              isExpanded ? 'px-4 py-3' : 'p-3'
-            }`}
-          >
-            <PlusIcon className="w-5 h-5 flex-shrink-0" />
-            {isExpanded && (
-              <>
-                <span className="font-semibold whitespace-nowrap">Criar</span>
-                <ChevronDownIcon
-                  className={`w-4 h-4 transition-transform duration-200 ${showQuickActions ? 'rotate-180' : ''}`}
-                />
-              </>
-            )}
-          </button>
+      {quickActions.length > 0 && (
+        <div className="p-4">
+          <div className="relative">
+            <button
+              onClick={() => setShowQuickActions(!showQuickActions)}
+              className={`w-full flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-xl transition-shadow hover:shadow-lg hover:shadow-indigo-500/30 ${
+                isExpanded ? 'px-4 py-3' : 'p-3'
+              }`}
+            >
+              <Plus className="w-5 h-5 flex-shrink-0" />
+              {isExpanded && (
+                <>
+                  <span className="font-semibold whitespace-nowrap">Criar</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform duration-200 ${showQuickActions ? 'rotate-180' : ''}`}
+                  />
+                </>
+              )}
+            </button>
 
-          {/* Dropdown de ações */}
-          <AnimatePresence>
-            {showQuickActions && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-                className={`absolute top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 ${
-                  isExpanded ? 'left-0 right-0' : 'left-0 w-48'
-                }`}
-              >
-                {quickActions.map((action) => (
-                  <button
-                    key={action.id}
-                    onClick={() => handleQuickAction(action.id)}
-                    className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
-                  >
-                    {action.label}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
+            {/* Dropdown de ações */}
+            <AnimatePresence>
+              {showQuickActions && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                  className={`absolute top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50 ${
+                    isExpanded ? 'left-0 right-0' : 'left-0 w-48'
+                  }`}
+                >
+                  {quickActions.map((action) => (
+                    <button
+                      key={action.id}
+                      onClick={() => handleQuickAction(action.id)}
+                      className="w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 transition-colors text-sm"
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Menu Items */}
       <nav className="flex-1 px-3 py-2 overflow-y-auto">
@@ -318,6 +439,7 @@ export default function AdminSidebarV2({
             activeTab={activeTab}
             onItemClick={handleItemClick}
             onSubmenuClick={handleSubmenuClick}
+            hasPermission={hasPermission}
           />
         ))}
       </nav>
@@ -330,11 +452,11 @@ export default function AdminSidebarV2({
         >
           {isExpanded ? (
             <>
-              <ChevronLeftIcon className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5" />
               <span className="text-sm">Recolher</span>
             </>
           ) : (
-            <ChevronRightIcon className="w-5 h-5" />
+            <ChevronRight className="w-5 h-5" />
           )}
         </button>
       </div>

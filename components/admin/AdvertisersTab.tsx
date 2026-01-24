@@ -205,7 +205,7 @@ export default function AdvertisersTab() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="w-8 h-8 border-4 border-[#F59E0B] border-t-transparent rounded-full animate-spin"></div>
+        <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -222,7 +222,7 @@ export default function AdvertisersTab() {
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base w-full sm:w-auto"
           >
             <PlusIcon className="w-5 h-5" />
             Novo Anunciante
@@ -251,7 +251,7 @@ export default function AdvertisersTab() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Ex: BoxPrático Mercado Inteligente"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                   required
                 />
               </div>
@@ -276,7 +276,7 @@ export default function AdvertisersTab() {
                 <select
                   value={segment}
                   onChange={(e) => setSegment(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 >
                   <option value="">Selecione a categoria</option>
                   {BUSINESS_CATEGORIES.map((cat) => (
@@ -293,7 +293,7 @@ export default function AdvertisersTab() {
                   value={cnpj}
                   onChange={(e) => setCnpj(e.target.value)}
                   placeholder="00.000.000/0000-00"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 />
               </div>
             </div>
@@ -310,7 +310,7 @@ export default function AdvertisersTab() {
                     value={contactName}
                     onChange={(e) => setContactName(e.target.value)}
                     placeholder="João Silva"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                   />
                 </div>
                 <div>
@@ -322,7 +322,7 @@ export default function AdvertisersTab() {
                     value={contactPhone}
                     onChange={(e) => setContactPhone(e.target.value)}
                     placeholder="(11) 99999-9999"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                   />
                 </div>
                 <div>
@@ -334,7 +334,7 @@ export default function AdvertisersTab() {
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     placeholder="contato@empresa.com"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                   />
                 </div>
               </div>
@@ -349,7 +349,7 @@ export default function AdvertisersTab() {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Informações adicionais sobre o anunciante..."
                 rows={2}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none text-gray-900 resize-none"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900 resize-none"
               />
             </div>
 
@@ -377,7 +377,7 @@ export default function AdvertisersTab() {
                     }}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-[#F59E0B]/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#F59E0B]"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-500/20 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
                 </label>
               </div>
 
@@ -410,7 +410,7 @@ export default function AdvertisersTab() {
               </button>
               <button
                 type="submit"
-                className="flex-1 sm:flex-none px-6 py-2.5 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                className="flex-1 sm:flex-none px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
               >
                 {editingAdvertiser ? 'Salvar Alterações' : 'Criar Anunciante'}
               </button>
@@ -429,7 +429,7 @@ export default function AdvertisersTab() {
           </p>
           <button
             onClick={() => setShowForm(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg transition-all"
           >
             <PlusIcon className="w-5 h-5" />
             Criar primeiro anunciante

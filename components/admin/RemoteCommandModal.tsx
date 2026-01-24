@@ -251,7 +251,7 @@ export default function RemoteCommandModal({
                       disabled={!monitor.isOnline}
                       className={`p-4 rounded-xl border-2 text-left transition-all ${
                         selectedCommand === cmd.type
-                          ? 'border-[#F59E0B] bg-[#FFFBEB]'
+                          ? 'border-indigo-500 bg-indigo-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       } ${!monitor.isOnline ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
@@ -297,7 +297,7 @@ export default function RemoteCommandModal({
                           max={100}
                           value={volumeValue}
                           onChange={(e) => setVolumeValue(parseInt(e.target.value))}
-                          className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#F59E0B]"
+                          className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                         />
                         <span className="w-12 text-center font-bold text-gray-900">
                           {volumeValue}%
@@ -318,7 +318,7 @@ export default function RemoteCommandModal({
                           value={messageText}
                           onChange={(e) => setMessageText(e.target.value)}
                           rows={3}
-                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                           placeholder="Digite a mensagem..."
                         />
                       </div>
@@ -333,7 +333,7 @@ export default function RemoteCommandModal({
                           max={60}
                           value={messageDuration}
                           onChange={(e) => setMessageDuration(parseInt(e.target.value))}
-                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                         />
                       </div>
                     </div>
@@ -342,7 +342,7 @@ export default function RemoteCommandModal({
                   <button
                     onClick={handleSendCommand}
                     disabled={sending || (selectedCommand === 'message' && !messageText)}
-                    className="mt-4 w-full py-3 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="mt-4 w-full py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {sending ? (
                       <>
@@ -367,7 +367,7 @@ export default function RemoteCommandModal({
                   </h3>
                   <button
                     onClick={fetchCommandHistory}
-                    className="text-sm text-[#F59E0B] hover:underline flex items-center gap-1"
+                    className="text-sm text-indigo-600 hover:underline flex items-center gap-1"
                   >
                     <ArrowPathIcon className="w-4 h-4" />
                     Atualizar

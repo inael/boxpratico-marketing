@@ -268,7 +268,7 @@ export default function SpecialMediaModal({
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                        className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                         placeholder="Ex: Hora Certa - Lobby"
                       />
                     </div>
@@ -286,7 +286,7 @@ export default function SpecialMediaModal({
                         max={120}
                         value={durationSeconds}
                         onChange={(e) => setDurationSeconds(parseInt(e.target.value) || 15)}
-                        className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                        className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                       />
                     </div>
                   </div>
@@ -310,7 +310,7 @@ export default function SpecialMediaModal({
                           type="text"
                           value={clockTitle}
                           onChange={(e) => setClockTitle(e.target.value)}
-                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                           placeholder="Ex: Bom dia! Seja bem-vindo"
                         />
                       </div>
@@ -328,7 +328,7 @@ export default function SpecialMediaModal({
                               onClick={() => setClockBgGradient(gradient.value)}
                               className={`h-10 rounded-lg bg-gradient-to-br ${gradient.value} ${
                                 clockBgGradient === gradient.value
-                                  ? 'ring-2 ring-[#F59E0B] ring-offset-2'
+                                  ? 'ring-2 ring-indigo-500 ring-offset-2'
                                   : ''
                               }`}
                               title={gradient.name}
@@ -357,7 +357,7 @@ export default function SpecialMediaModal({
                           type="text"
                           value={currencyTitle}
                           onChange={(e) => setCurrencyTitle(e.target.value)}
-                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                           placeholder="Ex: Cotacoes do Dia"
                         />
                       </div>
@@ -375,7 +375,7 @@ export default function SpecialMediaModal({
                               onClick={() => setCurrencyBgGradient(gradient.value)}
                               className={`h-10 rounded-lg bg-gradient-to-br ${gradient.value} ${
                                 currencyBgGradient === gradient.value
-                                  ? 'ring-2 ring-[#F59E0B] ring-offset-2'
+                                  ? 'ring-2 ring-indigo-500 ring-offset-2'
                                   : ''
                               }`}
                               title={gradient.name}
@@ -411,7 +411,7 @@ export default function SpecialMediaModal({
                           type="text"
                           value={weatherCity}
                           onChange={(e) => setWeatherCity(e.target.value)}
-                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                           placeholder="Ex: Sao Paulo"
                         />
                       </div>
@@ -427,7 +427,7 @@ export default function SpecialMediaModal({
                           type="text"
                           value={weatherTitle}
                           onChange={(e) => setWeatherTitle(e.target.value)}
-                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B] focus:border-[#F59E0B] outline-none"
+                          className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                           placeholder="Ex: Previsao do Tempo"
                         />
                       </div>
@@ -445,7 +445,7 @@ export default function SpecialMediaModal({
                               onClick={() => setWeatherBgGradient(gradient.value)}
                               className={`h-10 rounded-lg bg-gradient-to-br ${gradient.value} ${
                                 weatherBgGradient === gradient.value
-                                  ? 'ring-2 ring-[#F59E0B] ring-offset-2'
+                                  ? 'ring-2 ring-indigo-500 ring-offset-2'
                                   : ''
                               }`}
                               title={gradient.name}
@@ -471,7 +471,7 @@ export default function SpecialMediaModal({
                 <button
                   onClick={handleSave}
                   disabled={!title}
-                  className="px-6 py-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-6 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Adicionar Midia
                 </button>

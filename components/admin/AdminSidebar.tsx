@@ -107,7 +107,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
         {/* Mobile Close Button */}
         <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-[#F59E0B] to-[#D97706] rounded-lg flex items-center justify-center">
+            <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-lg flex items-center justify-center">
               <span className="text-black font-bold text-sm">BP</span>
             </div>
             <span className="font-bold text-gray-900">Menu</span>
@@ -132,7 +132,7 @@ export default function AdminSidebar({ activeTab, onTabChange }: AdminSidebarPro
                 onClick={() => handleTabChange(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                   isActive
-                    ? 'bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white shadow-lg shadow-[#F59E0B]/30'
+                    ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 text-white shadow-lg shadow-indigo-500/30'
                     : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                 }`}
               >

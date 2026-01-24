@@ -108,7 +108,7 @@ export default function LocationsMap({
         <div class="relative">
           <div class="w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
             isSelected
-              ? 'bg-[#F59E0B] ring-4 ring-[#F59E0B]/30'
+              ? 'bg-indigo-600 ring-4 ring-indigo-500/30'
               : isOnline
               ? 'bg-green-500'
               : 'bg-gray-400'
@@ -163,8 +163,8 @@ export default function LocationsMap({
             center={[centerLat, centerLng]}
             radius={radiusKm * 1000} // Converter km para metros
             pathOptions={{
-              color: '#F59E0B',
-              fillColor: '#F59E0B',
+              color: '#6366F1',
+              fillColor: '#6366F1',
               fillOpacity: 0.1,
               weight: 2,
             }}
@@ -215,7 +215,7 @@ export default function LocationsMap({
                   {onLocationSelect && (
                     <button
                       onClick={() => onLocationSelect(location.id)}
-                      className="mt-3 w-full px-3 py-2 bg-[#F59E0B] text-white text-xs font-medium rounded-lg hover:bg-[#D97706] transition-colors"
+                      className="mt-3 w-full px-3 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                     >
                       Selecionar Local
                     </button>
@@ -240,7 +240,7 @@ export default function LocationsMap({
             <span className="text-xs text-gray-600">Offline</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#F59E0B]"></div>
+            <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
             <span className="text-xs text-gray-600">Selecionado</span>
           </div>
         </div>

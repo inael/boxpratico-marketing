@@ -136,7 +136,7 @@ export default function PlayerPreviewModal({
                       onClick={() => setPreviewSize(size)}
                       className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                         previewSize === size
-                          ? 'bg-[#F59E0B] text-white'
+                          ? 'bg-indigo-600 text-white'
                           : 'text-gray-300 hover:text-white'
                       }`}
                     >
@@ -223,7 +223,7 @@ export default function PlayerPreviewModal({
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <span>URL:</span>
-                <code className="px-2 py-1 bg-gray-700 rounded text-[#F59E0B] font-mono">
+                <code className="px-2 py-1 bg-gray-700 rounded text-indigo-600 font-mono">
                   {playerUrl}
                 </code>
               </div>

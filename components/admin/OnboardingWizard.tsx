@@ -123,7 +123,7 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
         className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden"
       >
         {/* Header */}
-        <div className="bg-gradient-to-r from-[#F59E0B] to-[#D97706] p-6 text-white relative">
+        <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-6 text-white relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 p-2 hover:bg-white/20 rounded-lg transition-colors"
@@ -156,7 +156,7 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
                 onClick={() => setCurrentStep(index)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
                   isCurrent
-                    ? 'bg-[#FEF3C7] text-[#B45309] ring-2 ring-[#F59E0B]'
+                    ? 'bg-indigo-100 text-indigo-800 ring-2 ring-indigo-500'
                     : isPast
                     ? 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
@@ -165,7 +165,7 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
                 <span
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                     isCurrent
-                      ? 'bg-[#F59E0B] text-white'
+                      ? 'bg-indigo-600 text-white'
                       : isPast
                       ? 'bg-gray-400 text-white'
                       : 'bg-gray-300 text-gray-600'
@@ -192,9 +192,9 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
             className="p-6"
           >
             <div className="flex items-start gap-4 mb-6">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-[#FFCE00]/20 to-[#F59E0B]/20 relative">
-                <StepIcon className="w-8 h-8 text-[#D97706]" />
-                <span className="absolute -top-2 -right-2 w-7 h-7 bg-[#F59E0B] text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-gradient-to-br from-indigo-400/20 to-indigo-500/20 relative">
+                <StepIcon className="w-8 h-8 text-indigo-700" />
+                <span className="absolute -top-2 -right-2 w-7 h-7 bg-indigo-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-md">
                   {step.id}
                 </span>
               </div>
@@ -210,7 +210,7 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
               <ul className="space-y-2">
                 {step.tips.map((tip, index) => (
                   <li key={index} className="flex items-start gap-2 text-sm text-gray-600">
-                    <span className="text-[#F59E0B] mt-1">•</span>
+                    <span className="text-indigo-600 mt-1">•</span>
                     {tip}
                   </li>
                 ))}
@@ -220,7 +220,7 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
             {/* Action Button */}
             <button
               onClick={handleAction}
-              className="w-full bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
             >
               {step.action}
               <ArrowRightIcon className="w-5 h-5" />
@@ -248,7 +248,7 @@ export default function OnboardingWizard({ onClose, onNavigate }: OnboardingWiza
               <div
                 key={index}
                 className={`w-2 h-2 rounded-full transition-all ${
-                  index === currentStep ? 'bg-[#F59E0B] w-4' : 'bg-gray-300'
+                  index === currentStep ? 'bg-indigo-600 w-4' : 'bg-gray-300'
                 }`}
               />
             ))}

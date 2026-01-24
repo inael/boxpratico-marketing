@@ -692,7 +692,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base"
             >
               <PlusIcon className="w-5 h-5" />
               Nova Playlist
@@ -813,7 +813,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                               key={condo.id}
                               className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
                                 targetLocations.includes(condo.id)
-                                  ? 'bg-[#FFFBEB] border border-[#F59E0B]'
+                                  ? 'bg-indigo-50 border border-indigo-500'
                                   : withinRadius && radiusConfig
                                   ? 'bg-blue-50 hover:bg-blue-100 border border-blue-200'
                                   : 'bg-gray-50 hover:bg-gray-100'
@@ -823,7 +823,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                                 type="checkbox"
                                 checked={targetLocations.includes(condo.id)}
                                 onChange={() => toggleTargetLocation(condo.id)}
-                                className="w-5 h-5 text-[#F59E0B] border-gray-300 rounded focus:ring-[#F59E0B]"
+                                className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                               />
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
@@ -1063,7 +1063,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                 <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
-                    className="flex-1 bg-gradient-to-r from-[#F59E0B] to-[#D97706] text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                    className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
                     {editingCampaign ? 'Atualizar' : 'Criar'} Playlist
                   </button>
@@ -1106,7 +1106,7 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Monitor:</span>
                     {campaign.monitorId ? (
-                      <span className="font-semibold text-[#D97706]">
+                      <span className="font-semibold text-indigo-700">
                         {monitors.find(m => m.id === campaign.monitorId)?.name || 'N/A'}
                       </span>
                     ) : (

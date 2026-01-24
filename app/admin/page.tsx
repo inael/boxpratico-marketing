@@ -16,6 +16,8 @@ import AdvertisersTab from '@/components/admin/AdvertisersTab';
 import ReportsTab from '@/components/admin/ReportsTab';
 import ContractsTab from '@/components/admin/ContractsTab';
 import UsersTab from '@/components/admin/UsersTab';
+import TeamPage from './equipe/page';
+import WelcomeHero from '@/components/admin/WelcomeHero';
 import AccountsTab from '@/components/admin/AccountsTab';
 import MediaGroupsTab from '@/components/admin/MediaGroupsTab';
 import LibraryTab from '@/components/admin/LibraryTab';
@@ -924,6 +926,9 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB]">
+      {/* Welcome Hero - First Login */}
+      <WelcomeHero />
+
       <AdminSidebarV2
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -2158,6 +2163,11 @@ export default function AdminPage() {
           {/* Users Tab */}
           {activeTab === 'users' && (
             <UsersTab />
+          )}
+
+          {/* Team Tab */}
+          {activeTab === 'team' && (
+            <TeamPage />
           )}
 
           {/* Accounts Tab */}

@@ -300,7 +300,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   required
                 />
               </div>
@@ -318,7 +318,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                       value="company"
                       checked={formData.personType === 'company'}
                       onChange={() => setFormData({ ...formData, personType: 'company' })}
-                      className="text-[#F59E0B] focus:ring-[#F59E0B]"
+                      className="text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-gray-700">Pessoa Jurídica</span>
                   </label>
@@ -329,7 +329,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                       value="individual"
                       checked={formData.personType === 'individual'}
                       onChange={() => setFormData({ ...formData, personType: 'individual' })}
-                      className="text-[#F59E0B] focus:ring-[#F59E0B]"
+                      className="text-indigo-600 focus:ring-indigo-500"
                     />
                     <span className="text-sm text-gray-700">Pessoa Física</span>
                   </label>
@@ -346,7 +346,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                   value={formData.document}
                   onChange={(e) => setFormData({ ...formData, document: e.target.value })}
                   placeholder={formData.personType === 'company' ? '00.000.000/0000-00' : '000.000.000-00'}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
@@ -363,7 +363,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                       onChange={(e) =>
                         setFormData({ ...formData, isScreenLocation: e.target.checked })
                       }
-                      className="w-5 h-5 text-[#F59E0B] rounded focus:ring-[#F59E0B]"
+                      className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
                     />
                     <div>
                       <div className="font-medium text-gray-900">Ponto de Tela</div>
@@ -379,7 +379,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                       onChange={(e) =>
                         setFormData({ ...formData, isAdvertiser: e.target.checked })
                       }
-                      className="w-5 h-5 text-[#F59E0B] rounded focus:ring-[#F59E0B]"
+                      className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
                     />
                     <div>
                       <div className="font-medium text-gray-900">Anunciante</div>
@@ -402,7 +402,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                   type="text"
                   value={formData.contactName}
                   onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
@@ -416,7 +416,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     value={formData.contactPhone}
                     onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
                     placeholder="(00) 00000-0000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div>
@@ -427,7 +427,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     type="email"
                     value={formData.contactEmail}
                     onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -447,7 +447,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     value={formData.address}
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     placeholder="Rua, Avenida..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div>
@@ -458,7 +458,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     type="text"
                     value={formData.addressNumber}
                     onChange={(e) => setFormData({ ...formData, addressNumber: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -473,7 +473,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     value={formData.complement}
                     onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
                     placeholder="Sala, Bloco..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div>
@@ -484,7 +484,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     type="text"
                     value={formData.neighborhood}
                     onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
               </div>
@@ -498,7 +498,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   />
                 </div>
                 <div>
@@ -508,7 +508,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                   <select
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                   >
                     <option value="">Selecione</option>
                     {STATES.map((state) => (
@@ -529,7 +529,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                   value={formData.zipCode}
                   onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
                   placeholder="00000-000"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                 />
               </div>
 
@@ -567,7 +567,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                       onChange={(e) =>
                         setFormData({ ...formData, category: e.target.value as BusinessCategory })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     >
                       <option value="">Selecione uma categoria</option>
                       {BUSINESS_CATEGORIES.map((cat) => (
@@ -589,7 +589,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                         setFormData({ ...formData, whatsappPhone: e.target.value })
                       }
                       placeholder="(00) 00000-0000"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
 
@@ -606,7 +606,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                           setFormData({ ...formData, averageDailyTraffic: e.target.value })
                         }
                         placeholder="Ex: 500"
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                       />
                       {/* Medalha estimada */}
                       {formData.averageDailyTraffic && parseInt(formData.averageDailyTraffic) > 0 && (
@@ -651,7 +651,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                     <select
                       value={formData.segment}
                       onChange={(e) => setFormData({ ...formData, segment: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     >
                       <option value="">Selecione um segmento</option>
                       {BUSINESS_CATEGORIES.map((cat) => (
@@ -670,7 +670,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={3}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
                 </>
@@ -685,7 +685,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                 type="checkbox"
                 checked={formData.isActive}
                 onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                className="w-5 h-5 text-[#F59E0B] rounded focus:ring-[#F59E0B]"
+                className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
               />
               <span className="text-sm text-gray-700">Empresa ativa</span>
             </label>
@@ -704,7 +704,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
               <button
                 type="submit"
                 disabled={isLoading}
-                className="px-6 py-2 bg-[#F59E0B] text-white font-medium rounded-lg hover:bg-[#D97706] disabled:opacity-50 transition-colors"
+                className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
                 {isLoading ? 'Salvando...' : editingCompany ? 'Atualizar' : 'Cadastrar'}
               </button>
@@ -728,7 +728,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
         </div>
         <button
           onClick={() => setIsFormOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[#F59E0B] text-white font-medium rounded-lg hover:bg-[#D97706] transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -745,7 +745,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Buscar por nome, documento ou cidade..."
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#F59E0B]/20 focus:border-[#F59E0B]"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
         <div className="flex gap-2">
@@ -753,7 +753,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
             onClick={() => setFilterRole('all')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               filterRole === 'all'
-                ? 'bg-[#F59E0B] text-white'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -842,7 +842,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                       {/* Nome */}
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#F59E0B] to-[#D97706] flex items-center justify-center text-white font-bold text-sm">
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm">
                             {company.name.charAt(0).toUpperCase()}
                           </div>
                           <div>
@@ -971,7 +971,7 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
                         <div className="flex justify-center gap-2">
                           <button
                             onClick={() => handleEdit(company)}
-                            className="p-2 text-gray-500 hover:text-[#F59E0B] hover:bg-[#F59E0B]/10 rounded-lg transition-colors"
+                            className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-600/10 rounded-lg transition-colors"
                             title="Editar"
                           >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
