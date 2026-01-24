@@ -245,6 +245,25 @@ export type ScreenOrientation = 'horizontal' | 'vertical';
 // Classe social para métricas de audiência
 export type SocialClass = 'A' | 'B' | 'C' | 'D' | 'E';
 
+// Classificação de qualidade do ponto/terminal (para precificação)
+export type TerminalTier = 'GOLD' | 'SILVER' | 'BRONZE';
+
+// Labels e multiplicadores para tiers
+export const TERMINAL_TIER_CONFIG: Record<TerminalTier, { label: string; color: string; multiplier: number }> = {
+  GOLD: { label: 'Ouro', color: '#FFD700', multiplier: 2.0 },
+  SILVER: { label: 'Prata', color: '#C0C0C0', multiplier: 1.5 },
+  BRONZE: { label: 'Bronze', color: '#CD7F32', multiplier: 1.0 },
+};
+
+// Tipo de gestão de mídia do contrato
+export type ContractManagementType = 'SELF_SERVICE' | 'AGENCY_MANAGED';
+
+// Labels para tipos de gestão
+export const CONTRACT_MANAGEMENT_LABELS: Record<ContractManagementType, string> = {
+  SELF_SERVICE: 'Autoatendimento',    // Cliente gerencia própria mídia
+  AGENCY_MANAGED: 'Gerenciado',       // Operador gerencia mídia para o cliente
+};
+
 export interface Monitor {
   id: string;
   name: string;
@@ -277,7 +296,15 @@ export interface Monitor {
     daysOfWeek?: number[];
   };
 
+  // Geolocalização do terminal
+  latitude?: number;
+  longitude?: number;
+
+  // Classificação do ponto (para precificação)
+  tier?: TerminalTier;
+
   // Metricas de audiencia
+  averageDailyTraffic?: number;     // Fluxo de pessoas por dia (ex: 5000)
   averageMonthlyTraffic?: number;   // Fluxo medio de pessoas por mes
   averagePeoplePerHour?: number;    // Media de pessoas simultaneas
   socialClass?: SocialClass;         // Classe social predominante
@@ -354,6 +381,7 @@ export type Role =
   | 'SUPER_ADMIN'      // Dono da plataforma - acesso total
   | 'TENANT_ADMIN'     // Administrador do tenant
   | 'TENANT_MANAGER'   // Gerente do tenant (admin limitado)
+  | 'SALES_AGENT'      // Vendedor externo (prospecção + contratos)
   | 'LOCATION_OWNER'   // Parceiro de local (acesso limitado)
   | 'ADVERTISER'       // Anunciante (campanhas apenas)
   | 'OPERATOR';        // Operador de conteúdo
@@ -363,18 +391,25 @@ export const ROLE_LABELS: Record<Role, string> = {
   SUPER_ADMIN: 'Super Admin',
   TENANT_ADMIN: 'Administrador',
   TENANT_MANAGER: 'Gerente',
+  SALES_AGENT: 'Vendedor',
   LOCATION_OWNER: 'Parceiro de Local',
   ADVERTISER: 'Anunciante',
   OPERATOR: 'Operador',
 };
 
-// Tipo de tenant
-export type TenantType = 'COMMERCIAL' | 'CORPORATE';
+// Tipo de tenant - define modelo de negócio
+export type TenantType = 'NETWORK_OPERATOR' | 'CORPORATE_CLIENT';
 
 // Labels para tipos de tenant
 export const TENANT_TYPE_LABELS: Record<TenantType, string> = {
-  COMMERCIAL: 'Comercial',
-  CORPORATE: 'Corporativo',
+  NETWORK_OPERATOR: 'Operador de Rede',     // Vende publicidade, usa Campanhas
+  CORPORATE_CLIENT: 'Cliente Corporativo',  // TV interna, usa Playlists diretas
+};
+
+// Descrições detalhadas dos tipos de tenant
+export const TENANT_TYPE_DESCRIPTIONS: Record<TenantType, string> = {
+  NETWORK_OPERATOR: 'Opera rede de telas e vende espaço publicitário para anunciantes. Usa campanhas com regras automáticas de injeção de mídia.',
+  CORPORATE_CLIENT: 'Usa telas para comunicação interna (TV corporativa). Não tem anunciantes externos, usa playlists manuais diretas.',
 };
 
 // Status do tenant
@@ -1010,6 +1045,9 @@ export interface Account {
   id: string;
   name: string;              // Nome da empresa/condomínio
   slug: string;
+
+  // Tipo de negócio
+  type?: TenantType;         // NETWORK_OPERATOR ou CORPORATE_CLIENT
 
   // Dados do proprietário
   ownerName: string;

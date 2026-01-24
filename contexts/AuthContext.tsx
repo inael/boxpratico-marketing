@@ -2,13 +2,15 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import type { Role, Tenant, Permission, UserRole } from '@/types';
+import type { Role, Tenant, Permission, UserRole, TenantType } from '@/types';
 
 // Mapeamento de roles legados para o novo sistema RBAC
 const LEGACY_ROLE_MAP: Record<string, Role> = {
   'admin': 'SUPER_ADMIN',
   'manager': 'TENANT_ADMIN',
   'editor': 'TENANT_MANAGER',
+  'sales': 'SALES_AGENT',
+  'vendedor': 'SALES_AGENT',
   'operator': 'OPERATOR',
   'viewer': 'OPERATOR',
 };
@@ -22,7 +24,7 @@ function normalizeRole(role: string | undefined, isAdmin?: boolean): Role {
   if (!role) return 'OPERATOR';
 
   // Se já é um role do novo sistema, retorna ele
-  const newRoles: Role[] = ['SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_MANAGER', 'LOCATION_OWNER', 'ADVERTISER', 'OPERATOR'];
+  const newRoles: Role[] = ['SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_MANAGER', 'SALES_AGENT', 'LOCATION_OWNER', 'ADVERTISER', 'OPERATOR'];
   if (newRoles.includes(role as Role)) {
     return role as Role;
   }
@@ -73,6 +75,15 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'financial:read',
     'affiliates:read',
     'settings:read',
+  ],
+  SALES_AGENT: [
+    // Vendedor: prospecção, contratos e comissões (apenas dele)
+    'advertisers:read', 'advertisers:create', 'advertisers:update',
+    'contracts:read', 'contracts:create', 'contracts:update',
+    'campaigns:read', 'campaigns:create',
+    'screens:read',       // Ver telas para mostrar ao cliente
+    'locations:read',     // Ver locais para mostrar ao cliente
+    'financial:read',     // Ver comissões próprias
   ],
   LOCATION_OWNER: [
     'locations:read',
@@ -132,6 +143,11 @@ interface AuthContextType {
   isTenantAdmin: () => boolean;
   isViewingAsTenant: () => boolean;
 
+  // Tipo do tenant atual (para adaptar interface)
+  tenantType: TenantType | null;
+  isNetworkOperator: () => boolean;
+  isCorporateClient: () => boolean;
+
   // Estado
   loading: boolean;
   isFirstLogin: boolean;
@@ -144,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession();
   const [activeContext, setActiveContext] = useState<ActiveContext | null>(null);
   const [availableContexts, setAvailableContexts] = useState<AvailableContext[]>([]);
+  const [tenantType, setTenantType] = useState<TenantType | null>(null);
   const [isFirstLogin, setIsFirstLogin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -209,10 +226,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         label: 'Minha Organização',
       });
       setAvailableContexts(contexts);
+
+      // Buscar tipo do tenant atual
+      if (tenantId) {
+        fetchTenantType(tenantId);
+      }
     }
 
     setLoading(false);
   }, [session, status]);
+
+  // Buscar tipo do tenant
+  const fetchTenantType = async (tenantId: string) => {
+    try {
+      const res = await fetch(`/api/tenants/${tenantId}`);
+      if (res.ok) {
+        const tenant = await res.json();
+        setTenantType(tenant.type || 'NETWORK_OPERATOR');
+      }
+    } catch (err) {
+      console.error('[AuthContext] Error fetching tenant type:', err);
+      // Default para NETWORK_OPERATOR se não conseguir buscar
+      setTenantType('NETWORK_OPERATOR');
+    }
+  };
 
   // Buscar lista de tenants (apenas para Super Admin)
   const fetchTenants = async (): Promise<Tenant[]> => {
@@ -220,8 +257,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch('/api/accounts');
       if (!res.ok) return [];
       const data = await res.json();
-      return data.accounts || [];
-    } catch {
+      // A API retorna array diretamente ou objeto com accounts
+      const accounts = Array.isArray(data) ? data : (data.accounts || []);
+      return accounts.map((a: { id: string; name: string; slug?: string; email?: string; plan?: string }) => ({
+        id: a.id,
+        name: a.name,
+        slug: a.slug,
+        email: a.email,
+        plan: a.plan,
+      })) as Tenant[];
+    } catch (err) {
+      console.error('[AuthContext] Error fetching tenants:', err);
       return [];
     }
   };
@@ -275,6 +321,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return isSuperAdmin() && activeContext?.role !== 'SUPER_ADMIN';
   }, [isSuperAdmin, activeContext]);
 
+  // Helpers para tipo de tenant
+  const isNetworkOperator = useCallback((): boolean => {
+    return tenantType === 'NETWORK_OPERATOR';
+  }, [tenantType]);
+
+  const isCorporateClient = useCallback((): boolean => {
+    return tenantType === 'CORPORATE_CLIENT';
+  }, [tenantType]);
+
   // Dispensar tela de primeiro login
   const dismissFirstLogin = useCallback(() => {
     if (session?.user?.id) {
@@ -306,6 +361,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isSuperAdmin,
         isTenantAdmin,
         isViewingAsTenant,
+        tenantType,
+        isNetworkOperator,
+        isCorporateClient,
         loading,
         isFirstLogin,
         dismissFirstLogin,

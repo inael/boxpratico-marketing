@@ -35,13 +35,16 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import type { Role, Permission } from '@/types';
+import type { Role, Permission, TenantType } from '@/types';
 
 interface SubMenuItem {
   id: string;
   label: string;
   icon?: LucideIcon;
   permission?: Permission;
+  // Restrições por tipo de tenant
+  networkOnly?: boolean;     // Só aparece para NETWORK_OPERATOR
+  corporateOnly?: boolean;   // Só aparece para CORPORATE_CLIENT
 }
 
 interface MenuItem {
@@ -53,6 +56,9 @@ interface MenuItem {
   submenu?: SubMenuItem[];
   permission?: Permission;
   roles?: Role[]; // Papéis que podem ver este item
+  // Restrições por tipo de tenant
+  networkOnly?: boolean;     // Só aparece para NETWORK_OPERATOR
+  corporateOnly?: boolean;   // Só aparece para CORPORATE_CLIENT
 }
 
 interface AdminSidebarV2Props {
@@ -63,29 +69,34 @@ interface AdminSidebarV2Props {
 }
 
 // Menu base - visível para todos os papéis autorizados
+// networkOnly: só NETWORK_OPERATOR (vende publicidade)
+// corporateOnly: só CORPORATE_CLIENT (TV interna)
 const baseMenuStructure: MenuItem[] = [
-  // DASHBOARD - Visão geral
+  // DASHBOARD - Visão geral (todos)
   { id: 'dashboard', icon: LayoutDashboard, label: 'Início' },
 
-  // COMERCIAL - Vendedor (prospecção, contratos, campanhas de venda)
+  // COMERCIAL - Apenas NETWORK_OPERATOR (vendedor de publicidade)
   {
     id: 'comercial',
     icon: Briefcase,
     label: 'Comercial',
     permission: 'advertisers:read',
+    networkOnly: true,  // Oculto para CORPORATE_CLIENT
     submenu: [
       { id: 'companies', label: 'Meus Clientes', icon: Users, permission: 'advertisers:read' },
       { id: 'contracts', label: 'Contratos', icon: FileSignature, permission: 'contracts:read' },
       { id: 'campaigns', label: 'Campanhas', icon: Megaphone, permission: 'campaigns:read' },
+      { id: 'simulator', label: 'Simulador', icon: Megaphone, permission: 'campaigns:create' },
     ],
   },
 
-  // FINANCEIRO - Gestor (cobranças, recebíveis, comissões)
+  // FINANCEIRO - Apenas NETWORK_OPERATOR (cobra de terceiros)
   {
     id: 'financeiro',
     icon: Banknote,
     label: 'Financeiro',
     permission: 'financial:read',
+    networkOnly: true,  // Oculto para CORPORATE_CLIENT
     submenu: [
       { id: 'financial', label: 'Cobranças', icon: Receipt, permission: 'financial:read' },
       { id: 'receivables', label: 'Recebíveis', icon: TrendingUp, permission: 'financial:read' },
@@ -93,7 +104,7 @@ const baseMenuStructure: MenuItem[] = [
     ],
   },
 
-  // OPERAÇÃO - Técnico (telas, grades/playlists, biblioteca de mídia)
+  // OPERAÇÃO - Todos (telas, grades/playlists, biblioteca de mídia)
   {
     id: 'operacao',
     icon: Tv,
@@ -106,7 +117,7 @@ const baseMenuStructure: MenuItem[] = [
     ],
   },
 
-  // GROWTH/PARCERIAS - Afiliados (indicação, comissões de afiliado)
+  // GROWTH/PARCERIAS - Apenas NETWORK_OPERATOR (afiliados)
   {
     id: 'growth',
     icon: Rocket,
@@ -114,13 +125,14 @@ const baseMenuStructure: MenuItem[] = [
     badge: true,
     badgeCount: 1,
     permission: 'affiliates:read',
+    networkOnly: true,  // Oculto para CORPORATE_CLIENT
     submenu: [
       { id: 'affiliate', label: 'Indicar Amigo', icon: UserPlus, permission: 'affiliates:read' },
       { id: 'affiliate-earnings', label: 'Extrato Afiliado', icon: ScrollText, permission: 'affiliates:read' },
     ],
   },
 
-  // ADMINISTRAÇÃO - Configurações do sistema (Tenant)
+  // ADMINISTRAÇÃO - Todos (configurações do sistema)
   {
     id: 'admin',
     icon: Settings,
@@ -255,19 +267,25 @@ export default function AdminSidebarV2({
   isExpanded,
   onExpandChange,
 }: AdminSidebarV2Props) {
-  const { activeContext, hasPermission, isSuperAdmin, isViewingAsTenant } = useAuth();
+  const { activeContext, hasPermission, isSuperAdmin, isViewingAsTenant, tenantType, isNetworkOperator, isCorporateClient } = useAuth();
 
-  // Construir menu baseado nas permissões do contexto ativo
+  // Construir menu baseado nas permissões e tipo de tenant
   const menuStructure = useMemo(() => {
     const menu: MenuItem[] = [];
 
-    // Filtrar menu base por permissões
+    // Filtrar menu base por permissões e tipo de tenant
     baseMenuStructure.forEach((item) => {
       // Se não tem permissão requerida, não mostra
       if (item.permission && !hasPermission(item.permission)) return;
 
       // Se tem restrição de papel, verificar
       if (item.roles && activeContext && !item.roles.includes(activeContext.role)) return;
+
+      // Filtrar por tipo de tenant
+      // networkOnly: só aparece para NETWORK_OPERATOR
+      if (item.networkOnly && !isNetworkOperator() && !isSuperAdmin()) return;
+      // corporateOnly: só aparece para CORPORATE_CLIENT
+      if (item.corporateOnly && !isCorporateClient() && !isSuperAdmin()) return;
 
       menu.push(item);
     });
@@ -278,7 +296,7 @@ export default function AdminSidebarV2({
     }
 
     return menu;
-  }, [activeContext, hasPermission, isSuperAdmin, isViewingAsTenant]);
+  }, [activeContext, hasPermission, isSuperAdmin, isViewingAsTenant, tenantType, isNetworkOperator, isCorporateClient]);
 
   // Ações rápidas filtradas por permissão
   const quickActions = useMemo(() => {

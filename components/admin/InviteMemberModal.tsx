@@ -22,6 +22,11 @@ const ROLE_OPTIONS = [
     description: 'Gerencia operações sem deletar',
   },
   {
+    value: 'SALES_AGENT',
+    label: 'Vendedor',
+    description: 'Prospecção, contratos e comissões',
+  },
+  {
     value: 'OPERATOR',
     label: 'Operador',
     description: 'Apenas telas e playlists',
