@@ -1599,6 +1599,14 @@ export interface Payment {
   mpPaymentId?: string;        // ID do pagamento no MercadoPago
   mpPreferenceId?: string;     // ID da preferência (checkout)
 
+  // Asaas
+  asaasPaymentId?: string;     // ID da cobrança no Asaas
+  asaasCustomerId?: string;    // ID do cliente no Asaas
+  asaasInvoiceUrl?: string;    // URL da fatura Asaas
+
+  // Provider usado
+  paymentProvider?: 'mercadopago' | 'asaas';
+
   // Quem está pagando
   accountId: string;           // Conta do operador/anunciante
   userId?: string;             // Usuário que fez o pagamento
@@ -1646,6 +1654,13 @@ export interface Subscription {
   // MercadoPago
   mpSubscriptionId?: string;   // ID da assinatura no MercadoPago
   mpPlanId?: string;           // ID do plano
+
+  // Asaas
+  asaasSubscriptionId?: string;  // ID da assinatura no Asaas
+  asaasCustomerId?: string;      // ID do cliente no Asaas
+
+  // Provider usado
+  paymentProvider?: 'mercadopago' | 'asaas';
 
   // Quem está assinando
   accountId: string;

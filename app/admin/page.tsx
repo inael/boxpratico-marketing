@@ -5,7 +5,10 @@ import { useSession, signOut } from 'next-auth/react';
 import { Condominium, MediaItem, Campaign, AnalyticsView, Monitor, PricingModel, PricingConfig, CommissionConfig, Advertiser, BUSINESS_CATEGORIES, BusinessCategory, Company } from '@/types';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminSidebar from '@/components/admin/AdminSidebar';
+import AdminSidebarV2 from '@/components/admin/AdminSidebarV2';
+import AdminHeaderV2 from '@/components/admin/AdminHeaderV2';
 import AdminFooter from '@/components/admin/AdminFooter';
+import BenefitsTab from '@/components/admin/BenefitsTab';
 import CampaignsTab from '@/components/admin/CampaignsTab';
 import SettingsTab from '@/components/admin/SettingsTab';
 import MonitorsTab from '@/components/admin/MonitorsTab';
@@ -98,6 +101,7 @@ async function sendWhatsAppNotification(
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const [condominiums, setCondominiums] = useState<Condominium[]>([]);
   const [selectedCondominium, setSelectedCondominium] = useState<string>('');
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -871,6 +875,35 @@ export default function AdminPage() {
     setActiveTab(tab);
   }
 
+  // Generate breadcrumbs based on active tab
+  function getBreadcrumbs(): { label: string; id?: string }[] {
+    const breadcrumbMap: Record<string, { label: string; id?: string }[]> = {
+      dashboard: [{ label: 'Inicio' }],
+      condominiums: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Locais' }],
+      media: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Midias' }],
+      monitors: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Receber', id: 'companies' }, { label: 'Monitores' }],
+      companies: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Receber' }, { label: 'Meus Clientes' }],
+      contracts: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Receber' }, { label: 'Contratos' }],
+      financial: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Receber' }, { label: 'Cobrancas' }],
+      advertisers: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Receber' }, { label: 'Anunciantes' }],
+      campaigns: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Campanhas' }],
+      reports: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Relatorios' }],
+      analytics: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Analytics' }],
+      users: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Administracao' }, { label: 'Usuarios' }],
+      accounts: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Administracao' }, { label: 'Contas' }],
+      settings: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Configuracoes' }],
+      affiliate: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Beneficios' }, { label: 'Indicar Amigo' }],
+      'affiliate-earnings': [{ label: 'Inicio', id: 'dashboard' }, { label: 'Beneficios' }, { label: 'Minhas Comissoes' }],
+      'media-groups': [{ label: 'Inicio', id: 'dashboard' }, { label: 'Grupos de Midia' }],
+      library: [{ label: 'Inicio', id: 'dashboard' }, { label: 'Biblioteca' }],
+    };
+    return breadcrumbMap[activeTab] || [{ label: 'Inicio' }];
+  }
+
+  function handleBreadcrumbNavigate(id: string) {
+    setActiveTab(id);
+  }
+
   // Show loading while checking authentication
   if (status === 'loading') {
     return (
@@ -890,13 +923,25 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex">
-      <AdminSidebar activeTab={activeTab} onTabChange={setActiveTab} />
+    <div className="min-h-screen bg-[#F9FAFB]">
+      <AdminSidebarV2
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isExpanded={sidebarExpanded}
+        onExpandChange={setSidebarExpanded}
+      />
+      <AdminHeaderV2
+        breadcrumbs={getBreadcrumbs()}
+        onNavigate={handleBreadcrumbNavigate}
+        sidebarExpanded={sidebarExpanded}
+      />
 
-      <div className="flex-1 flex flex-col">
-        <AdminHeader />
-
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-auto">
+      <main
+        className={`pt-20 pb-8 px-4 sm:px-6 lg:px-8 transition-all duration-300 lg:ml-[var(--sidebar-width)]`}
+        style={{
+          '--sidebar-width': sidebarExpanded ? '280px' : '80px',
+        } as React.CSSProperties}
+      >
           {/* Dashboard Tab */}
           {activeTab === 'dashboard' && (
             <div className="space-y-6">
@@ -2210,12 +2255,14 @@ export default function AdminPage() {
               <SettingsTab />
             </div>
           )}
+
+          {/* Benefits/Affiliate Tab */}
+          {(activeTab === 'affiliate' || activeTab === 'affiliate-earnings') && (
+            <BenefitsTab subTab={activeTab as 'affiliate' | 'affiliate-earnings'} />
+          )}
         </main>
 
-        <AdminFooter />
-      </div>
-
-            {/* Media Form Modal */}
+      {/* Media Form Modal */}
       {showMediaForm && (
         <div className="fixed inset-0 bg-black/50 flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto z-50">
           <motion.div
