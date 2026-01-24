@@ -2,7 +2,34 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
-import type { Role, Tenant, Permission } from '@/types';
+import type { Role, Tenant, Permission, UserRole } from '@/types';
+
+// Mapeamento de roles legados para o novo sistema RBAC
+const LEGACY_ROLE_MAP: Record<string, Role> = {
+  'admin': 'SUPER_ADMIN',
+  'manager': 'TENANT_ADMIN',
+  'editor': 'TENANT_MANAGER',
+  'operator': 'OPERATOR',
+  'viewer': 'OPERATOR',
+};
+
+// Função para normalizar role (legado -> novo RBAC)
+function normalizeRole(role: string | undefined, isAdmin?: boolean): Role {
+  // Se é admin legado, é SUPER_ADMIN
+  if (isAdmin) return 'SUPER_ADMIN';
+
+  // Se não tem role, assume OPERATOR
+  if (!role) return 'OPERATOR';
+
+  // Se já é um role do novo sistema, retorna ele
+  const newRoles: Role[] = ['SUPER_ADMIN', 'TENANT_ADMIN', 'TENANT_MANAGER', 'LOCATION_OWNER', 'ADVERTISER', 'OPERATOR'];
+  if (newRoles.includes(role as Role)) {
+    return role as Role;
+  }
+
+  // Mapeia role legado para novo
+  return LEGACY_ROLE_MAP[role.toLowerCase()] || 'OPERATOR';
+}
 
 // Mapeamento de permissões por papel
 const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
@@ -131,8 +158,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const userRole = (session.user.role as Role) || 'OPERATOR';
+    // Normalizar role (compatibilidade com sistema legado)
+    const userRole = normalizeRole(session.user.role as string, session.user.isAdmin);
     const tenantId = session.user.tenantId;
+
+    console.log('[AuthContext] User role:', session.user.role, '-> normalized:', userRole, 'isAdmin:', session.user.isAdmin);
 
     // Verificar primeiro login
     const firstLoginKey = `bp_first_login_${session.user.id}`;
@@ -232,7 +262,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Helpers
   const isSuperAdmin = useCallback((): boolean => {
-    return session?.user?.role === 'SUPER_ADMIN';
+    // Verifica se é SUPER_ADMIN pelo role normalizado ou pelo isAdmin legado
+    const role = normalizeRole(session?.user?.role as string, session?.user?.isAdmin);
+    return role === 'SUPER_ADMIN' || session?.user?.isAdmin === true;
   }, [session]);
 
   const isTenantAdmin = useCallback((): boolean => {
@@ -257,7 +289,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name: session.user.name || '',
     email: session.user.email || '',
     avatarUrl: session.user.image || undefined,
-    role: (session.user.role as Role) || 'OPERATOR',
+    role: normalizeRole(session.user.role as string, session.user.isAdmin),
     tenantId: session.user.tenantId,
   } : null;
 

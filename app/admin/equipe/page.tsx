@@ -1,22 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
   Mail,
-  Phone,
-  MoreVertical,
   Shield,
   Edit2,
   Trash2,
   UserCheck,
   UserX,
+  RefreshCw,
+  Loader2,
 } from 'lucide-react';
 import PageHeader from '@/components/admin/PageHeader';
 import PaginatedTable, { Column } from '@/components/admin/PaginatedTable';
-import EmptyState, { EmptyDataState } from '@/components/admin/EmptyState';
+import { EmptyDataState, ErrorState } from '@/components/admin/EmptyState';
+import InviteMemberModal from '@/components/admin/InviteMemberModal';
+import EditMemberModal from '@/components/admin/EditMemberModal';
+import ConfirmRemoveModal from '@/components/admin/ConfirmRemoveModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { Role } from '@/types';
 
 // Tipos
 interface TeamMember {
@@ -25,58 +29,19 @@ interface TeamMember {
   name: string;
   email: string;
   phone?: string;
-  role: 'TENANT_ADMIN' | 'TENANT_MANAGER' | 'OPERATOR';
+  role: Role;
   status: 'active' | 'inactive' | 'pending';
-  avatarUrl?: string;
+  avatar?: string;
   createdAt: string;
   lastLogin?: string;
 }
 
-// Dados de exemplo
-const mockTeamMembers: TeamMember[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao@empresa.com',
-    phone: '(11) 99999-0001',
-    role: 'TENANT_ADMIN',
-    status: 'active',
-    createdAt: '2024-01-15',
-    lastLogin: '2024-01-20T14:30:00',
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria@empresa.com',
-    phone: '(11) 99999-0002',
-    role: 'TENANT_MANAGER',
-    status: 'active',
-    createdAt: '2024-01-10',
-    lastLogin: '2024-01-19T09:15:00',
-  },
-  {
-    id: '3',
-    name: 'Carlos Oliveira',
-    email: 'carlos@empresa.com',
-    role: 'OPERATOR',
-    status: 'pending',
-    createdAt: '2024-01-18',
-  },
-  {
-    id: '4',
-    name: 'Ana Costa',
-    email: 'ana@empresa.com',
-    phone: '(11) 99999-0004',
-    role: 'OPERATOR',
-    status: 'inactive',
-    createdAt: '2024-01-05',
-    lastLogin: '2024-01-10T16:45:00',
-  },
-];
-
 const roleLabels: Record<string, { label: string; color: string }> = {
+  SUPER_ADMIN: { label: 'Super Admin', color: 'bg-red-100 text-red-700' },
   TENANT_ADMIN: { label: 'Administrador', color: 'bg-purple-100 text-purple-700' },
   TENANT_MANAGER: { label: 'Gerente', color: 'bg-blue-100 text-blue-700' },
+  LOCATION_OWNER: { label: 'Dono de Local', color: 'bg-green-100 text-green-700' },
+  ADVERTISER: { label: 'Anunciante', color: 'bg-amber-100 text-amber-700' },
   OPERATOR: { label: 'Operador', color: 'bg-gray-100 text-gray-700' },
 };
 
@@ -87,13 +52,51 @@ const statusLabels: Record<string, { label: string; color: string; icon: typeof 
 };
 
 export default function TeamPage() {
-  const { hasPermission } = useAuth();
-  const [members] = useState<TeamMember[]>(mockTeamMembers);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const { hasPermission, user } = useAuth();
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Modal states
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+  const [removingMember, setRemovingMember] = useState<TeamMember | null>(null);
 
   const canManageUsers = hasPermission('users:create') || hasPermission('users:update');
   const canDeleteUsers = hasPermission('users:delete');
+
+  // Fetch members
+  const fetchMembers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/team');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Falha ao carregar equipe');
+      }
+
+      setMembers(data.members || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar equipe');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
+
+  // Stats calculados
+  const stats = {
+    total: members.length,
+    active: members.filter(m => m.status === 'active').length,
+    pending: members.filter(m => m.status === 'pending').length,
+    inactive: members.filter(m => m.status === 'inactive').length,
+  };
 
   const columns: Column<TeamMember>[] = [
     {
@@ -103,14 +106,21 @@ export default function TeamPage() {
       render: (member) => (
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-medium text-sm">
-            {member.avatarUrl ? (
-              <img src={member.avatarUrl} alt={member.name} className="w-full h-full rounded-full object-cover" />
+            {member.avatar ? (
+              <img src={member.avatar} alt={member.name} className="w-full h-full rounded-full object-cover" />
             ) : (
               member.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
             )}
           </div>
           <div>
-            <p className="font-medium text-gray-900">{member.name}</p>
+            <p className="font-medium text-gray-900">
+              {member.name}
+              {member.id === user?.id && (
+                <span className="ml-2 text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  Você
+                </span>
+              )}
+            </p>
             <p className="text-sm text-gray-500">{member.email}</p>
           </div>
         </div>
@@ -121,7 +131,7 @@ export default function TeamPage() {
       header: 'Papel',
       sortable: true,
       render: (member) => {
-        const role = roleLabels[member.role];
+        const role = roleLabels[member.role] || { label: member.role, color: 'bg-gray-100 text-gray-700' };
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${role.color}`}>
             <Shield className="w-3 h-3" />
@@ -135,7 +145,7 @@ export default function TeamPage() {
       header: 'Status',
       sortable: true,
       render: (member) => {
-        const status = statusLabels[member.status];
+        const status = statusLabels[member.status] || statusLabels.active;
         const StatusIcon = status.icon;
         return (
           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}>
@@ -173,36 +183,87 @@ export default function TeamPage() {
       key: 'actions',
       header: '',
       width: '80px',
-      render: (member) => (
-        <div className="flex items-center justify-end gap-1">
-          {canManageUsers && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedMember(member);
-              }}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-              title="Editar"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
-          )}
-          {canDeleteUsers && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                // Handle delete
-              }}
-              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-              title="Remover"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      ),
+      render: (member) => {
+        // Não permitir editar/remover a si mesmo
+        const isSelf = member.id === user?.id;
+
+        return (
+          <div className="flex items-center justify-end gap-1">
+            {canManageUsers && !isSelf && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingMember(member);
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                title="Editar"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
+            {canDeleteUsers && !isSelf && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRemovingMember(member);
+                }}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                title="Remover"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            {isSelf && (
+              <span className="text-xs text-gray-400 px-2">-</span>
+            )}
+          </div>
+        );
+      },
     },
   ];
+
+  // Loading state
+  if (loading && members.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title="Minha Equipe"
+          subtitle="Gerencie os membros da sua organização"
+          breadcrumbs={[
+            { label: 'Início', href: '/admin' },
+            { label: 'Administração' },
+            { label: 'Minha Equipe' },
+          ]}
+        />
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600" />
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && members.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title="Minha Equipe"
+          subtitle="Gerencie os membros da sua organização"
+          breadcrumbs={[
+            { label: 'Início', href: '/admin' },
+            { label: 'Administração' },
+            { label: 'Minha Equipe' },
+          ]}
+        />
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+          <ErrorState
+            message={error}
+            onRetry={fetchMembers}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -215,17 +276,27 @@ export default function TeamPage() {
           { label: 'Minha Equipe' },
         ]}
         actions={
-          canManageUsers && (
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={fetchMembers}
+              disabled={loading}
+              className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+              title="Atualizar lista"
             >
-              <Plus className="w-4 h-4" />
-              Convidar Membro
-            </motion.button>
-          )
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </button>
+            {canManageUsers && (
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Convidar Membro
+              </motion.button>
+            )}
+          </div>
         }
         helpTitle="Gerenciamento de Equipe"
         helpDescription="Adicione membros à sua equipe e defina permissões de acesso para cada um."
@@ -240,10 +311,10 @@ export default function TeamPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total de Membros', value: members.length, color: 'bg-indigo-500' },
-          { label: 'Ativos', value: members.filter(m => m.status === 'active').length, color: 'bg-green-500' },
-          { label: 'Pendentes', value: members.filter(m => m.status === 'pending').length, color: 'bg-amber-500' },
-          { label: 'Inativos', value: members.filter(m => m.status === 'inactive').length, color: 'bg-gray-400' },
+          { label: 'Total de Membros', value: stats.total, color: 'bg-indigo-500' },
+          { label: 'Ativos', value: stats.active, color: 'bg-green-500' },
+          { label: 'Pendentes', value: stats.pending, color: 'bg-amber-500' },
+          { label: 'Inativos', value: stats.inactive, color: 'bg-gray-400' },
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
@@ -268,7 +339,7 @@ export default function TeamPage() {
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
           <EmptyDataState
             entityName="membro"
-            onAdd={() => setShowAddModal(true)}
+            onAdd={() => setShowInviteModal(true)}
           />
         </div>
       ) : (
@@ -280,33 +351,40 @@ export default function TeamPage() {
           searchPlaceholder="Buscar por nome ou email..."
           searchKeys={['name', 'email']}
           emptyMessage="Nenhum membro encontrado"
-          onRowClick={(member) => setSelectedMember(member)}
+          onRowClick={(member) => {
+            if (member.id !== user?.id && canManageUsers) {
+              setEditingMember(member);
+            }
+          }}
         />
       )}
 
-      {/* Add Member Modal Placeholder */}
-      {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Convidar Novo Membro</h3>
-            <p className="text-gray-500 mb-6">
-              Esta funcionalidade será implementada em breve.
-            </p>
-            <div className="flex justify-end">
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Fechar
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+      {/* Modals */}
+      <InviteMemberModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        onSuccess={() => {
+          fetchMembers();
+        }}
+      />
+
+      <EditMemberModal
+        isOpen={!!editingMember}
+        member={editingMember}
+        onClose={() => setEditingMember(null)}
+        onSuccess={() => {
+          fetchMembers();
+        }}
+      />
+
+      <ConfirmRemoveModal
+        isOpen={!!removingMember}
+        member={removingMember}
+        onClose={() => setRemovingMember(null)}
+        onConfirm={() => {
+          fetchMembers();
+        }}
+      />
     </div>
   );
 }
