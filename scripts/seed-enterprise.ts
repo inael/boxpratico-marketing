@@ -838,11 +838,11 @@ async function ensureDataDir() {
   }
 }
 
-async function writeJson(filename: string, data: unknown[]) {
+async function writeJson(filename: string, data: Array<{ id?: string }>) {
   const filepath = path.join(DATA_DIR, filename);
 
   // Ler dados existentes
-  let existing: unknown[] = [];
+  let existing: Array<{ id?: string }> = [];
   try {
     const content = await fs.readFile(filepath, 'utf-8');
     existing = JSON.parse(content);
@@ -851,8 +851,8 @@ async function writeJson(filename: string, data: unknown[]) {
   }
 
   // Mesclar dados (evitar duplicatas por ID)
-  const existingIds = new Set(existing.map((item: { id?: string }) => item.id));
-  const newItems = data.filter((item: { id?: string }) => !existingIds.has(item.id));
+  const existingIds = new Set(existing.map((item) => item.id));
+  const newItems = data.filter((item) => !existingIds.has(item.id));
 
   const merged = [...existing, ...newItems];
   await fs.writeFile(filepath, JSON.stringify(merged, null, 2));
