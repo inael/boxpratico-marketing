@@ -2970,9 +2970,10 @@ export interface AffiliateSettings {
 }
 
 // Valores padrão das configurações de afiliados
+// IMPORTANTE: Use DEFAULT_PLATFORM_SETTINGS como fonte de verdade
 export const DEFAULT_AFFILIATE_SETTINGS: AffiliateSettings = {
   affiliateEnabled: true,
-  affiliateL1Percentage: 20.0,
+  affiliateL1Percentage: 10.0,  // CORRIGIDO: 10% (não 20%)
   affiliateL2Percentage: 5.0,
   affiliateCookieDuration: 60,
   affiliateLockDays: 30,
@@ -3199,6 +3200,7 @@ export function getContextLabel(context: UserContext): string {
     LOCATION_OWNER: 'Parceiro Local',
     ADVERTISER: 'Anunciante',
     OPERATOR: 'Operador',
+    SALES_AGENT: 'Vendedor',
   };
 
   const roleLabel = roleLabels[context.role] || context.role;
@@ -3208,5 +3210,303 @@ export function getContextLabel(context: UserContext): string {
   }
 
   return roleLabel;
+}
+
+// ============================================
+// PLATFORM SETTINGS - Configurações Globais
+// ============================================
+
+/**
+ * Configurações globais da plataforma
+ * Armazenadas no banco e editáveis pelo SUPER_ADMIN
+ */
+export interface PlatformSettings {
+  id: string;
+
+  // Comissões de Afiliados (indicação de novos assinantes SaaS)
+  affiliateEnabled: boolean;
+  affiliateL1Percentage: number;    // Nível 1 (indicação direta) - Ex: 10.0 = 10%
+  affiliateL2Percentage: number;    // Nível 2 (indicação indireta) - Ex: 5.0 = 5%
+  affiliateLockDays: number;        // Dias antes de liberar saque
+  affiliateMinWithdrawal: number;   // Valor mínimo para saque (R$)
+
+  // Comissões de Vendedores (SALES_AGENT)
+  salesAgentDefaultCommission: number;  // % padrão sobre contratos fechados
+  salesAgentMinCommission: number;      // % mínimo permitido
+  salesAgentMaxCommission: number;      // % máximo permitido
+
+  // Comissões de Parceiros de Local (LOCATION_OWNER)
+  locationOwnerDefaultCommission: number;  // % padrão de revenue share
+  locationOwnerMinCommission: number;      // % mínimo permitido
+  locationOwnerMaxCommission: number;      // % máximo permitido
+
+  // Precificação base
+  basePricePerPlay: number;         // Preço base por exibição (R$)
+  baseSlotDuration: number;         // Duração base do slot em segundos
+
+  // Metadados
+  updatedAt: string;
+  updatedBy?: string;
+}
+
+/**
+ * Valores padrão das configurações da plataforma
+ * IMPORTANTE: Estes valores são usados como fallback quando não há configuração no banco
+ */
+export const DEFAULT_PLATFORM_SETTINGS: Omit<PlatformSettings, 'id' | 'updatedAt' | 'updatedBy'> = {
+  // Afiliados: 10% nível 1, 5% nível 2 (regra de negócio definitiva)
+  affiliateEnabled: true,
+  affiliateL1Percentage: 10.0,
+  affiliateL2Percentage: 5.0,
+  affiliateLockDays: 30,
+  affiliateMinWithdrawal: 50.0,
+
+  // Vendedores: 15% padrão, pode variar de 5% a 30%
+  salesAgentDefaultCommission: 15.0,
+  salesAgentMinCommission: 5.0,
+  salesAgentMaxCommission: 30.0,
+
+  // Parceiros de Local: 10% padrão, pode variar de 5% a 50%
+  locationOwnerDefaultCommission: 10.0,
+  locationOwnerMinCommission: 5.0,
+  locationOwnerMaxCommission: 50.0,
+
+  // Precificação base
+  basePricePerPlay: 0.10,    // R$ 0,10 por play (slot de 15s)
+  baseSlotDuration: 15,       // 15 segundos
+};
+
+// ============================================
+// PLAY LOG - Registro de Exibições
+// ============================================
+
+/**
+ * Log de cada exibição de mídia
+ * Usado para calcular proof-of-play e revenue share
+ */
+export interface PlayLog {
+  id: string;
+
+  // Identificadores
+  tenantId: string;
+  terminalId: string;         // Monitor/tela que exibiu
+  locationId?: string;        // Ponto onde está o terminal
+
+  // Mídia exibida
+  mediaItemId: string;
+  campaignId?: string;        // Campanha associada (se houver)
+  advertiserId?: string;      // Anunciante dono da mídia
+
+  // Detalhes da exibição
+  playedAt: string;           // Timestamp da exibição
+  durationSeconds: number;    // Duração real exibida
+  slotDurationSeconds: number; // Duração contratada do slot
+
+  // Valor financeiro (calculado no momento da exibição)
+  valuePerPlay: number;       // Valor unitário deste play (R$)
+
+  // Metadados
+  terminalStatus?: 'ONLINE' | 'OFFLINE';
+  playlistId?: string;
+
+  createdAt: string;
+}
+
+/**
+ * Agregação de PlayLogs por período
+ */
+export interface PlayLogSummary {
+  tenantId: string;
+  terminalId: string;
+  locationId?: string;
+  campaignId?: string;
+  advertiserId?: string;
+
+  period: string;             // Ex: "2024-01" (YYYY-MM)
+  totalPlays: number;
+  totalDurationSeconds: number;
+  totalValue: number;         // Soma dos valuePerPlay
+}
+
+// ============================================
+// SETTLEMENT - Fechamento Financeiro
+// ============================================
+
+export type SettlementStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'PAID' | 'CANCELLED';
+
+export const SETTLEMENT_STATUS_LABELS: Record<SettlementStatus, string> = {
+  DRAFT: 'Rascunho',
+  PENDING: 'Pendente',
+  APPROVED: 'Aprovado',
+  PAID: 'Pago',
+  CANCELLED: 'Cancelado',
+};
+
+export const SETTLEMENT_STATUS_COLORS: Record<SettlementStatus, { bg: string; text: string }> = {
+  DRAFT: { bg: 'bg-gray-100', text: 'text-gray-700' },
+  PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+  APPROVED: { bg: 'bg-blue-100', text: 'text-blue-700' },
+  PAID: { bg: 'bg-green-100', text: 'text-green-700' },
+  CANCELLED: { bg: 'bg-red-100', text: 'text-red-700' },
+};
+
+export type SettlementType = 'LOCATION_OWNER' | 'SALES_AGENT';
+
+/**
+ * Registro de fechamento financeiro mensal
+ * Gerado pelo SettlementService
+ */
+export interface Settlement {
+  id: string;
+
+  // Identificadores
+  tenantId: string;
+  type: SettlementType;       // Tipo de beneficiário
+  beneficiaryId: string;      // ID do parceiro ou vendedor
+  beneficiaryName: string;    // Nome para exibição
+  beneficiaryEmail?: string;
+
+  // Período
+  referenceMonth: string;     // Ex: "2024-01" (YYYY-MM)
+  periodStart: string;        // Data início do período
+  periodEnd: string;          // Data fim do período
+
+  // Valores calculados
+  grossValue: number;         // Valor bruto gerado (campanhas no terminal ou contratos)
+  commissionRate: number;     // Taxa aplicada (%)
+  netValue: number;           // Valor líquido a pagar (grossValue * commissionRate / 100)
+
+  // Detalhamento
+  totalPlays?: number;        // Total de exibições (para LOCATION_OWNER)
+  totalContracts?: number;    // Total de contratos (para SALES_AGENT)
+  details?: SettlementDetail[];
+
+  // Status e pagamento
+  status: SettlementStatus;
+  approvedAt?: string;
+  approvedBy?: string;
+  paidAt?: string;
+  paidBy?: string;
+  paymentMethod?: string;
+  paymentReference?: string;  // ID da transação
+
+  // Metadados
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Detalhamento do settlement (linha por campanha/contrato)
+ */
+export interface SettlementDetail {
+  id: string;
+  settlementId: string;
+
+  // Referência
+  campaignId?: string;
+  campaignName?: string;
+  contractId?: string;
+  contractName?: string;
+  advertiserId?: string;
+  advertiserName?: string;
+
+  // Valores
+  grossValue: number;
+  commissionRate: number;
+  netValue: number;
+
+  // Para LOCATION_OWNER
+  totalPlays?: number;
+  totalDurationSeconds?: number;
+
+  // Para SALES_AGENT
+  contractValue?: number;
+}
+
+/**
+ * Input para gerar settlements de um período
+ */
+export interface GenerateSettlementsInput {
+  tenantId: string;
+  referenceMonth: string;     // YYYY-MM
+  type: SettlementType;
+  dryRun?: boolean;           // Se true, não salva, apenas calcula
+}
+
+/**
+ * Resultado da geração de settlements
+ */
+export interface GenerateSettlementsResult {
+  success: boolean;
+  settlements: Settlement[];
+  totalGrossValue: number;
+  totalNetValue: number;
+  beneficiariesCount: number;
+  errors?: string[];
+}
+
+// ============================================
+// SALES AGENT QUOTE - Comissão no Simulador
+// ============================================
+
+/**
+ * Resultado do cálculo de orçamento com comissão do vendedor
+ */
+export interface QuoteWithCommission {
+  // Dados do orçamento
+  totalPrice: number;
+  pricePerTerminal: Array<{
+    id: string;
+    name: string;
+    tier: TerminalTier;
+    price: number;
+  }>;
+  audience: {
+    dailyImpressions: number;
+    uniqueViewers: number;
+    totalImpressions: number;
+  };
+  summary: {
+    terminals: number;
+    totalPlays: number;
+    avgPricePerPlay: number;
+    durationDays: number;
+    slotDurationSec: number;
+  };
+
+  // Comissão do vendedor (calculada em tempo real)
+  salesAgentCommission: {
+    rate: number;              // Taxa aplicada (%)
+    estimatedValue: number;    // Valor estimado da comissão
+    perDay: number;            // Comissão por dia de campanha
+    note: string;              // Ex: "Baseado em 15% sobre R$ 10.000"
+  };
+
+  // Multiplicador de tempo (importante para vendas)
+  timeMultiplier: {
+    factor: number;            // Ex: 2.0 para slot de 30s (base 15s)
+    explanation: string;       // Ex: "Slot de 30s = 2x o valor base"
+  };
+}
+
+/**
+ * Calcula o multiplicador de tempo baseado na duração do slot
+ */
+export function calculateTimeMultiplier(slotDurationSec: number, baseDuration: number = 15): number {
+  return slotDurationSec / baseDuration;
+}
+
+/**
+ * Calcula o valor por play considerando duração
+ */
+export function calculateValuePerPlay(
+  basePricePerPlay: number,
+  slotDurationSec: number,
+  tierMultiplier: number,
+  baseDuration: number = 15
+): number {
+  const timeMultiplier = calculateTimeMultiplier(slotDurationSec, baseDuration);
+  return basePricePerPlay * timeMultiplier * tierMultiplier;
 }
 

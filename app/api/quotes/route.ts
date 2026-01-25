@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getMonitors } from '@/lib/database';
+import { getMonitors, getSalesAgentById } from '@/lib/database';
 import {
-  calculateQuote,
+  calculateQuoteWithCommission,
   filterTerminalsByRadius,
   QuoteInput,
   DEFAULT_PRICING_CONFIG,
+  formatCurrency,
 } from '@/lib/quote-service';
 import { requirePermission, AuthenticatedUser } from '@/lib/auth-utils';
+import { DEFAULT_PLATFORM_SETTINGS } from '@/types';
 
-// POST /api/quotes - Calcular orçamento de campanha
+// POST /api/quotes - Calcular orçamento de campanha com comissão do vendedor
 export async function POST(request: NextRequest) {
   try {
     // Verificar permissão (vendedor ou superior)
@@ -17,6 +19,7 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
+    const user = authResult as AuthenticatedUser;
     const body = await request.json();
     const {
       terminalIds,
@@ -24,7 +27,8 @@ export async function POST(request: NextRequest) {
       playsPerDay = 48, // Default: 1 play a cada 30 min
       durationDays = 30,
       slotDurationSec = 15,
-    } = body as QuoteInput;
+      salesAgentId, // Opcional: ID do vendedor para buscar taxa personalizada
+    } = body as QuoteInput & { salesAgentId?: string };
 
     // Buscar terminais
     let terminals = await getMonitors();
@@ -51,11 +55,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calcular orçamento
-    const quote = calculateQuote(
+    // Determinar taxa de comissão do vendedor
+    let commissionRate = DEFAULT_PLATFORM_SETTINGS.salesAgentDefaultCommission;
+
+    if (salesAgentId) {
+      // Buscar taxa personalizada do vendedor
+      const salesAgent = await getSalesAgentById(salesAgentId);
+      if (salesAgent?.defaultCommissionRate) {
+        commissionRate = salesAgent.defaultCommissionRate;
+      }
+    } else if (user.role === 'SALES_AGENT' && user.id) {
+      // Se o próprio usuário é vendedor, buscar sua taxa
+      const salesAgent = await getSalesAgentById(user.id);
+      if (salesAgent?.defaultCommissionRate) {
+        commissionRate = salesAgent.defaultCommissionRate;
+      }
+    }
+
+    // Calcular orçamento COM comissão e multiplicador de tempo
+    const quote = calculateQuoteWithCommission(
       terminals,
       { playsPerDay, durationDays, slotDurationSec },
-      DEFAULT_PRICING_CONFIG
+      DEFAULT_PRICING_CONFIG,
+      commissionRate
     );
 
     return NextResponse.json(quote);

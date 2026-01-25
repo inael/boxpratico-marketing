@@ -498,6 +498,335 @@ const monitors = [
 ];
 
 // ============================================
+// DADOS FINANCEIROS (Parceiro, Vendedor, Campanhas, PlayLogs)
+// ============================================
+
+const IDS_FINANCIAL = {
+  // Parceiro de Local (LOCATION_OWNER)
+  parceiroPadaria: 'owner-padaria-001',
+
+  // Sales Agent expandido
+  salesAgentPaulo: 'agent-paulo-001',
+
+  // Anunciantes
+  anuncianteCoca: 'adv-coca-001',
+  anuncianteNike: 'adv-nike-001',
+
+  // Campanhas
+  campanhaCoca: 'camp-coca-001',
+  campanhaNike: 'camp-nike-001',
+
+  // Contratos
+  contratoCoca: 'contract-coca-001',
+  contratoNike: 'contract-nike-001',
+};
+
+// Parceiro de Local (dono da padaria que tem tela instalada)
+const locationOwners = [
+  {
+    id: IDS_FINANCIAL.parceiroPadaria,
+    tenantId: IDS.midiaBoxAccount,
+    userId: null, // Pode vincular a um user depois
+    name: 'José da Silva',
+    email: 'jose.padaria@email.com',
+    phone: '(11) 99999-0001',
+    document: '123.456.789-00',
+    // 10% de revenue share sobre campanhas exibidas na tela dele
+    commissionRate: 10,
+    // Terminais vinculados a este parceiro
+    terminalIds: [IDS.terminalPadaria1],
+    paymentDetails: {
+      pixKey: 'jose.padaria@email.com',
+      bankName: 'Nubank',
+    },
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// Vendedor (Sales Agent) com taxa de comissão
+const salesAgents = [
+  {
+    id: IDS_FINANCIAL.salesAgentPaulo,
+    tenantId: IDS.midiaBoxAccount,
+    userId: IDS.midiaBoxVendedor,
+    name: 'Paulo Silva',
+    email: 'vendedor@midiabox.com',
+    phone: '(11) 99999-0002',
+    document: '987.654.321-00',
+    // 15% de comissão sobre contratos fechados
+    defaultCommissionRate: 15,
+    paymentDetails: {
+      pixKey: 'vendedor@midiabox.com',
+      bankName: 'Itaú',
+    },
+    isActive: true,
+    totalContracts: 2,
+    totalCommissionsPending: 0,
+    totalCommissionsPaid: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// Anunciantes
+const advertisers = [
+  {
+    id: IDS_FINANCIAL.anuncianteCoca,
+    name: 'Coca-Cola Brasil',
+    slug: 'coca-cola-brasil',
+    contactName: 'Maria Santos',
+    contactEmail: 'maria@coca-cola.com.br',
+    contactPhone: '(11) 3000-0001',
+    cnpj: '12.345.678/0001-90',
+    segment: 'alimentacao',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: IDS_FINANCIAL.anuncianteNike,
+    name: 'Nike do Brasil',
+    slug: 'nike-brasil',
+    contactName: 'João Oliveira',
+    contactEmail: 'joao@nike.com.br',
+    contactPhone: '(11) 3000-0002',
+    cnpj: '98.765.432/0001-10',
+    segment: 'academia',
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// Contratos (fechados pelo vendedor)
+const contracts = [
+  {
+    id: IDS_FINANCIAL.contratoCoca,
+    tenantId: IDS.midiaBoxAccount,
+    advertiserId: IDS_FINANCIAL.anuncianteCoca,
+    salesAgentId: IDS_FINANCIAL.salesAgentPaulo,
+    name: 'Campanha Natal Coca-Cola',
+    partyAName: 'Mídia Box SP',
+    partyBName: 'Coca-Cola Brasil',
+    // Valor total do contrato
+    totalValue: 10000, // R$ 10.000
+    // Meta de plays
+    totalPlaysTarget: 100000,
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    terminalIds: [IDS.terminalShopping1, IDS.terminalShopping2, IDS.terminalPadaria1],
+    status: 'active',
+    signedAt: '2024-11-25T10:00:00.000Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: IDS_FINANCIAL.contratoNike,
+    tenantId: IDS.midiaBoxAccount,
+    advertiserId: IDS_FINANCIAL.anuncianteNike,
+    salesAgentId: IDS_FINANCIAL.salesAgentPaulo,
+    name: 'Campanha Verão Nike',
+    partyAName: 'Mídia Box SP',
+    partyBName: 'Nike do Brasil',
+    totalValue: 5000, // R$ 5.000
+    totalPlaysTarget: 50000,
+    startDate: '2024-12-15',
+    endDate: '2025-01-15',
+    terminalIds: [IDS.terminalAcademia, IDS.terminalShopping3],
+    status: 'active',
+    signedAt: '2024-12-10T14:00:00.000Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// Campanhas (geradas a partir dos contratos)
+const campaigns = [
+  {
+    id: IDS_FINANCIAL.campanhaCoca,
+    tenantId: IDS.midiaBoxAccount,
+    contractId: IDS_FINANCIAL.contratoCoca,
+    advertiserId: IDS_FINANCIAL.anuncianteCoca,
+    name: 'Campanha Natal Coca-Cola',
+    budget: 10000,
+    totalPlaysTarget: 100000,
+    // Valor por play = 10000 / 100000 = R$ 0,10
+    valuePerPlay: 0.10,
+    startDate: '2024-12-01',
+    endDate: '2024-12-31',
+    terminalIds: [IDS.terminalShopping1, IDS.terminalShopping2, IDS.terminalPadaria1],
+    status: 'ACTIVE',
+    playsDelivered: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: IDS_FINANCIAL.campanhaNike,
+    tenantId: IDS.midiaBoxAccount,
+    contractId: IDS_FINANCIAL.contratoNike,
+    advertiserId: IDS_FINANCIAL.anuncianteNike,
+    name: 'Campanha Verão Nike',
+    budget: 5000,
+    totalPlaysTarget: 50000,
+    // Valor por play = 5000 / 50000 = R$ 0,10
+    valuePerPlay: 0.10,
+    startDate: '2024-12-15',
+    endDate: '2025-01-15',
+    terminalIds: [IDS.terminalAcademia, IDS.terminalShopping3],
+    status: 'ACTIVE',
+    playsDelivered: 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+/**
+ * Gera PlayLogs mockados para simular um mês de exibição
+ * Isso permite testar o SettlementService
+ */
+function generateMockPlayLogs(): Array<{
+  id: string;
+  tenantId: string;
+  terminalId: string;
+  locationId: string;
+  mediaItemId: string;
+  campaignId: string;
+  advertiserId: string;
+  playedAt: string;
+  durationSeconds: number;
+  slotDurationSeconds: number;
+  valuePerPlay: number;
+  createdAt: string;
+}> {
+  const playLogs: Array<{
+    id: string;
+    tenantId: string;
+    terminalId: string;
+    locationId: string;
+    mediaItemId: string;
+    campaignId: string;
+    advertiserId: string;
+    playedAt: string;
+    durationSeconds: number;
+    slotDurationSeconds: number;
+    valuePerPlay: number;
+    createdAt: string;
+  }> = [];
+
+  // Simular dezembro de 2024
+  const referenceMonth = '2024-12';
+  const daysInMonth = 31;
+
+  // Campanha Coca-Cola: 3 terminais, 48 plays/dia por terminal
+  const cocaTerminals = [
+    { terminalId: IDS.terminalShopping1, locationId: IDS.locationShopping },
+    { terminalId: IDS.terminalShopping2, locationId: IDS.locationShopping },
+    { terminalId: IDS.terminalPadaria1, locationId: IDS.locationPadaria1 },
+  ];
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    for (const { terminalId, locationId } of cocaTerminals) {
+      // 48 plays por dia = 1 a cada 30 minutos
+      for (let play = 0; play < 48; play++) {
+        const hour = Math.floor(play / 2);
+        const minute = (play % 2) * 30;
+
+        playLogs.push({
+          id: `play-coca-${day}-${terminalId}-${play}`,
+          tenantId: IDS.midiaBoxAccount,
+          terminalId,
+          locationId,
+          mediaItemId: 'media-coca-001',
+          campaignId: IDS_FINANCIAL.campanhaCoca,
+          advertiserId: IDS_FINANCIAL.anuncianteCoca,
+          playedAt: `${referenceMonth}-${day.toString().padStart(2, '0')}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00.000Z`,
+          durationSeconds: 15,
+          slotDurationSeconds: 15,
+          valuePerPlay: 0.10, // R$ 0,10 por play
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  // Total Coca-Cola: 3 terminais × 48 plays × 31 dias = 4.464 plays
+  // Valor total: 4.464 × R$ 0,10 = R$ 446,40
+
+  // Campanha Nike: 2 terminais, 48 plays/dia (apenas últimos 17 dias de dezembro)
+  const nikeTerminals = [
+    { terminalId: IDS.terminalAcademia, locationId: IDS.locationAcademia },
+    { terminalId: IDS.terminalShopping3, locationId: IDS.locationShopping },
+  ];
+
+  for (let day = 15; day <= daysInMonth; day++) {
+    for (const { terminalId, locationId } of nikeTerminals) {
+      for (let play = 0; play < 48; play++) {
+        const hour = Math.floor(play / 2);
+        const minute = (play % 2) * 30;
+
+        playLogs.push({
+          id: `play-nike-${day}-${terminalId}-${play}`,
+          tenantId: IDS.midiaBoxAccount,
+          terminalId,
+          locationId,
+          mediaItemId: 'media-nike-001',
+          campaignId: IDS_FINANCIAL.campanhaNike,
+          advertiserId: IDS_FINANCIAL.anuncianteNike,
+          playedAt: `${referenceMonth}-${day.toString().padStart(2, '0')}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00.000Z`,
+          durationSeconds: 15,
+          slotDurationSeconds: 15,
+          valuePerPlay: 0.10,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    }
+  }
+
+  // Total Nike: 2 terminais × 48 plays × 17 dias = 1.632 plays
+  // Valor total: 1.632 × R$ 0,10 = R$ 163,20
+
+  return playLogs;
+}
+
+// Gerar comissões de vendedor (sobre contratos fechados)
+const commissionLedger = [
+  {
+    id: 'comm-coca-001',
+    tenantId: IDS.midiaBoxAccount,
+    salesAgentId: IDS_FINANCIAL.salesAgentPaulo,
+    contractId: IDS_FINANCIAL.contratoCoca,
+    invoiceId: null,
+    // 15% de R$ 10.000 = R$ 1.500
+    amount: 1500,
+    rate: 15,
+    baseAmount: 10000,
+    referenceMonth: '2024-12',
+    status: 'PENDING',
+    notes: 'Comissão Campanha Natal Coca-Cola',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'comm-nike-001',
+    tenantId: IDS.midiaBoxAccount,
+    salesAgentId: IDS_FINANCIAL.salesAgentPaulo,
+    contractId: IDS_FINANCIAL.contratoNike,
+    invoiceId: null,
+    // 15% de R$ 5.000 = R$ 750
+    amount: 750,
+    rate: 15,
+    baseAmount: 5000,
+    referenceMonth: '2024-12',
+    status: 'PENDING',
+    notes: 'Comissão Campanha Verão Nike',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// ============================================
 // EXECUÇÃO
 // ============================================
 
@@ -532,18 +861,30 @@ async function writeJson(filename: string, data: unknown[]) {
 }
 
 async function main() {
-  console.log('\n🌱 Seed Enterprise - Dados de Teste B2B2C\n');
+  console.log('\n🌱 Seed Enterprise - Dados de Teste B2B2C + Financeiro\n');
 
   await ensureDataDir();
 
   // Criar usuários (precisa hash async)
   const users = await createUsers();
 
-  // Escrever dados
+  // Gerar PlayLogs mockados
+  const playLogs = generateMockPlayLogs();
+
+  // Escrever dados base
   await writeJson('accounts.json', accounts);
   await writeJson('users.json', users);
   await writeJson('condominiums.json', condominiums);
   await writeJson('monitors.json', monitors);
+
+  // Escrever dados financeiros
+  await writeJson('location-owners.json', locationOwners);
+  await writeJson('sales-agents.json', salesAgents);
+  await writeJson('advertisers.json', advertisers);
+  await writeJson('contracts.json', contracts);
+  await writeJson('campaigns.json', campaigns);
+  await writeJson('play-logs.json', playLogs);
+  await writeJson('commission-ledger.json', commissionLedger);
 
   console.log('\n✨ Seed concluído!\n');
   console.log('📋 Credenciais de teste:');
@@ -559,6 +900,26 @@ async function main() {
   console.log('  Vendedor:');
   console.log('    Email: vendedor@midiabox.com');
   console.log('    Senha: 123456');
+  console.log('    Comissão: 15% (R$ 2.250 pendente)');
+  console.log('');
+  console.log('📊 Dados Financeiros Mockados:');
+  console.log('');
+  console.log('  Parceiro de Local (José - Padaria Pinheiros):');
+  console.log('    Revenue Share: 10%');
+  console.log('    Terminais: 1 (Padaria Pinheiros)');
+  console.log('');
+  console.log('  Campanhas Ativas:');
+  console.log('    - Coca-Cola: R$ 10.000 (3 terminais, dez/24)');
+  console.log('    - Nike: R$ 5.000 (2 terminais, 15-31 dez/24)');
+  console.log('');
+  console.log(`  PlayLogs Gerados: ${playLogs.length} registros`);
+  console.log('    - Coca-Cola: 4.464 plays (R$ 446,40)');
+  console.log('    - Nike: 1.632 plays (R$ 163,20)');
+  console.log('');
+  console.log('  Para testar Settlement do Parceiro:');
+  console.log('    Padaria Pinheiros recebeu plays da Coca-Cola');
+  console.log('    Valor gerado: 48 plays × 31 dias × R$ 0,10 = R$ 148,80');
+  console.log('    Comissão (10%): R$ 14,88');
   console.log('');
 }
 

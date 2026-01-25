@@ -266,3 +266,150 @@ export function formatLargeNumber(num: number): string {
   }
   return num.toString();
 }
+
+// ============================================
+// COMISSÃO DO VENDEDOR (SALES_AGENT)
+// ============================================
+
+export interface SalesAgentCommission {
+  rate: number;              // Taxa aplicada (%)
+  estimatedValue: number;    // Valor estimado da comissão em centavos
+  perDay: number;            // Comissão por dia de campanha em centavos
+  formatted: string;         // Valor formatado em R$
+  note: string;              // Ex: "Baseado em 15% sobre R$ 10.000"
+}
+
+export interface TimeMultiplier {
+  factor: number;            // Ex: 2.0 para slot de 30s (base 15s)
+  explanation: string;       // Ex: "Slot de 30s = 2x o valor base"
+  baseSlotSec: number;       // Duração base (15s)
+  actualSlotSec: number;     // Duração escolhida
+}
+
+export interface QuoteWithCommission extends QuoteResult {
+  // Comissão do vendedor (calculada em tempo real)
+  salesAgentCommission: SalesAgentCommission;
+  // Multiplicador de tempo
+  timeMultiplier: TimeMultiplier;
+}
+
+// Duração base do slot em segundos
+const BASE_SLOT_DURATION_SEC = 15;
+
+// Taxa padrão de comissão do vendedor (%)
+const DEFAULT_SALES_AGENT_RATE = 15;
+
+/**
+ * Calcula o multiplicador de tempo baseado na duração do slot
+ * Slots maiores = maior valor = maior comissão
+ *
+ * Exemplo:
+ * - Slot 15s (base) → multiplicador 1.0x
+ * - Slot 30s → multiplicador 2.0x
+ * - Slot 60s → multiplicador 4.0x
+ */
+export function calculateTimeMultiplier(slotDurationSec: number): TimeMultiplier {
+  const factor = slotDurationSec / BASE_SLOT_DURATION_SEC;
+
+  let explanation: string;
+  if (factor === 1) {
+    explanation = `Slot de ${slotDurationSec}s (padrão)`;
+  } else if (factor > 1) {
+    explanation = `Slot de ${slotDurationSec}s = ${factor}x o valor base`;
+  } else {
+    explanation = `Slot de ${slotDurationSec}s = ${(factor * 100).toFixed(0)}% do valor base`;
+  }
+
+  return {
+    factor,
+    explanation,
+    baseSlotSec: BASE_SLOT_DURATION_SEC,
+    actualSlotSec: slotDurationSec,
+  };
+}
+
+/**
+ * Calcula a comissão estimada do vendedor
+ *
+ * REGRA DE OURO (Time-Value):
+ * A comissão já considera o multiplicador de tempo embutido no preço total.
+ * Se o vendedor altera de 15s para 30s, o preço dobra e a comissão dobra.
+ */
+export function calculateSalesAgentCommission(
+  totalCents: number,
+  durationDays: number,
+  commissionRate: number = DEFAULT_SALES_AGENT_RATE
+): SalesAgentCommission {
+  const estimatedValueCents = Math.round((totalCents * commissionRate) / 100);
+  const perDayCents = durationDays > 0
+    ? Math.round(estimatedValueCents / durationDays)
+    : 0;
+
+  return {
+    rate: commissionRate,
+    estimatedValue: estimatedValueCents,
+    perDay: perDayCents,
+    formatted: formatCurrency(estimatedValueCents),
+    note: `Baseado em ${commissionRate}% sobre ${formatCurrency(totalCents)}`,
+  };
+}
+
+/**
+ * Calcula quote completo COM comissão do vendedor e multiplicador de tempo
+ * Esta é a função que deve ser usada no Simulador de Vendas
+ */
+export function calculateQuoteWithCommission(
+  terminals: Monitor[],
+  input: Omit<QuoteInput, 'terminalIds' | 'geoFilter'>,
+  config: PricingConfig = DEFAULT_PRICING_CONFIG,
+  salesAgentCommissionRate: number = DEFAULT_SALES_AGENT_RATE
+): QuoteWithCommission {
+  const { slotDurationSec } = input;
+
+  // Calcular multiplicador de tempo
+  const timeMultiplier = calculateTimeMultiplier(slotDurationSec);
+
+  // Ajustar config com multiplicador de tempo
+  const adjustedConfig: PricingConfig = {
+    ...config,
+    basePricePerPlayCents: Math.round(config.basePricePerPlayCents * timeMultiplier.factor),
+    minMonthlyPriceCents: Math.round(config.minMonthlyPriceCents * timeMultiplier.factor),
+  };
+
+  // Calcular quote base com preços ajustados pelo tempo
+  const baseQuote = calculateQuote(terminals, input, adjustedConfig);
+
+  // Calcular comissão do vendedor sobre o valor total
+  const salesAgentCommission = calculateSalesAgentCommission(
+    baseQuote.totalCents,
+    input.durationDays,
+    salesAgentCommissionRate
+  );
+
+  return {
+    ...baseQuote,
+    salesAgentCommission,
+    timeMultiplier,
+  };
+}
+
+/**
+ * Retorna um resumo formatado do quote para exibição
+ */
+export function formatQuoteSummary(quote: QuoteWithCommission): {
+  totalFormatted: string;
+  commissionFormatted: string;
+  perDayFormatted: string;
+  audienceFormatted: string;
+  playsFormatted: string;
+  timeMultiplierText: string;
+} {
+  return {
+    totalFormatted: formatCurrency(quote.totalCents),
+    commissionFormatted: quote.salesAgentCommission.formatted,
+    perDayFormatted: formatCurrency(quote.salesAgentCommission.perDay),
+    audienceFormatted: formatLargeNumber(quote.estimatedTotalReach),
+    playsFormatted: formatLargeNumber(quote.totalPlays),
+    timeMultiplierText: quote.timeMultiplier.explanation,
+  };
+}

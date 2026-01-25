@@ -136,7 +136,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
           <div>
             <h2 className="text-2xl md:text-3xl font-bold mb-2">
-              Indique e ganhe até 20% em cada assinatura
+              Indique e ganhe até 15% em cada assinatura
             </h2>
             <p className="text-white/90 text-lg">
               Compartilhe seu link e ganhe comissões recorrentes em 2 níveis!
@@ -232,7 +232,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
                     <CheckIcon className="w-3 h-3 text-green-600" />
                   </div>
                   <span className="text-gray-600">
-                    <strong className="text-gray-900">20%</strong> de comissão recorrente sobre cada pagamento do seu indicado direto (Nível 1)
+                    <strong className="text-gray-900">10%</strong> de comissão recorrente sobre cada pagamento do seu indicado direto (Nível 1)
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
@@ -362,7 +362,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
               </p>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-gray-200">
-              <p className="text-sm text-gray-500 mb-1">Nível 1 (20%)</p>
+              <p className="text-sm text-gray-500 mb-1">Nível 1 (10%)</p>
               <p className="text-2xl font-bold text-green-600">
                 {formatCurrency(stats?.tier1Earnings || 0)}
               </p>
