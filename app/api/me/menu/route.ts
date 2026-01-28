@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Determinar tipo do tenant
-    const tenantType: TenantType = tenant?.type || 'COMMERCIAL';
+    const tenantType: TenantType = tenant?.type || 'CORPORATE_CLIENT';
 
     // Obter menu baseado no role e tipo do tenant
     const menu = getUserMenu(user as any, tenant);
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
     const permissions = NEW_ROLE_PERMISSIONS[role] || [];
 
     // Obter features habilitadas para o tipo de tenant
-    const features = FEATURE_TOGGLES[tenantType] || FEATURE_TOGGLES.COMMERCIAL;
+    const features = FEATURE_TOGGLES[tenantType] || FEATURE_TOGGLES.CORPORATE_CLIENT;
 
     // Montar resposta
     const response: UserMenuResponse = {

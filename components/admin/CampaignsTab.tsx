@@ -25,6 +25,9 @@ import { Campaign, Condominium, MediaItem, Monitor, Advertiser, calculateDistanc
 import MediaEditModal from './MediaEditModal';
 import SpecialMediaModal from './SpecialMediaModal';
 import PlayerPreviewModal from './PlayerPreviewModal';
+import EmptyState from './EmptyState';
+import PageHeader from './PageHeader';
+import { Megaphone, Plus as PlusLucide } from 'lucide-react';
 
 // Helper to send WhatsApp notifications
 async function sendWhatsAppNotification(
@@ -683,23 +686,22 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Playlists</h2>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">Gerencie playlists por anunciante e distribua para os locais</p>
-        </div>
-        {selectedAdvertiser && !showForm && (
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
+      <PageHeader
+        title="Campanhas"
+        helpTitle="Campanhas"
+        helpDescription="Configure campanhas publicitárias com mídias, horários de exibição e terminais. Monitore o desempenho em tempo real."
+        actions={
+          selectedAdvertiser && !showForm ? (
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base"
             >
               <PlusIcon className="w-5 h-5" />
-              Nova Playlist
+              Nova Campanha
             </button>
-          </div>
-        )}
-      </div>
+          ) : undefined
+        }
+      />
 
       {advertisers.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
@@ -1248,15 +1250,18 @@ export default function CampaignsTab({ condominiums }: CampaignsTabProps) {
           </div>
 
           {filteredCampaigns.length === 0 && !showForm && (
-            <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-              <MegaphoneIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Nenhuma playlist criada ainda</p>
-              <button
-                onClick={() => setShowForm(true)}
-                className="mt-4 text-primary-600 hover:text-primary-700 font-semibold"
-              >
-                Criar primeira playlist
-              </button>
+            <div className="bg-white rounded-xl border border-gray-100">
+              <EmptyState
+                title="Nenhuma campanha criada"
+                description="Crie campanhas publicitárias com mídias, horários de exibição e terminais vinculados."
+                icon={Megaphone}
+                mascotImage="/images/mascot-empty.png"
+                primaryAction={{
+                  label: 'Criar Campanha',
+                  onClick: () => setShowForm(true),
+                  icon: PlusLucide,
+                }}
+              />
             </div>
           )}
         </>

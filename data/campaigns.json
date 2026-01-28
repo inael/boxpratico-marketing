@@ -12,5 +12,46 @@
     "updatedAt": "2025-12-08T15:01:00.379Z",
     "monitorId": "1765205438619",
     "showNews": true
+  },
+  {
+    "id": "camp-coca-001",
+    "tenantId": "acc-midiabox-001",
+    "contractId": "contract-coca-001",
+    "advertiserId": "adv-coca-001",
+    "name": "Campanha Natal Coca-Cola",
+    "budget": 10000,
+    "totalPlaysTarget": 100000,
+    "valuePerPlay": 0.1,
+    "startDate": "2024-12-01",
+    "endDate": "2024-12-31",
+    "terminalIds": [
+      "term-shopping-001",
+      "term-shopping-002",
+      "term-padaria-001"
+    ],
+    "status": "ACTIVE",
+    "playsDelivered": 0,
+    "createdAt": "2026-01-25T00:03:06.504Z",
+    "updatedAt": "2026-01-25T00:03:06.504Z"
+  },
+  {
+    "id": "camp-nike-001",
+    "tenantId": "acc-midiabox-001",
+    "contractId": "contract-nike-001",
+    "advertiserId": "adv-nike-001",
+    "name": "Campanha Verão Nike",
+    "budget": 5000,
+    "totalPlaysTarget": 50000,
+    "valuePerPlay": 0.1,
+    "startDate": "2024-12-15",
+    "endDate": "2025-01-15",
+    "terminalIds": [
+      "term-academia-001",
+      "term-shopping-003"
+    ],
+    "status": "ACTIVE",
+    "playsDelivered": 0,
+    "createdAt": "2026-01-25T00:03:06.504Z",
+    "updatedAt": "2026-01-25T00:03:06.504Z"
   }
 ]

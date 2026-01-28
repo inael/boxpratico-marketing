@@ -6,9 +6,11 @@ import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
+import { useSystemName } from '@/contexts/SettingsContext';
 
 export default function AdminHeader() {
   const { data: session } = useSession();
+  const systemName = useSystemName();
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
@@ -20,7 +22,7 @@ export default function AdminHeader() {
               <span className="text-black font-bold text-sm sm:text-lg">BP</span>
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg sm:text-xl font-display font-bold text-gray-900">BoxPratico</h1>
+              <h1 className="text-lg sm:text-xl font-display font-bold text-gray-900">{systemName}</h1>
               <p className="text-xs text-gray-500">Marketing Dashboard</p>
             </div>
           </div>

@@ -35,6 +35,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSystemName } from '@/contexts/SettingsContext';
 import type { Role, Permission, TenantType } from '@/types';
 
 interface SubMenuItem {
@@ -268,6 +269,7 @@ export default function AdminSidebarV2({
   onExpandChange,
 }: AdminSidebarV2Props) {
   const { activeContext, hasPermission, isSuperAdmin, isViewingAsTenant, tenantType, isNetworkOperator, isCorporateClient } = useAuth();
+  const systemName = useSystemName();
 
   // Construir menu baseado nas permissões e tipo de tenant
   const menuStructure = useMemo(() => {
@@ -384,7 +386,7 @@ export default function AdminSidebarV2({
           {isExpanded && (
             <div className="overflow-hidden">
               <span className="font-bold text-gray-900 text-lg whitespace-nowrap block">
-                BoxPratico
+                {systemName}
               </span>
               {activeContext && isViewingAsTenant() && (
                 <span className="text-xs text-indigo-600 truncate block">

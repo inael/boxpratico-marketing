@@ -2111,10 +2111,12 @@ export async function processInvoicePayment(
 
 interface PlatformSettingsData {
   id: string;
-  platformName: string;
-  platformLogo?: string;
+  // Identidade do Sistema
+  systemName: string;
+  systemLogo?: string;
   supportEmail?: string;
   supportPhone?: string;
+  // Afiliados
   affiliateEnabled: boolean;
   affiliateL1Percentage: number;
   affiliateL2Percentage: number;
@@ -2129,7 +2131,7 @@ interface PlatformSettingsData {
 export async function getPlatformSettings(): Promise<PlatformSettingsData> {
   const defaultSettings: PlatformSettingsData = {
     id: 'platform',
-    platformName: 'Box Prático',
+    systemName: 'BoxPratico',
     affiliateEnabled: true,
     affiliateL1Percentage: 20.0,
     affiliateL2Percentage: 5.0,

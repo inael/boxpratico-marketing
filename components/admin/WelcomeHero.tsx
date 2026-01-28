@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Play, Pause, Volume2, VolumeX, Maximize2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSystemName } from '@/contexts/SettingsContext';
 
 interface WelcomeHeroProps {
   videoSrc?: string;
@@ -14,11 +15,13 @@ interface WelcomeHeroProps {
 
 export default function WelcomeHero({
   videoSrc = '/videos/welcome.mp4',
-  title = 'Bem-vindo ao BoxPratico!',
+  title: propTitle,
   subtitle = 'Assista este vídeo rápido para conhecer a plataforma',
   onDismiss,
 }: WelcomeHeroProps) {
   const { isFirstLogin, dismissFirstLogin, user } = useAuth();
+  const systemName = useSystemName();
+  const title = propTitle || `Bem-vindo ao ${systemName}!`;
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [progress, setProgress] = useState(0);

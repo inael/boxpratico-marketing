@@ -745,6 +745,19 @@ export const NEW_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     'condominiums:read',
     'monitors:read', 'monitors:update',
   ],
+  SALES_AGENT: [
+    // Vendedor externo - prospecção e contratos
+    'locations:read',
+    'screens:read',
+    'advertisers:read', 'advertisers:create', 'advertisers:update',
+    'campaigns:read', 'campaigns:create',
+    'contracts:read', 'contracts:create', 'contracts:update',
+    'financial:read',
+    'reports:read',
+    // Legados
+    'condominiums:read',
+    'monitors:read',
+  ],
 };
 
 // Permissões por role (legado - mantido para compatibilidade)
@@ -2132,23 +2145,52 @@ export const MENU_CONFIG: Record<Role, {
       },
     ],
   },
+  SALES_AGENT: {
+    commercial: [
+      {
+        id: 'main',
+        label: 'Principal',
+        items: [
+          { id: 'dashboard', label: 'Dashboard', icon: 'HomeIcon', path: 'dashboard' },
+        ],
+      },
+      {
+        id: 'sales',
+        label: 'Vendas',
+        items: [
+          { id: 'simulator', label: 'Simulador', icon: 'CalculatorIcon', path: 'simulator' },
+          { id: 'advertisers', label: 'Clientes', icon: 'UserGroupIcon', path: 'advertisers' },
+          { id: 'contracts', label: 'Contratos', icon: 'DocumentTextIcon', path: 'contracts' },
+        ],
+      },
+      {
+        id: 'financial',
+        label: 'Minhas Comissões',
+        items: [
+          { id: 'sales-commissions', label: 'Extrato', icon: 'CurrencyDollarIcon', path: 'sales-commissions' },
+        ],
+      },
+    ],
+    corporate: [], // Vendedores externos não operam em modo corporativo
+  },
 };
 
 // Função para obter o menu do usuário
 export function getUserMenu(user: User, tenant: Tenant | null): MenuGroup[] {
   const role = user.role as Role;
-  const tenantType = tenant?.type || 'COMMERCIAL';
+  const tenantType = tenant?.type || 'NETWORK_OPERATOR';
 
   const menuConfig = MENU_CONFIG[role];
   if (!menuConfig) return [];
 
-  const menus = tenantType === 'CORPORATE' ? menuConfig.corporate : menuConfig.commercial;
+  // commercial = NETWORK_OPERATOR, corporate = CORPORATE_CLIENT
+  const menus = tenantType === 'CORPORATE_CLIENT' ? menuConfig.corporate : menuConfig.commercial;
   return menus || [];
 }
 
 // Feature toggles por tipo de tenant
 export const FEATURE_TOGGLES: Record<TenantType, Record<string, boolean>> = {
-  COMMERCIAL: {
+  NETWORK_OPERATOR: {
     advertisers: true,
     campaigns: true,
     contracts: true,
@@ -2165,7 +2207,7 @@ export const FEATURE_TOGGLES: Record<TenantType, Record<string, boolean>> = {
     whitelabel: true,
     affiliates: true,
   },
-  CORPORATE: {
+  CORPORATE_CLIENT: {
     advertisers: false,
     campaigns: false,
     contracts: false,
@@ -3216,12 +3258,114 @@ export function getContextLabel(context: UserContext): string {
 // PLATFORM SETTINGS - Configurações Globais
 // ============================================
 
+// ============================================
+// RSS FEEDS CONFIGURATION
+// ============================================
+
+/**
+ * Categorias de feeds RSS
+ */
+export type RSSFeedCategory =
+  | 'geral'
+  | 'esporte'
+  | 'saude'
+  | 'economia'
+  | 'tecnologia'
+  | 'entretenimento'
+  | 'politica'
+  | 'mundo';
+
+export const RSS_FEED_CATEGORY_LABELS: Record<RSSFeedCategory, string> = {
+  geral: 'Geral',
+  esporte: 'Esporte',
+  saude: 'Saude',
+  economia: 'Economia',
+  tecnologia: 'Tecnologia',
+  entretenimento: 'Entretenimento',
+  politica: 'Politica',
+  mundo: 'Mundo',
+};
+
+/**
+ * Configuracao de um feed RSS individual
+ */
+export interface RSSFeedConfig {
+  id: string;
+  name: string;                    // Nome amigavel do feed
+  url: string;                     // URL do feed RSS
+  category: RSSFeedCategory;       // Categoria do conteudo
+  imageTag: string;                // Tag XML para imagem (ex: enclosure, media:content)
+  titleTag: string;                // Tag XML para titulo (ex: title)
+  descriptionTag: string;          // Tag XML para descricao (ex: description)
+  isActive: boolean;               // Se o feed esta ativo
+  refreshIntervalMinutes: number;  // Intervalo de atualizacao em minutos
+  maxItems: number;                // Maximo de itens a exibir
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Feeds RSS padrao pre-configurados
+ */
+export const DEFAULT_RSS_FEEDS: Omit<RSSFeedConfig, 'id' | 'createdAt' | 'updatedAt'>[] = [
+  {
+    name: 'G1 - Noticias',
+    url: 'https://g1.globo.com/rss/g1/',
+    category: 'geral',
+    imageTag: 'enclosure',
+    titleTag: 'title',
+    descriptionTag: 'description',
+    isActive: true,
+    refreshIntervalMinutes: 30,
+    maxItems: 10,
+  },
+  {
+    name: 'G1 - Tecnologia',
+    url: 'https://g1.globo.com/rss/g1/tecnologia/',
+    category: 'tecnologia',
+    imageTag: 'enclosure',
+    titleTag: 'title',
+    descriptionTag: 'description',
+    isActive: false,
+    refreshIntervalMinutes: 30,
+    maxItems: 10,
+  },
+  {
+    name: 'G1 - Economia',
+    url: 'https://g1.globo.com/rss/g1/economia/',
+    category: 'economia',
+    imageTag: 'enclosure',
+    titleTag: 'title',
+    descriptionTag: 'description',
+    isActive: false,
+    refreshIntervalMinutes: 30,
+    maxItems: 10,
+  },
+  {
+    name: 'GE - Esportes',
+    url: 'https://ge.globo.com/rss.xml',
+    category: 'esporte',
+    imageTag: 'enclosure',
+    titleTag: 'title',
+    descriptionTag: 'description',
+    isActive: false,
+    refreshIntervalMinutes: 15,
+    maxItems: 10,
+  },
+];
+
 /**
  * Configurações globais da plataforma
  * Armazenadas no banco e editáveis pelo SUPER_ADMIN
  */
 export interface PlatformSettings {
   id: string;
+
+  // Identidade do Sistema
+  systemName: string;             // Nome do sistema (default: "BoxPratico")
+  systemLogo?: string;            // URL do logo customizado
+  supportEmail?: string;          // Email de suporte
+  supportPhone?: string;          // Telefone de suporte
 
   // Comissões de Afiliados (indicação de novos assinantes SaaS)
   affiliateEnabled: boolean;
@@ -3254,6 +3398,12 @@ export interface PlatformSettings {
  * IMPORTANTE: Estes valores são usados como fallback quando não há configuração no banco
  */
 export const DEFAULT_PLATFORM_SETTINGS: Omit<PlatformSettings, 'id' | 'updatedAt' | 'updatedBy'> = {
+  // Identidade do Sistema
+  systemName: 'BoxPratico',
+  systemLogo: undefined,
+  supportEmail: undefined,
+  supportPhone: undefined,
+
   // Afiliados: 10% nível 1, 5% nível 2 (regra de negócio definitiva)
   affiliateEnabled: true,
   affiliateL1Percentage: 10.0,

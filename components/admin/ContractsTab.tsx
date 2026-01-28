@@ -26,6 +26,9 @@ import {
   ClockIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+import EmptyState from './EmptyState';
+import PageHeader from './PageHeader';
+import { FileSignature, Plus } from 'lucide-react';
 
 // Helper to format currency
 function formatCurrency(value: number): string {
@@ -308,26 +311,24 @@ export default function ContractsTab() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-6"
     >
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900">Contratos</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Gerencie contratos de parceria, publicidade e cessao de espaco
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setEditingContract(null);
-            resetForm();
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
-        >
-          <PlusIcon className="w-5 h-5" />
-          Novo Contrato
-        </button>
-      </div>
+      <PageHeader
+        title="Contratos"
+        helpTitle="Contratos"
+        helpDescription="Crie e gerencie contratos de publicidade. Defina valores, prazos, terminais e acompanhe o status de cada negociação."
+        actions={
+          <button
+            onClick={() => {
+              setEditingContract(null);
+              resetForm();
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
+          >
+            <PlusIcon className="w-5 h-5" />
+            Novo Contrato
+          </button>
+        }
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -758,23 +759,26 @@ export default function ContractsTab() {
       {/* Contracts List */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         {filteredContracts.length === 0 ? (
-          <div className="p-12 text-center">
-            <DocumentTextIcon className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum contrato encontrado</h3>
-            <p className="text-gray-500 text-sm mb-4">
-              {contracts.length === 0
-                ? 'Comece criando seu primeiro contrato'
-                : 'Nenhum contrato corresponde aos filtros selecionados'}
-            </p>
-            {contracts.length === 0 && (
-              <button
-                onClick={() => setShowForm(true)}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:shadow-lg transition-all"
-              >
-                Criar primeiro contrato
-              </button>
-            )}
-          </div>
+          contracts.length === 0 ? (
+            <EmptyState
+              title="Nenhum contrato criado"
+              description="Crie contratos de publicidade com seus clientes. Defina valores, prazos e quais telas serão utilizadas."
+              icon={FileSignature}
+              mascotImage="/images/mascot-empty.png"
+              primaryAction={{
+                label: 'Criar Contrato',
+                onClick: () => setShowForm(true),
+                icon: Plus,
+              }}
+            />
+          ) : (
+            <EmptyState
+              variant="filter"
+              title="Nenhum contrato encontrado"
+              description="Nenhum contrato corresponde aos filtros selecionados. Tente ajustar os filtros."
+              mascotImage="/images/mascot-search.png"
+            />
+          )
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">

@@ -5,6 +5,86 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle, X, ChevronRight, ExternalLink } from 'lucide-react';
 import FeatureExplainer from './FeatureExplainer';
 
+// Textos de ajuda padrao por pagina
+export const PAGE_HELP_TEXTS: Record<string, { title: string; description: string }> = {
+  companies: {
+    title: 'Meus Clientes',
+    description: 'Cadastre e gerencie seus clientes (anunciantes). Aqui voce vincula empresas a contratos e campanhas de publicidade.',
+  },
+  contracts: {
+    title: 'Contratos',
+    description: 'Crie e gerencie contratos de publicidade. Defina valores, prazos, terminais e acompanhe o status de cada negociacao.',
+  },
+  campaigns: {
+    title: 'Campanhas',
+    description: 'Configure campanhas publicitarias com midias, horarios de exibicao e terminais. Monitore o desempenho em tempo real.',
+  },
+  monitors: {
+    title: 'Minhas Telas',
+    description: 'Cadastre e monitore suas telas de exibicao. Veja status online/offline, configure playlists e gerencie a operacao.',
+  },
+  playlists: {
+    title: 'Grades de Programacao',
+    description: 'Monte grades de programacao com a sequencia de midias para cada tela. Defina horarios e duracao de cada conteudo.',
+  },
+  library: {
+    title: 'Biblioteca de Midia',
+    description: 'Faca upload de imagens, videos, configure feeds RSS e cameras RTMP. Organize sua biblioteca de conteudo.',
+  },
+  financial: {
+    title: 'Cobrancas',
+    description: 'Acompanhe cobrancas, pagamentos e inadimplencia. Gere boletos, envie lembretes e visualize o fluxo de caixa.',
+  },
+  receivables: {
+    title: 'Recebiveis',
+    description: 'Visualize recebiveis futuros e projecao de faturamento. Acompanhe valores a receber por periodo.',
+  },
+  'sales-commissions': {
+    title: 'Comissoes de Venda',
+    description: 'Acompanhe comissoes de vendas. Veja valores pendentes, pagos e historico de ganhos por contrato.',
+  },
+  affiliate: {
+    title: 'Indicar Amigo',
+    description: 'Compartilhe seu link de indicacao e ganhe comissoes. Acompanhe suas indicacoes e beneficios.',
+  },
+  'affiliate-earnings': {
+    title: 'Extrato Afiliado',
+    description: 'Veja o extrato de comissoes de afiliado. Acompanhe ganhos, saques e historico completo.',
+  },
+  team: {
+    title: 'Minha Equipe',
+    description: 'Gerencie sua equipe. Adicione usuarios, defina permissoes e acompanhe atividades.',
+  },
+  accounts: {
+    title: 'Contas',
+    description: 'Gerencie contas e tenants. Visualize planos, status e configuracoes de cada conta.',
+  },
+  settings: {
+    title: 'Configuracoes',
+    description: 'Configure parametros do sistema: precos, comissoes, integracoes, notificacoes e preferencias.',
+  },
+  reports: {
+    title: 'Relatorios',
+    description: 'Visualize relatorios de desempenho, audiencia, financeiro e operacional do seu negocio.',
+  },
+  tenants: {
+    title: 'Tenants / Afiliados',
+    description: 'Gerencie tenants e afiliados da plataforma. Ative, suspenda e acompanhe cada operacao.',
+  },
+  'subscription-plans': {
+    title: 'Planos de Assinatura',
+    description: 'Configure planos de assinatura. Defina limites, precos e recursos de cada plano.',
+  },
+  'global-users': {
+    title: 'Usuarios Globais',
+    description: 'Gerencie usuarios com acesso global a plataforma. Super admins e acessos especiais.',
+  },
+  simulator: {
+    title: 'Simulador de Orcamento',
+    description: 'Simule orcamentos de campanhas. Selecione terminais, configure parametros e veja o valor estimado.',
+  },
+};
+
 interface Breadcrumb {
   label: string;
   href?: string;

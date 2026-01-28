@@ -24,6 +24,16 @@ import LibraryTab from '@/components/admin/LibraryTab';
 import OnboardingWizard from '@/components/admin/OnboardingWizard';
 import CompaniesTab from '@/components/admin/CompaniesTab';
 import FinancialTab from '@/components/admin/FinancialTab';
+import OnboardingCard from '@/components/admin/OnboardingCard';
+import AnnouncementsCard from '@/components/admin/AnnouncementsCard';
+import SimulatorTab from '@/components/admin/SimulatorTab';
+import ReceivablesTab from '@/components/admin/ReceivablesTab';
+import SalesCommissionsTab from '@/components/admin/SalesCommissionsTab';
+import TenantsTab from '@/components/admin/TenantsTab';
+import SubscriptionPlansTab from '@/components/admin/SubscriptionPlansTab';
+import GlobalUsersTab from '@/components/admin/GlobalUsersTab';
+import AffiliateEarningsTab from '@/components/admin/AffiliateEarningsTab';
+import PlaylistsTab from '@/components/admin/PlaylistsTab';
 import dynamic from 'next/dynamic';
 import { brazilianStates, citiesByState } from '@/lib/brazilian-cities';
 
@@ -1035,6 +1045,18 @@ export default function AdminPage() {
               {/* Dashboard Content - only show when data is loaded */}
               {!isLoadingData && (
                 <>
+              {/* Announcements */}
+              <AnnouncementsCard />
+
+              {/* Onboarding Progress Card (estilo Asaas) */}
+              <OnboardingCard
+                monitors={monitors.length}
+                mediaItems={activeMedia.length}
+                playlists={activeCampaigns}
+                advertisers={advertisers.length}
+                onNavigate={setActiveTab}
+              />
+
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-6">
                 <motion.button
                   initial={{ opacity: 0, y: 20 }}
@@ -1051,8 +1073,8 @@ export default function AdminPage() {
                       Ativos
                     </span>
                   </div>
-                  <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">{activeCondos.length}</h3>
-                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Locais</p>
+                  <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-[#F59E0B] to-[#D97706] bg-clip-text text-transparent">{monitors.length}</h3>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Telas</p>
                 </motion.button>
 
                 <motion.button
@@ -1111,7 +1133,7 @@ export default function AdminPage() {
                     </span>
                   </div>
                   <h3 className="text-2xl sm:text-4xl font-bold bg-gradient-to-br from-purple-500 to-purple-600 bg-clip-text text-transparent">{activeCampaigns}</h3>
-                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Playlists</p>
+                  <p className="text-slate-600 text-xs sm:text-sm mt-1 sm:mt-2">Grades</p>
                 </motion.button>
 
                 <motion.button
@@ -2267,8 +2289,47 @@ export default function AdminPage() {
           )}
 
           {/* Benefits/Affiliate Tab */}
-          {(activeTab === 'affiliate' || activeTab === 'affiliate-earnings') && (
-            <BenefitsTab subTab={activeTab as 'affiliate' | 'affiliate-earnings'} />
+          {activeTab === 'affiliate' && (
+            <BenefitsTab subTab="affiliate" />
+          )}
+
+          {/* Affiliate Earnings Tab */}
+          {activeTab === 'affiliate-earnings' && (
+            <AffiliateEarningsTab />
+          )}
+
+          {/* Simulator Tab */}
+          {activeTab === 'simulator' && (
+            <SimulatorTab />
+          )}
+
+          {/* Receivables Tab */}
+          {activeTab === 'receivables' && (
+            <ReceivablesTab />
+          )}
+
+          {/* Sales Commissions Tab */}
+          {activeTab === 'sales-commissions' && (
+            <SalesCommissionsTab />
+          )}
+
+          {/* Tenants Tab */}
+          {activeTab === 'tenants' && (
+            <TenantsTab />
+          )}
+
+          {/* Subscription Plans Tab */}
+          {activeTab === 'subscription-plans' && (
+            <SubscriptionPlansTab />
+          )}
+
+          {/* Global Users Tab */}
+          {activeTab === 'global-users' && (
+            <GlobalUsersTab />
+          )}
+
+          {activeTab === 'playlists' && (
+            <PlaylistsTab />
           )}
         </main>
 

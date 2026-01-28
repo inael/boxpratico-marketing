@@ -249,6 +249,28 @@ export default function AdminHeaderV2({
 
       {/* Right Side Actions */}
       <div className="flex items-center gap-4">
+        {/* Role Badge - Mostra o perfil atual do usuário */}
+        {activeContext?.role && (
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gray-100">
+            <span className={`w-2 h-2 rounded-full ${
+              activeContext.role === 'SUPER_ADMIN' ? 'bg-purple-500' :
+              activeContext.role === 'TENANT_ADMIN' ? 'bg-indigo-500' :
+              activeContext.role === 'SALES_AGENT' ? 'bg-green-500' :
+              activeContext.role === 'OPERATOR' ? 'bg-blue-500' :
+              'bg-gray-500'
+            }`} />
+            <span className="text-sm font-medium text-gray-700">
+              {ROLE_LABELS[activeContext.role] || activeContext.role}
+            </span>
+            {availableContexts.length > 1 && (
+              <ChevronDown
+                className="w-3 h-3 text-gray-400 cursor-pointer hover:text-gray-600"
+                onClick={() => setShowContextSwitcher(true)}
+              />
+            )}
+          </div>
+        )}
+
         {/* Notifications */}
         <div className="relative" ref={notificationsRef}>
           <button

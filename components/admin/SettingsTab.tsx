@@ -15,6 +15,8 @@ import {
   ChevronDownIcon,
   RssIcon,
   LockClosedIcon,
+  PlusIcon,
+  TrashIcon,
 } from '@heroicons/react/24/outline';
 import {
   SystemPricingConfig,
@@ -24,9 +26,20 @@ import {
   MedalTier,
   DEFAULT_MEDAL_CONFIG,
   MedalType,
+  RSSFeedConfig,
+  RSSFeedCategory,
+  RSS_FEED_CATEGORY_LABELS,
+  DEFAULT_RSS_FEEDS,
 } from '@/types';
+import SettingTooltip, { SETTING_TOOLTIPS } from './SettingTooltip';
 
 interface Settings {
+  // Identidade do Sistema
+  systemName: string;
+  systemLogo: string;
+  supportEmail: string;
+  supportPhone: string;
+  // Configurações
   rss: {
     url: string;
     imageTag: string;
@@ -68,6 +81,10 @@ interface WhatsAppStatus {
 
 export default function SettingsTab() {
   const [settings, setSettings] = useState<Settings>({
+    systemName: 'BoxPratico',
+    systemLogo: '',
+    supportEmail: '',
+    supportPhone: '',
     rss: {
       url: '',
       imageTag: '',
@@ -110,8 +127,14 @@ export default function SettingsTab() {
   const [medalConfig, setMedalConfig] = useState<MedalConfig>(DEFAULT_MEDAL_CONFIG);
   const [savingMedals, setSavingMedals] = useState(false);
 
+  // RSS feeds states
+  const [rssFeeds, setRssFeeds] = useState<RSSFeedConfig[]>([]);
+  const [showAddFeedModal, setShowAddFeedModal] = useState(false);
+  const [editingFeed, setEditingFeed] = useState<RSSFeedConfig | null>(null);
+
   // Collapsible sections state - all collapsed by default
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    identity: false,
     whatsapp: false,
     networkPricing: false,
     systemPricing: false,
@@ -155,6 +178,10 @@ export default function SettingsTab() {
       const data = await res.json();
       setSettings({
         ...data,
+        systemName: data.systemName || 'BoxPratico',
+        systemLogo: data.systemLogo || '',
+        supportEmail: data.supportEmail || '',
+        supportPhone: data.supportPhone || '',
         whatsapp: data.whatsapp || { notificationsEnabled: true },
         evolution: data.evolution || { apiUrl: '', apiKey: '', instanceName: '', managerUrl: '' },
         networkPricing: data.networkPricing || {
@@ -433,6 +460,95 @@ export default function SettingsTab() {
       className="space-y-6"
     >
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* System Identity Configuration */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => toggleSection('identity')}
+            className="w-full p-4 sm:p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                <BuildingStorefrontIcon className="w-6 h-6 text-indigo-600" />
+              </div>
+              <div className="text-left">
+                <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
+                  Identidade do Sistema
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Nome, logo e informações de contato
+                </p>
+              </div>
+            </div>
+            <ChevronDownIcon
+              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                expandedSections.identity ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+
+          {expandedSections.identity && (
+            <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Sistema
+                  </label>
+                  <input
+                    type="text"
+                    value={settings.systemName}
+                    onChange={(e) => setSettings({ ...settings, systemName: e.target.value })}
+                    placeholder="BoxPratico"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Este nome será exibido em todo o sistema
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    URL do Logo (opcional)
+                  </label>
+                  <input
+                    type="url"
+                    value={settings.systemLogo}
+                    onChange={(e) => setSettings({ ...settings, systemLogo: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email de Suporte
+                  </label>
+                  <input
+                    type="email"
+                    value={settings.supportEmail}
+                    onChange={(e) => setSettings({ ...settings, supportEmail: e.target.value })}
+                    placeholder="suporte@exemplo.com"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Telefone de Suporte
+                  </label>
+                  <input
+                    type="tel"
+                    value={settings.supportPhone}
+                    onChange={(e) => setSettings({ ...settings, supportPhone: e.target.value })}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* WhatsApp Configuration */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
@@ -988,8 +1104,9 @@ export default function SettingsTab() {
           <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pt-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="flex items-center gap-1 text-sm font-semibold text-gray-700 mb-2">
                 Preco por Display (R$/mes)
+                <SettingTooltip {...SETTING_TOOLTIPS.pricePerDisplayMonth} />
               </label>
               <input
                 type="number"
@@ -1003,14 +1120,12 @@ export default function SettingsTab() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="20.00"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Valor base cobrado por cada tela/display por mes
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="flex items-center gap-1 text-sm font-semibold text-gray-700 mb-2">
                 Insercoes por Hora
+                <SettingTooltip {...SETTING_TOOLTIPS.insertionsPerHour} />
               </label>
               <input
                 type="number"
@@ -1023,14 +1138,12 @@ export default function SettingsTab() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="4"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Quantas vezes o anuncio aparece por hora em cada tela
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="flex items-center gap-1 text-sm font-semibold text-gray-700 mb-2">
                 Duracao Media da Insercao (segundos)
+                <SettingTooltip {...SETTING_TOOLTIPS.avgInsertionDurationSeconds} />
               </label>
               <input
                 type="number"
@@ -1043,14 +1156,12 @@ export default function SettingsTab() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="15"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Tempo medio de exibicao de cada insercao
-              </p>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="flex items-center gap-1 text-sm font-semibold text-gray-700 mb-2">
                 Horas de Funcionamento por Dia
+                <SettingTooltip {...SETTING_TOOLTIPS.operatingHoursPerDay} />
               </label>
               <input
                 type="number"
@@ -1064,9 +1175,6 @@ export default function SettingsTab() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
                 placeholder="12"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Media de horas que as telas ficam ligadas por dia
-              </p>
             </div>
           </div>
 
@@ -1471,7 +1579,7 @@ export default function SettingsTab() {
           )}
         </div>
 
-        {/* RSS Configuration */}
+        {/* RSS Configuration - Multiple Feeds */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <button
             type="button"
@@ -1484,115 +1592,187 @@ export default function SettingsTab() {
               </div>
               <div className="text-left">
                 <h2 className="text-lg sm:text-xl font-display font-bold text-gray-900">
-                  Configurações de RSS
+                  Feeds RSS
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500">
-                  Configure feeds RSS para importar conteúdo
+                  Configure multiplos feeds RSS por categoria
                 </p>
               </div>
             </div>
-            <ChevronDownIcon
-              className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
-                expandedSections.rss ? 'rotate-180' : ''
-              }`}
-            />
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                {rssFeeds.filter(f => f.isActive).length} ativos
+              </span>
+              <ChevronDownIcon
+                className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
+                  expandedSections.rss ? 'rotate-180' : ''
+                }`}
+              />
+            </div>
           </button>
 
           {expandedSections.rss && (
           <div className="px-4 sm:px-6 pb-4 sm:pb-6 border-t border-gray-100 pt-4">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                URL do Feed RSS
-              </label>
-              <input
-                type="url"
-                value={settings.rss.url}
-                onChange={(e) => setSettings({
-                  ...settings,
-                  rss: { ...settings.rss, url: e.target.value }
-                })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
-                placeholder="https://exemplo.com/feed.xml"
-                required
-              />
+            {/* Feeds Pre-configurados */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-700">Feeds Disponiveis</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingFeed(null);
+                    setShowAddFeedModal(true);
+                  }}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg text-sm font-medium hover:bg-orange-200 transition-colors"
+                >
+                  <PlusIcon className="w-4 h-4" />
+                  Adicionar Feed
+                </button>
+              </div>
+
+              {/* Lista de Feeds */}
+              <div className="space-y-2">
+                {/* Feeds padrao pre-configurados (se nao houver nenhum salvo) */}
+                {rssFeeds.length === 0 && DEFAULT_RSS_FEEDS.map((feed, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        feed.isActive ? 'bg-green-100' : 'bg-gray-200'
+                      }`}>
+                        <RssIcon className={`w-4 h-4 ${feed.isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{feed.name}</p>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            feed.category === 'geral' ? 'bg-blue-100 text-blue-700' :
+                            feed.category === 'esporte' ? 'bg-green-100 text-green-700' :
+                            feed.category === 'tecnologia' ? 'bg-purple-100 text-purple-700' :
+                            feed.category === 'economia' ? 'bg-amber-100 text-amber-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {RSS_FEED_CATEGORY_LABELS[feed.category]}
+                          </span>
+                          <span className="text-xs text-gray-500 truncate max-w-[200px]">{feed.url}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={feed.isActive}
+                          onChange={() => {
+                            // Transformar em feed salvo e ativar
+                            const newFeed: RSSFeedConfig = {
+                              ...feed,
+                              id: `feed-${Date.now()}-${index}`,
+                              isActive: !feed.isActive,
+                              createdAt: new Date().toISOString(),
+                              updatedAt: new Date().toISOString(),
+                            };
+                            setRssFeeds([...rssFeeds, newFeed]);
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                      </label>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Feeds salvos */}
+                {rssFeeds.map((feed) => (
+                  <div
+                    key={feed.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        feed.isActive ? 'bg-green-100' : 'bg-gray-200'
+                      }`}>
+                        <RssIcon className={`w-4 h-4 ${feed.isActive ? 'text-green-600' : 'text-gray-400'}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 text-sm">{feed.name}</p>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            feed.category === 'geral' ? 'bg-blue-100 text-blue-700' :
+                            feed.category === 'esporte' ? 'bg-green-100 text-green-700' :
+                            feed.category === 'tecnologia' ? 'bg-purple-100 text-purple-700' :
+                            feed.category === 'economia' ? 'bg-amber-100 text-amber-700' :
+                            feed.category === 'saude' ? 'bg-pink-100 text-pink-700' :
+                            feed.category === 'entretenimento' ? 'bg-indigo-100 text-indigo-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {RSS_FEED_CATEGORY_LABELS[feed.category]}
+                          </span>
+                          <span className="text-xs text-gray-500 truncate max-w-[200px]">{feed.url}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={feed.isActive}
+                          onChange={() => {
+                            setRssFeeds(rssFeeds.map(f =>
+                              f.id === feed.id ? { ...f, isActive: !f.isActive, updatedAt: new Date().toISOString() } : f
+                            ));
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-500"></div>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingFeed(feed);
+                          setShowAddFeedModal(true);
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                      >
+                        <QuestionMarkCircleIcon className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRssFeeds(rssFeeds.filter(f => f.id !== feed.id));
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                      >
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
+            {/* Info Box */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-blue-800 font-medium mb-2">
-                Mapeamento de Tags XML
+                Como funcionam os feeds?
               </p>
-              <p className="text-xs text-blue-700">
-                Preencha apenas o nome da tag XML (sem os símbolos &lt; e &gt;).
-                Para tags aninhadas, use ponto (.). Exemplo: <code className="bg-blue-100 px-1 rounded">enclosure.url</code>
-              </p>
+              <ul className="text-xs text-blue-700 space-y-1">
+                <li>• Ative os feeds que deseja exibir nas telas</li>
+                <li>• Cada feed pode ter uma categoria diferente (esporte, economia, etc.)</li>
+                <li>• O player exibe noticias rotacionando entre os feeds ativos</li>
+                <li>• Voce pode adicionar feeds personalizados clicando em "Adicionar Feed"</li>
+              </ul>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tag da Imagem
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&lt;</span>
-                  <input
-                    type="text"
-                    value={settings.rss.imageTag}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      rss: { ...settings.rss, imageTag: e.target.value }
-                    })}
-                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
-                    placeholder="enclosure.url"
-                    required
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&gt;</span>
-                </div>
+            {/* Legacy RSS config (mantido para compatibilidade) */}
+            {settings.rss?.url && (
+              <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                <p className="text-xs text-amber-700 mb-2 font-medium">Feed Legado (sera migrado)</p>
+                <p className="text-xs text-amber-600 truncate">{settings.rss.url}</p>
               </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tag do Título
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&lt;</span>
-                  <input
-                    type="text"
-                    value={settings.rss.titleTag}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      rss: { ...settings.rss, titleTag: e.target.value }
-                    })}
-                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
-                    placeholder="title"
-                    required
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&gt;</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Tag do Resumo
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&lt;</span>
-                  <input
-                    type="text"
-                    value={settings.rss.descriptionTag}
-                    onChange={(e) => setSettings({
-                      ...settings,
-                      rss: { ...settings.rss, descriptionTag: e.target.value }
-                    })}
-                    className="w-full pl-7 pr-7 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none text-gray-900"
-                    placeholder="description"
-                    required
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">&gt;</span>
-                </div>
-              </div>
-            </div>
-          </div>
+            )}
           </div>
           )}
         </div>

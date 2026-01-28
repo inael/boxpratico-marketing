@@ -18,6 +18,9 @@ import {
   MEDAL_COLORS,
 } from '@/types';
 import LocationsMap from './LocationsMap';
+import EmptyState from './EmptyState';
+import PageHeader from './PageHeader';
+import { Building2, Plus } from 'lucide-react';
 
 interface CompaniesTabProps {
   companies: Company[];
@@ -718,24 +721,20 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
   // Lista de empresas
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Empresas</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Gerencie pontos de tela e anunciantes em um só lugar
-          </p>
-        </div>
-        <button
-          onClick={() => setIsFormOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-        >
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Nova Empresa
-        </button>
-      </div>
+      <PageHeader
+        title="Meus Clientes"
+        helpTitle="Meus Clientes"
+        helpDescription="Cadastre e gerencie seus clientes (anunciantes) e pontos de exibição. Vincule empresas a contratos e campanhas de publicidade."
+        actions={
+          <button
+            onClick={() => setIsFormOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Nova Empresa
+          </button>
+        }
+      />
 
       {/* Filtros */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -785,25 +784,17 @@ export default function CompaniesTab({ companies, onRefresh }: CompaniesTabProps
       {/* Lista em formato de tabela */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {filteredCompanies.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900">Nenhuma empresa encontrada</h3>
-            <p className="text-gray-500 mt-1">Cadastre sua primeira empresa para começar.</p>
-          </div>
+          <EmptyState
+            title="Nenhuma empresa cadastrada"
+            description="Cadastre seus clientes e pontos de exibição para começar a criar contratos e campanhas de publicidade."
+            icon={Building2}
+            mascotImage="/images/mascot-empty.png"
+            primaryAction={{
+              label: 'Cadastrar Empresa',
+              onClick: () => setIsFormOpen(true),
+              icon: Plus,
+            }}
+          />
         ) : (
           <>
             <div className="overflow-x-auto">

@@ -614,11 +614,11 @@ const contracts = [
     totalValue: 10000, // R$ 10.000
     // Meta de plays
     totalPlaysTarget: 100000,
-    startDate: '2024-12-01',
-    endDate: '2024-12-31',
+    startDate: '2026-01-01',
+    endDate: '2026-01-31',
     terminalIds: [IDS.terminalShopping1, IDS.terminalShopping2, IDS.terminalPadaria1],
     status: 'active',
-    signedAt: '2024-11-25T10:00:00.000Z',
+    signedAt: '2025-12-20T10:00:00.000Z',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -632,11 +632,11 @@ const contracts = [
     partyBName: 'Nike do Brasil',
     totalValue: 5000, // R$ 5.000
     totalPlaysTarget: 50000,
-    startDate: '2024-12-15',
-    endDate: '2025-01-15',
+    startDate: '2026-01-15',
+    endDate: '2026-02-15',
     terminalIds: [IDS.terminalAcademia, IDS.terminalShopping3],
     status: 'active',
-    signedAt: '2024-12-10T14:00:00.000Z',
+    signedAt: '2026-01-10T14:00:00.000Z',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -654,8 +654,8 @@ const campaigns = [
     totalPlaysTarget: 100000,
     // Valor por play = 10000 / 100000 = R$ 0,10
     valuePerPlay: 0.10,
-    startDate: '2024-12-01',
-    endDate: '2024-12-31',
+    startDate: '2026-01-01',
+    endDate: '2026-01-31',
     terminalIds: [IDS.terminalShopping1, IDS.terminalShopping2, IDS.terminalPadaria1],
     status: 'ACTIVE',
     playsDelivered: 0,
@@ -672,8 +672,8 @@ const campaigns = [
     totalPlaysTarget: 50000,
     // Valor por play = 5000 / 50000 = R$ 0,10
     valuePerPlay: 0.10,
-    startDate: '2024-12-15',
-    endDate: '2025-01-15',
+    startDate: '2026-01-15',
+    endDate: '2026-02-15',
     terminalIds: [IDS.terminalAcademia, IDS.terminalShopping3],
     status: 'ACTIVE',
     playsDelivered: 0,
@@ -715,8 +715,8 @@ function generateMockPlayLogs(): Array<{
     createdAt: string;
   }> = [];
 
-  // Simular dezembro de 2024
-  const referenceMonth = '2024-12';
+  // Simular janeiro de 2026
+  const referenceMonth = '2026-01';
   const daysInMonth = 31;
 
   // Campanha Coca-Cola: 3 terminais, 48 plays/dia por terminal
@@ -802,7 +802,7 @@ const commissionLedger = [
     amount: 1500,
     rate: 15,
     baseAmount: 10000,
-    referenceMonth: '2024-12',
+    referenceMonth: '2026-01',
     status: 'PENDING',
     notes: 'Comissão Campanha Natal Coca-Cola',
     createdAt: new Date().toISOString(),
@@ -818,7 +818,7 @@ const commissionLedger = [
     amount: 750,
     rate: 15,
     baseAmount: 5000,
-    referenceMonth: '2024-12',
+    referenceMonth: '2026-01',
     status: 'PENDING',
     notes: 'Comissão Campanha Verão Nike',
     createdAt: new Date().toISOString(),
@@ -909,8 +909,8 @@ async function main() {
   console.log('    Terminais: 1 (Padaria Pinheiros)');
   console.log('');
   console.log('  Campanhas Ativas:');
-  console.log('    - Coca-Cola: R$ 10.000 (3 terminais, dez/24)');
-  console.log('    - Nike: R$ 5.000 (2 terminais, 15-31 dez/24)');
+  console.log('    - Coca-Cola: R$ 10.000 (3 terminais, jan/26)');
+  console.log('    - Nike: R$ 5.000 (2 terminais, 15-31 jan/26)');
   console.log('');
   console.log(`  PlayLogs Gerados: ${playLogs.length} registros`);
   console.log('    - Coca-Cola: 4.464 plays (R$ 446,40)');

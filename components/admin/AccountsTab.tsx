@@ -23,6 +23,9 @@ import {
   AccountStatus,
 } from '@/types';
 import { LabelWithTooltip } from '@/components/ui/Tooltip';
+import EmptyState from './EmptyState';
+import PageHeader from './PageHeader';
+import { Users, Plus } from 'lucide-react';
 
 export default function AccountsTab() {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -215,7 +218,22 @@ export default function AccountsTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header com estatísticas */}
+      <PageHeader
+        title="Contas"
+        helpTitle="Contas"
+        helpDescription="Gerencie contas e sub-organizações. Visualize planos, status e configurações de cada conta."
+        actions={
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Nova Conta
+          </button>
+        }
+      />
+
+      {/* Cards com estatísticas */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl p-4 border border-gray-100">
           <div className="flex items-center gap-3">
@@ -544,9 +562,18 @@ export default function AccountsTab() {
       </div>
 
       {filteredAccounts.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-          <UserGroupIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">Nenhuma conta encontrada</p>
+        <div className="bg-white rounded-xl border border-gray-100">
+          <EmptyState
+            title="Nenhuma conta encontrada"
+            description="Contas são sub-organizações dentro do seu tenant. Crie contas para separar clientes ou filiais."
+            icon={Users}
+            mascotImage="/images/mascot-empty.png"
+            primaryAction={{
+              label: 'Criar Conta',
+              onClick: () => setShowForm(true),
+              icon: Plus,
+            }}
+          />
         </div>
       )}
     </div>

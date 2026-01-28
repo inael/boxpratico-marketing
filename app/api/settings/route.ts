@@ -9,6 +9,12 @@ const SETTINGS_KEY = 'app_settings';
 // Get default settings with environment variable fallbacks
 function getDefaultSettings() {
   return {
+    // Identidade do Sistema
+    systemName: 'BoxPratico',
+    systemLogo: '',
+    supportEmail: '',
+    supportPhone: '',
+    // RSS Feed
     rss: {
       url: 'https://www.gazetadopovo.com.br/feed/rss/brasil.xml',
       imageTag: 'enclosure.url',

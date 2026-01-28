@@ -129,6 +129,7 @@ async function createAdvertiserUser(
       phone: advertiserPhone,
       role,
       isAdmin: false,
+      isActive: true,
       tenantId,
       // Marcar como pendente para verificação de email
       emailVerified: false,
@@ -158,13 +159,12 @@ async function createDraftCampaign(
 
     // Calcular datas baseado no contrato
     const startDate = contract.startDate || new Date().toISOString().split('T')[0];
-    const endDate = contract.endDate || calculateEndDate(startDate, contract.durationMonths || 1);
+    const endDate = contract.endDate || calculateEndDate(startDate, ((contract as unknown) as {durationMonths?: number}).durationMonths || 1);
 
     // Criar campanha
     const campaign = await createCampaign({
       name: `Campanha - ${advertiserName}`,
-      description: `Campanha criada automaticamente do contrato #${contract.id}`,
-      advertiserId: contract.advertiserId,
+      advertiserId: contract.advertiserId || '',
       contractId: contract.id,
       status: 'DRAFT',
       startDate,
@@ -177,7 +177,8 @@ async function createDraftCampaign(
       // Metadata
       tenantId,
       managementType: input.managementType,
-    });
+      isActive: true,
+    } as Parameters<typeof createCampaign>[0]);
 
     return { campaignId: campaign.id };
   } catch (error) {

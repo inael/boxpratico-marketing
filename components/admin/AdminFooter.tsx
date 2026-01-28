@@ -1,14 +1,17 @@
 'use client';
 
+import { useSystemName } from '@/contexts/SettingsContext';
+
 export default function AdminFooter() {
   const currentYear = new Date().getFullYear();
+  const systemName = useSystemName();
 
   return (
     <footer className="bg-white border-t border-gray-200 mt-auto">
       <div className="px-6 py-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-2">
-            <span>© {currentYear} BoxPrático Marketing.</span>
+            <span>© {currentYear} {systemName} Marketing.</span>
             <span className="hidden sm:inline">Sistema de mídia indoor / digital signage.</span>
           </div>
 

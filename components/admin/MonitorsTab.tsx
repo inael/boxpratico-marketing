@@ -20,6 +20,7 @@ import { Monitor, Condominium, Campaign, MediaItem, ScreenOrientation, SocialCla
 import { LabelWithTooltip } from '@/components/ui/Tooltip';
 import RemoteCommandModal from './RemoteCommandModal';
 import PlayerPreviewModal from './PlayerPreviewModal';
+import PageHeader from './PageHeader';
 
 // Helper to send WhatsApp notifications
 async function sendWhatsAppNotification(
@@ -477,30 +478,33 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-display font-bold text-gray-900">Telas</h2>
-          <p className="text-gray-600 mt-1 text-sm sm:text-base">Cadastre as telas/terminais de cada local</p>
-          <p className="text-xs text-gray-400 mt-1 flex items-center gap-2">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-              Atualização automática
+      <PageHeader
+        title="Minhas Telas"
+        helpTitle="Minhas Telas"
+        helpDescription="Cadastre e monitore suas telas de exibição. Veja status online/offline, configure grades e gerencie a operação."
+        actions={
+          <div className="flex items-center gap-4">
+            <span className="hidden sm:flex items-center gap-2 text-xs text-gray-400">
+              <span className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+                Atualização automática
+              </span>
+              <span className="bg-gray-100 px-2 py-0.5 rounded-full font-mono font-medium text-gray-600">
+                {nextUpdateCountdown}s
+              </span>
             </span>
-            <span className="bg-gray-100 px-2 py-0.5 rounded-full font-mono font-medium text-gray-600">
-              {nextUpdateCountdown}s
-            </span>
-          </p>
-        </div>
-        {selectedCondominium && !showForm && (
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base w-full sm:w-auto"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Nova Tela
-          </button>
-        )}
-      </div>
+            {selectedCondominium && !showForm && (
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl hover:shadow-lg transition-all font-semibold shadow-md text-sm sm:text-base w-full sm:w-auto"
+              >
+                <PlusIcon className="w-5 h-5" />
+                Nova Tela
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {condominiums.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-gray-100">

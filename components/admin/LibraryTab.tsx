@@ -29,6 +29,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { LibraryItem, LibraryFolder, LibraryFileType, LIBRARY_FILE_TYPE_LABELS, Advertiser } from '@/types';
 import Tooltip, { LabelWithTooltip } from '@/components/ui/Tooltip';
+import EmptyState from './EmptyState';
+import PageHeader from './PageHeader';
+import { FolderOpen, Plus, Upload } from 'lucide-react';
 
 // Ícone por tipo de arquivo
 const FileTypeIcon = ({ type, className = 'w-6 h-6' }: { type: LibraryFileType; className?: string }) => {
@@ -386,34 +389,29 @@ export default function LibraryTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <CloudArrowUpIcon className="w-7 h-7 text-amber-500" />
-            Biblioteca de Conteúdos
-          </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            Gerencie todos os arquivos de mídia em um só lugar
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setShowFolderModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
-          >
-            <FolderPlusIcon className="w-5 h-5" />
-            <span className="font-medium hidden sm:inline">Nova Pasta</span>
-          </button>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-500/25"
-          >
-            <ArrowUpTrayIcon className="w-5 h-5" />
-            <span className="font-medium">Adicionar Arquivo</span>
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Biblioteca de Mídia"
+        helpTitle="Biblioteca de Mídia"
+        helpDescription="Faça upload de imagens, vídeos, configure feeds RSS e câmeras RTMP. Organize sua biblioteca de conteúdo para usar em campanhas e grades."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setShowFolderModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl hover:bg-gray-50 transition-all"
+            >
+              <FolderPlusIcon className="w-5 h-5" />
+              <span className="font-medium hidden sm:inline">Nova Pasta</span>
+            </button>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl hover:from-amber-600 hover:to-amber-700 transition-all shadow-lg shadow-amber-500/25"
+            >
+              <ArrowUpTrayIcon className="w-5 h-5" />
+              <span className="font-medium">Adicionar Arquivo</span>
+            </button>
+          </div>
+        }
+      />
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
@@ -561,14 +559,27 @@ export default function LibraryTab() {
 
         {/* Files */}
         {filteredItems.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
-            <CloudArrowUpIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700">Nenhum arquivo encontrado</h3>
-            <p className="text-sm text-gray-500 mt-2">
-              {searchTerm || filterType
-                ? 'Tente ajustar os filtros'
-                : 'Adicione arquivos à sua biblioteca para começar'}
-            </p>
+          <div className="bg-white rounded-xl border border-gray-200">
+            {searchTerm || filterType ? (
+              <EmptyState
+                variant="filter"
+                title="Nenhum arquivo encontrado"
+                description="Nenhum arquivo corresponde aos filtros selecionados. Tente ajustar os filtros."
+                mascotImage="/images/mascot-search.png"
+              />
+            ) : (
+              <EmptyState
+                title="Biblioteca vazia"
+                description="Faça upload de imagens, vídeos e outros arquivos para usar em suas campanhas e grades de programação."
+                icon={FolderOpen}
+                mascotImage="/images/mascot-empty.png"
+                primaryAction={{
+                  label: 'Fazer Upload',
+                  onClick: () => document.getElementById('file-upload')?.click(),
+                  icon: Upload,
+                }}
+              />
+            )}
           </div>
         ) : viewMode === 'grid' ? (
           <div>

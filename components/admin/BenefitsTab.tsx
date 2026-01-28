@@ -13,6 +13,7 @@ import {
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 import { useSession } from 'next-auth/react';
+import { useSystemName } from '@/contexts/SettingsContext';
 
 interface AffiliateStats {
   affiliateCode: string;
@@ -47,6 +48,7 @@ interface BenefitsTabProps {
 
 export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) {
   const { data: session } = useSession();
+  const systemName = useSystemName();
   const [stats, setStats] = useState<AffiliateStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -55,8 +57,10 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
   );
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const affiliateLink = stats?.affiliateCode
-    ? `${baseUrl}/cadastro?ref=${stats.affiliateCode}`
+  // Generate affiliate code from userId if not provided by API
+  const affiliateCode = stats?.affiliateCode || (session?.user?.id ? session.user.id.substring(0, 8).toUpperCase() : '');
+  const affiliateLink = affiliateCode
+    ? `${baseUrl}/cadastro?ref=${affiliateCode}`
     : '';
 
   useEffect(() => {
@@ -91,8 +95,8 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'BoxPratico - Indique e Ganhe',
-          text: 'Conheça o BoxPratico! Use meu link de indicação e ganhe benefícios exclusivos.',
+          title: `${systemName} - Indique e Ganhe`,
+          text: `Conheça o ${systemName}! Use meu link de indicação e ganhe benefícios exclusivos.`,
           url: affiliateLink,
         });
       } catch (error) {
@@ -145,7 +149,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
           <div className="flex-shrink-0">
             <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
               <p className="text-sm text-white/80 mb-1">Seu código</p>
-              <p className="text-2xl font-bold">{stats?.affiliateCode || '---'}</p>
+              <p className="text-2xl font-bold">{affiliateCode || '---'}</p>
             </div>
           </div>
         </div>
@@ -271,7 +275,7 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
                     <CheckIcon className="w-3 h-3 text-green-600" />
                   </div>
                   <span className="text-gray-600">
-                    Acesso a todas as funcionalidades do BoxPratico
+                    Acesso a todas as funcionalidades do sistema
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
