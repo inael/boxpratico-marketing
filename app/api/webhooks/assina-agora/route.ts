@@ -2,15 +2,14 @@
  * Webhook endpoint para AssinaAgora
  *
  * Recebe notificações sobre eventos de documentos:
- * - document.created - Documento criado
- * - document.signed - Totalmente assinado
- * - document.partially_signed - Parcialmente assinado
- * - document.cancelled - Cancelado
+ * - document.created - Documento criado/enviado
+ * - document.signed - Todas assinaturas coletadas
+ * - document.viewed - Signatário visualizou
  * - signer.signed - Um signatário assinou
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { assinaAgoraService, mapAssinaAgoraStatusToContractStatus, WebhookPayload } from '@/lib/assinaagora';
+import { assinaAgoraService, WebhookPayload } from '@/lib/assinaagora';
 import { updateContract, getContractById } from '@/lib/database';
 import { onContractSigned } from '@/lib/contract-automation';
 
@@ -18,7 +17,8 @@ export async function POST(request: NextRequest) {
   try {
     // 1. Obter payload raw para validação HMAC
     const rawPayload = await request.text();
-    const signature = request.headers.get('x-assinaagora-signature') || '';
+    // Header correto conforme documentação: x-webhook-signature
+    const signature = request.headers.get('x-webhook-signature') || '';
 
     // 2. Validar assinatura HMAC (CRÍTICO!)
     if (!assinaAgoraService.validateWebhookSignature(rawPayload, signature)) {
@@ -73,6 +73,11 @@ async function processWebhookEvent(payload: WebhookPayload): Promise<void> {
 
     case 'document.signed':
       await handleDocumentSigned(contractId, data);
+      break;
+
+    case 'document.viewed':
+      // Signatário visualizou o documento - apenas log
+      console.log(`[Webhook AssinaAgora] Documento visualizado para contrato ${contractId}`);
       break;
 
     case 'document.partially_signed':
