@@ -24,6 +24,8 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
   ClockIcon,
+  PaperAirplaneIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import EmptyState from './EmptyState';
@@ -83,6 +85,8 @@ export default function ContractsTab() {
   const [advertiserId, setAdvertiserId] = useState('');
   const [notes, setNotes] = useState('');
   const [signedPdfUrl, setSignedPdfUrl] = useState('');
+  const [sendingToSignature, setSendingToSignature] = useState<string | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     loadContracts();
@@ -270,6 +274,87 @@ export default function ContractsTab() {
       }
     } catch (error) {
       console.error('Failed to delete contract:', error);
+    }
+  }
+
+  // Enviar contrato para assinatura digital via AssinaAgora
+  async function handleSendToSignature(contract: Contract) {
+    if (!contract.partyBEmail) {
+      alert('Este contrato nao possui email do cliente. Adicione o email antes de enviar para assinatura.');
+      return;
+    }
+
+    if (contract.assinaAgoraDocId) {
+      alert('Este contrato ja foi enviado para assinatura.');
+      return;
+    }
+
+    if (!confirm(`Enviar contrato de ${contract.partyBName} para assinatura digital?`)) {
+      return;
+    }
+
+    setSendingToSignature(contract.id);
+    try {
+      const res = await fetch(`/api/contracts/${contract.id}/send-to-signature`, {
+        method: 'POST',
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`Contrato enviado para assinatura!\n\nOs signatarios receberao email com o link de assinatura.`);
+
+        // Abrir pagina de assinatura em nova aba (opcional)
+        if (data.redirect_url && confirm('Deseja abrir a pagina de assinatura?')) {
+          window.open(data.redirect_url, '_blank');
+        }
+
+        await loadContracts();
+      } else {
+        alert(`Erro: ${data.error || 'Falha ao enviar para assinatura'}`);
+      }
+    } catch (error) {
+      console.error('Failed to send to signature:', error);
+      alert('Erro ao enviar contrato para assinatura');
+    } finally {
+      setSendingToSignature(null);
+    }
+  }
+
+  // Verificar status de assinatura no AssinaAgora
+  async function handleCheckSignatureStatus(contract: Contract) {
+    if (!contract.assinaAgoraDocId) {
+      alert('Este contrato ainda nao foi enviado para assinatura.');
+      return;
+    }
+
+    setCheckingStatus(contract.id);
+    try {
+      const res = await fetch(`/api/contracts/${contract.id}/signature-status`);
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        let message = `Status: ${data.document_status}\n\nSignatarios:\n`;
+        data.signers?.forEach((s: { name: string; status: string; signed_at?: string }) => {
+          message += `- ${s.name}: ${s.status === 'signed' ? 'Assinado' : s.status === 'pending' ? 'Pendente' : s.status}\n`;
+        });
+
+        if (data.signed_at) {
+          message += `\nAssinado em: ${new Date(data.signed_at).toLocaleString('pt-BR')}`;
+        }
+
+        alert(message);
+
+        // Recarregar para atualizar status local
+        await loadContracts();
+      } else {
+        alert(`Erro: ${data.error || 'Falha ao verificar status'}`);
+      }
+    } catch (error) {
+      console.error('Failed to check signature status:', error);
+      alert('Erro ao verificar status de assinatura');
+    } finally {
+      setCheckingStatus(null);
     }
   }
 
@@ -863,14 +948,44 @@ export default function ContractsTab() {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          {/* Botao de enviar para assinatura */}
+                          {!contract.assinaAgoraDocId && contract.status === 'draft' && (
+                            <button
+                              onClick={() => handleSendToSignature(contract)}
+                              disabled={sendingToSignature === contract.id}
+                              className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Enviar para assinatura digital"
+                            >
+                              {sendingToSignature === contract.id ? (
+                                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <PaperAirplaneIcon className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
+                          {/* Botao de verificar status de assinatura */}
+                          {contract.assinaAgoraDocId && contract.status !== 'active' && (
+                            <button
+                              onClick={() => handleCheckSignatureStatus(contract)}
+                              disabled={checkingStatus === contract.id}
+                              className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors disabled:opacity-50"
+                              title="Verificar status de assinatura"
+                            >
+                              {checkingStatus === contract.id ? (
+                                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <ClockIcon className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
                           {contract.signedPdfUrl && (
                             <a
                               href={contract.signedPdfUrl}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Ver PDF"
+                              title="Ver PDF assinado"
                             >
                               <EyeIcon className="w-4 h-4" />
                             </a>
