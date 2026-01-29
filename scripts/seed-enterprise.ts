@@ -790,6 +790,131 @@ function generateMockPlayLogs(): Array<{
   return playLogs;
 }
 
+// Mídias (para as campanhas)
+const mediaItems = [
+  {
+    id: 'media-coca-001',
+    name: 'Coca-Cola - Campanha Natal 2026',
+    type: 'video',
+    url: '/uploads/coca-natal-2026.mp4',
+    thumbnailUrl: '/uploads/thumbnails/coca-natal-2026.jpg',
+    duration: 15,
+    width: 1920,
+    height: 1080,
+    sizeBytes: 15000000,
+    mimeType: 'video/mp4',
+    condominiumId: IDS.locationShopping,
+    accountId: IDS.midiaBoxAccount,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'media-nike-001',
+    name: 'Nike - Verão 2026',
+    type: 'video',
+    url: '/uploads/nike-verao-2026.mp4',
+    thumbnailUrl: '/uploads/thumbnails/nike-verao-2026.jpg',
+    duration: 15,
+    width: 1920,
+    height: 1080,
+    sizeBytes: 12000000,
+    mimeType: 'video/mp4',
+    condominiumId: IDS.locationAcademia,
+    accountId: IDS.midiaBoxAccount,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'media-institucional-001',
+    name: 'BoxPratico - Institucional',
+    type: 'video',
+    url: '/uploads/boxpratico-institucional.mp4',
+    thumbnailUrl: '/uploads/thumbnails/boxpratico-institucional.jpg',
+    duration: 10,
+    width: 1920,
+    height: 1080,
+    sizeBytes: 8000000,
+    mimeType: 'video/mp4',
+    condominiumId: IDS.locationShopping,
+    accountId: IDS.midiaBoxAccount,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'media-hospital-001',
+    name: 'Dicas de Saúde',
+    type: 'image',
+    url: '/uploads/dicas-saude.png',
+    thumbnailUrl: '/uploads/thumbnails/dicas-saude.png',
+    duration: 10,
+    width: 1080,
+    height: 1920,
+    sizeBytes: 500000,
+    mimeType: 'image/png',
+    condominiumId: IDS.locationHospital,
+    accountId: IDS.hospitalAccount,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'media-hospital-002',
+    name: 'Horários de Visita',
+    type: 'image',
+    url: '/uploads/horarios-visita.png',
+    thumbnailUrl: '/uploads/thumbnails/horarios-visita.png',
+    duration: 8,
+    width: 1920,
+    height: 1080,
+    sizeBytes: 300000,
+    mimeType: 'image/png',
+    condominiumId: IDS.locationHospital,
+    accountId: IDS.hospitalAccount,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+// Cobranças (invoices geradas)
+const invoices = [
+  {
+    id: 'inv-coca-001',
+    tenantId: IDS.midiaBoxAccount,
+    contractId: IDS_FINANCIAL.contratoCoca,
+    advertiserId: IDS_FINANCIAL.anuncianteCoca,
+    number: 'BP-2026-0001',
+    description: 'Campanha Natal Coca-Cola - Janeiro/2026',
+    amount: 10000,
+    dueDate: '2026-02-10',
+    status: 'PAID',
+    paidAt: '2026-02-05T14:30:00.000Z',
+    paymentMethod: 'PIX',
+    referenceMonth: '2026-01',
+    createdAt: '2026-01-25T10:00:00.000Z',
+    updatedAt: '2026-02-05T14:30:00.000Z',
+  },
+  {
+    id: 'inv-nike-001',
+    tenantId: IDS.midiaBoxAccount,
+    contractId: IDS_FINANCIAL.contratoNike,
+    advertiserId: IDS_FINANCIAL.anuncianteNike,
+    number: 'BP-2026-0002',
+    description: 'Campanha Verão Nike - Janeiro/2026',
+    amount: 5000,
+    dueDate: '2026-02-15',
+    status: 'PENDING',
+    paidAt: null,
+    paymentMethod: null,
+    referenceMonth: '2026-01',
+    createdAt: '2026-01-20T10:00:00.000Z',
+    updatedAt: '2026-01-20T10:00:00.000Z',
+  },
+];
+
 // Gerar comissões de vendedor (sobre contratos fechados)
 const commissionLedger = [
   {
@@ -883,6 +1008,8 @@ async function main() {
   await writeJson('advertisers.json', advertisers);
   await writeJson('contracts.json', contracts);
   await writeJson('campaigns.json', campaigns);
+  await writeJson('media-items.json', mediaItems);
+  await writeJson('invoices.json', invoices);
   await writeJson('play-logs.json', playLogs);
   await writeJson('commission-ledger.json', commissionLedger);
 
@@ -915,6 +1042,15 @@ async function main() {
   console.log(`  PlayLogs Gerados: ${playLogs.length} registros`);
   console.log('    - Coca-Cola: 4.464 plays (R$ 446,40)');
   console.log('    - Nike: 1.632 plays (R$ 163,20)');
+  console.log('');
+  console.log('  Mídias Cadastradas: 5 itens');
+  console.log('    - 2 videos Coca-Cola e Nike');
+  console.log('    - 1 video Institucional BoxPratico');
+  console.log('    - 2 imagens Hospital (Dicas e Horários)');
+  console.log('');
+  console.log('  Cobranças (Invoices):');
+  console.log('    - Coca-Cola: R$ 10.000 (PAGO em 05/02/2026)');
+  console.log('    - Nike: R$ 5.000 (PENDENTE, vence 15/02/2026)');
   console.log('');
   console.log('  Para testar Settlement do Parceiro:');
   console.log('    Padaria Pinheiros recebeu plays da Coca-Cola');

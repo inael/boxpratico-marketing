@@ -12,6 +12,8 @@ export interface Announcement {
   type: 'info' | 'warning' | 'success' | 'promo';
   actionLabel?: string;
   actionUrl?: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
   imageUrl?: string;
   dismissible?: boolean;
 }
@@ -22,13 +24,36 @@ interface AnnouncementsCardProps {
 }
 
 export default function AnnouncementsCard({
-  announcements = [],
+  announcements: propAnnouncements = [],
   showWelcome = true,
 }: AnnouncementsCardProps) {
   const [dismissedIds, setDismissedIds] = useState<string[]>([]);
+  const [apiAnnouncements, setApiAnnouncements] = useState<Announcement[]>([]);
   const systemName = useSystemName();
 
-  // Avisos padrão - inclui boas-vindas se showWelcome = true
+  // Buscar avisos da API
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        const response = await fetch('/api/announcements');
+        if (response.ok) {
+          const data = await response.json();
+          // Mapear campos da API para o formato do componente
+          const mapped = data.map((ann: { id: string; title: string; message: string; type: string; ctaLabel?: string; ctaUrl?: string; dismissible?: boolean }) => ({
+            ...ann,
+            actionLabel: ann.ctaLabel,
+            actionUrl: ann.ctaUrl,
+          }));
+          setApiAnnouncements(mapped);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar avisos:', error);
+      }
+    };
+    fetchAnnouncements();
+  }, []);
+
+  // Combinar avisos da API com props
   const allAnnouncements = useMemo(() => {
     const welcomeAnnouncement: Announcement = {
       id: 'welcome',
@@ -37,8 +62,9 @@ export default function AnnouncementsCard({
       type: 'info',
       dismissible: true,
     };
-    return showWelcome ? [welcomeAnnouncement, ...announcements] : announcements;
-  }, [systemName, announcements, showWelcome]);
+    const combined = [...apiAnnouncements, ...propAnnouncements];
+    return showWelcome ? [welcomeAnnouncement, ...combined] : combined;
+  }, [systemName, propAnnouncements, apiAnnouncements, showWelcome]);
 
   // Carregar IDs dispensados do localStorage
   useEffect(() => {

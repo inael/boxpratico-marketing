@@ -56,12 +56,10 @@ export default function BenefitsTab({ subTab = 'affiliate' }: BenefitsTabProps) 
     subTab === 'affiliate-earnings' ? 'comissoes' : 'indicar'
   );
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://app.boxpratico.com.br';
   // Generate affiliate code from userId if not provided by API
-  const affiliateCode = stats?.affiliateCode || (session?.user?.id ? session.user.id.substring(0, 8).toUpperCase() : '');
-  const affiliateLink = affiliateCode
-    ? `${baseUrl}/cadastro?ref=${affiliateCode}`
-    : '';
+  const affiliateCode = stats?.affiliateCode || (session?.user?.id ? session.user.id.substring(0, 8).toUpperCase() : 'CARREGANDO');
+  const affiliateLink = `${baseUrl}/cadastro?ref=${affiliateCode}`;
 
   useEffect(() => {
     fetchStats();
