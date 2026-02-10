@@ -2,7 +2,7 @@
  * AssinaAgora Integration Service
  *
  * Serviço para integração com a plataforma de assinatura digital AssinaAgora.
- * URL Base: https://assinatura.itbooster.com.br
+ * URL Base: https://app.assinaagora.com.br
  *
  * Endpoints disponíveis:
  * - POST /api/integration/documents - Enviar documento
@@ -17,7 +17,7 @@ import crypto from 'crypto';
 // CONFIGURAÇÃO
 // ============================================
 
-const API_URL = process.env.ASSINA_AGORA_API_URL || 'https://assinatura.itbooster.com.br/api/integration';
+const API_URL = process.env.ASSINA_AGORA_API_URL || 'https://app.assinaagora.com.br/api/integration';
 const API_KEY = process.env.ASSINA_AGORA_API_KEY || '';
 const WEBHOOK_SECRET = process.env.ASSINA_AGORA_WEBHOOK_SECRET || '';
 const WEBHOOK_URL = process.env.ASSINA_AGORA_WEBHOOK_URL || '';
