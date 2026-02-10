@@ -86,6 +86,10 @@ export default function LibraryTab() {
   const [editingFolder, setEditingFolder] = useState<LibraryFolder | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [previewItem, setPreviewItem] = useState<LibraryItem | null>(null);
+  const [showGlobalLibrary, setShowGlobalLibrary] = useState(false);
+  const [globalItems, setGlobalItems] = useState<LibraryItem[]>([]);
+  const [loadingGlobal, setLoadingGlobal] = useState(false);
+  const [copyingItemId, setCopyingItemId] = useState<string | null>(null);
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -376,6 +380,53 @@ export default function LibraryTab() {
     return advertisers.find(a => a.id === id)?.name || 'Desconhecido';
   };
 
+  // Carregar biblioteca global
+  const fetchGlobalItems = async () => {
+    setLoadingGlobal(true);
+    try {
+      const res = await fetch('/api/library/global');
+      if (res.ok) {
+        setGlobalItems(await res.json());
+      }
+    } catch (error) {
+      console.error('Erro ao carregar biblioteca global:', error);
+    } finally {
+      setLoadingGlobal(false);
+    }
+  };
+
+  // Copiar item global para biblioteca do tenant
+  const handleCopyGlobalItem = async (item: LibraryItem) => {
+    setCopyingItemId(item.id);
+    try {
+      const res = await fetch('/api/library', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: item.name,
+          fileUrl: item.fileUrl,
+          fileType: item.fileType,
+          mimeType: item.mimeType,
+          fileSize: item.fileSize,
+          width: item.width,
+          height: item.height,
+          duration: item.duration,
+          thumbnailUrl: item.thumbnailUrl,
+          tags: item.tags?.filter(t => t !== 'biblioteca-global'),
+          description: item.description,
+        }),
+      });
+      if (res.ok) {
+        fetchData();
+        alert('Midia copiada para sua biblioteca!');
+      }
+    } catch (error) {
+      console.error('Erro ao copiar item:', error);
+    } finally {
+      setCopyingItemId(null);
+    }
+  };
+
   const fileTypes: LibraryFileType[] = ['image', 'video', 'audio', 'document', 'other'];
   const folderColors = ['#3B82F6', '#22C55E', '#EAB308', '#F97316', '#EF4444', '#A855F7', '#EC4899', '#6B7280'];
 
@@ -412,6 +463,75 @@ export default function LibraryTab() {
           </div>
         }
       />
+
+      {/* Toggle Biblioteca Global */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => { setShowGlobalLibrary(false); }}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            !showGlobalLibrary ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          Minha Biblioteca
+        </button>
+        <button
+          onClick={() => { setShowGlobalLibrary(true); if (globalItems.length === 0) fetchGlobalItems(); }}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            showGlobalLibrary ? 'bg-amber-500 text-white' : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          Biblioteca BoxPratico
+        </button>
+      </div>
+
+      {showGlobalLibrary ? (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Midias pre-cadastradas disponiveis para uso. Clique em &quot;Copiar&quot; para adicionar a sua biblioteca.
+          </p>
+          {loadingGlobal ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
+            </div>
+          ) : globalItems.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
+              <p className="text-gray-500">Nenhuma midia global disponivel.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {globalItems.map(item => {
+                const catTag = item.tags?.find(t => t.startsWith('categoria:'));
+                const catLabel = catTag ? catTag.replace('categoria:', '') : '';
+                return (
+                  <div key={item.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                    <div className="aspect-video bg-gray-100 flex items-center justify-center">
+                      {item.thumbnailUrl ? (
+                        <img src={item.thumbnailUrl} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <FileTypeIcon type={item.fileType} className="w-10 h-10 text-gray-300" />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <p className="text-sm font-medium text-gray-900 truncate">{item.name}</p>
+                      {catLabel && (
+                        <span className="inline-block mt-1 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full capitalize">{catLabel}</span>
+                      )}
+                      <button
+                        onClick={() => handleCopyGlobalItem(item)}
+                        disabled={copyingItemId === item.id}
+                        className="mt-2 w-full py-2 text-sm font-medium text-amber-600 border border-amber-300 rounded-lg hover:bg-amber-50 transition-colors disabled:opacity-50"
+                      >
+                        {copyingItemId === item.id ? 'Copiando...' : 'Copiar para minha biblioteca'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+      <>
 
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
@@ -1159,6 +1279,8 @@ export default function LibraryTab() {
           </motion.div>
         )}
       </AnimatePresence>
+      </>
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
   Monitor,
   ListVideo,
   FolderOpen,
+  LibraryBig,
   Gift,
   UserPlus,
   ScrollText,
@@ -158,6 +159,7 @@ const superAdminMenu: MenuItem = {
     { id: 'tenants', label: 'Tenants / Filiados', icon: Building2 },
     { id: 'subscription-plans', label: 'Planos de Assinatura', icon: CreditCard },
     { id: 'global-users', label: 'Usuários Globais', icon: UsersRound },
+    { id: 'global-library', label: 'Biblioteca Global', icon: LibraryBig },
   ],
 };
 

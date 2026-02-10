@@ -32,6 +32,7 @@ import SalesCommissionsTab from '@/components/admin/SalesCommissionsTab';
 import TenantsTab from '@/components/admin/TenantsTab';
 import SubscriptionPlansTab from '@/components/admin/SubscriptionPlansTab';
 import GlobalUsersTab from '@/components/admin/GlobalUsersTab';
+import GlobalLibraryTab from '@/components/admin/GlobalLibraryTab';
 import AffiliateEarningsTab from '@/components/admin/AffiliateEarningsTab';
 import PlaylistsTab from '@/components/admin/PlaylistsTab';
 import dynamic from 'next/dynamic';
@@ -2328,6 +2329,11 @@ export default function AdminPage() {
           {/* Global Users Tab */}
           {activeTab === 'global-users' && (
             <GlobalUsersTab />
+          )}
+
+          {/* Global Library Tab */}
+          {activeTab === 'global-library' && (
+            <GlobalLibraryTab />
           )}
 
           {activeTab === 'playlists' && (

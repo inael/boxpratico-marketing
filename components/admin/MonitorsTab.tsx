@@ -15,8 +15,9 @@ import {
   ClockIcon,
   CommandLineIcon,
   EyeIcon,
+  ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import { Monitor, Condominium, Campaign, MediaItem, ScreenOrientation, SocialClass } from '@/types';
+import { Monitor, Condominium, Campaign, MediaItem, ScreenOrientation, SocialClass, TerminalTier } from '@/types';
 import { LabelWithTooltip } from '@/components/ui/Tooltip';
 import RemoteCommandModal from './RemoteCommandModal';
 import PlayerPreviewModal from './PlayerPreviewModal';
@@ -78,9 +79,25 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
   // Configuracoes do terminal
   const [updateCycleMinutes, setUpdateCycleMinutes] = useState<number>(10);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(false);
+  // Endereco
+  const [address, setAddress] = useState('');
+  const [addressNumber, setAddressNumber] = useState('');
+  const [complement, setComplement] = useState('');
+  const [zipCode, setZipCode] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [loadingCep, setLoadingCep] = useState(false);
+  // Classificacao e geolocalizacao
+  const [tier, setTier] = useState<TerminalTier | ''>('');
+  const [latitude, setLatitude] = useState<number | ''>('');
+  const [longitude, setLongitude] = useState<number | ''>('');
   // Barra de rodape
   const [footerEnabled, setFooterEnabled] = useState<boolean>(false);
   const [footerText, setFooterText] = useState<string>('');
+  const [footerBgColor, setFooterBgColor] = useState('#000000');
+  const [footerTextColor, setFooterTextColor] = useState('#F59E0B');
+  const [footerSpeed, setFooterSpeed] = useState<'slow' | 'normal' | 'fast'>('normal');
   // Mostrar configuracoes avancadas
   const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
   // Modal de comandos remotos
@@ -245,6 +262,28 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
     return mediaItems.filter(m => m.campaignId === campaignId && m.isActive).length;
   };
 
+  // Buscar endereco pelo CEP (ViaCEP)
+  const handleCepLookup = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+
+    setLoadingCep(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+      if (!data.erro) {
+        setAddress(data.logradouro || '');
+        setNeighborhood(data.bairro || '');
+        setCity(data.localidade || '');
+        setState(data.uf || '');
+      }
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+    } finally {
+      setLoadingCep(false);
+    }
+  };
+
   function sanitizeSlug(slug: string): string {
     return slug
       .toLowerCase()
@@ -321,8 +360,24 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
       socialClass: socialClass || undefined,
       updateCycleMinutes,
       soundEnabled,
+      // Endereco
+      address: address || undefined,
+      addressNumber: addressNumber || undefined,
+      complement: complement || undefined,
+      zipCode: zipCode || undefined,
+      neighborhood: neighborhood || undefined,
+      city: city || undefined,
+      state: state || undefined,
+      // Classificacao e geolocalizacao
+      tier: tier || undefined,
+      latitude: latitude || undefined,
+      longitude: longitude || undefined,
+      // Rodape
       footerEnabled,
       footerText: footerEnabled ? footerText : undefined,
+      footerBgColor: footerEnabled ? footerBgColor : undefined,
+      footerTextColor: footerEnabled ? footerTextColor : undefined,
+      footerSpeed: footerEnabled ? footerSpeed : undefined,
     };
 
     try {
@@ -413,9 +468,25 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
     setSocialClass(monitor.socialClass || '');
     setUpdateCycleMinutes(monitor.updateCycleMinutes || 10);
     setSoundEnabled(monitor.soundEnabled || false);
+    // Endereco
+    setAddress(monitor.address || '');
+    setAddressNumber(monitor.addressNumber || '');
+    setComplement(monitor.complement || '');
+    setZipCode(monitor.zipCode || '');
+    setNeighborhood(monitor.neighborhood || '');
+    setCity(monitor.city || '');
+    setState(monitor.state || '');
+    // Classificacao e geolocalizacao
+    setTier(monitor.tier || '');
+    setLatitude(monitor.latitude || '');
+    setLongitude(monitor.longitude || '');
+    // Rodape
     setFooterEnabled(monitor.footerEnabled || false);
     setFooterText(monitor.footerText || '');
-    setShowAdvanced(!!monitor.averageMonthlyTraffic || !!monitor.footerEnabled);
+    setFooterBgColor(monitor.footerBgColor || '#000000');
+    setFooterTextColor(monitor.footerTextColor || '#F59E0B');
+    setFooterSpeed(monitor.footerSpeed || 'normal');
+    setShowAdvanced(!!monitor.averageMonthlyTraffic || !!monitor.footerEnabled || !!monitor.address);
     setShowForm(true);
   };
 
@@ -449,8 +520,21 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
     setSocialClass('');
     setUpdateCycleMinutes(10);
     setSoundEnabled(false);
+    setAddress('');
+    setAddressNumber('');
+    setComplement('');
+    setZipCode('');
+    setNeighborhood('');
+    setCity('');
+    setState('');
+    setTier('');
+    setLatitude('');
+    setLongitude('');
     setFooterEnabled(false);
     setFooterText('');
+    setFooterBgColor('#000000');
+    setFooterTextColor('#F59E0B');
+    setFooterSpeed('normal');
     setShowAdvanced(false);
     setEditingMonitor(null);
     setShowForm(false);
@@ -732,6 +816,171 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
 
                 {showAdvanced && (
                   <div className="space-y-4 bg-gray-50 p-4 rounded-lg">
+                    {/* Endereco */}
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Endereco do Local</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <LabelWithTooltip
+                            label="CEP"
+                            tooltip="Digite o CEP para preencher o endereco automaticamente."
+                            htmlFor="zipCode"
+                          />
+                          <div className="relative mt-1">
+                            <input
+                              id="zipCode"
+                              type="text"
+                              maxLength={9}
+                              value={zipCode}
+                              onChange={(e) => {
+                                const v = e.target.value.replace(/\D/g, '').replace(/(\d{5})(\d)/, '$1-$2');
+                                setZipCode(v);
+                                if (v.replace(/\D/g, '').length === 8) handleCepLookup(v);
+                              }}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                              placeholder="00000-000"
+                            />
+                            {loadingCep && (
+                              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                <ArrowPathIcon className="w-4 h-4 text-indigo-500 animate-spin" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="sm:col-span-2">
+                          <LabelWithTooltip label="Endereco" tooltip="Rua, avenida ou logradouro" htmlFor="address" />
+                          <input
+                            id="address"
+                            type="text"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                            placeholder="Rua Example"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Numero</label>
+                          <input
+                            type="text"
+                            value={addressNumber}
+                            onChange={(e) => setAddressNumber(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                            placeholder="123"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Complemento</label>
+                          <input
+                            type="text"
+                            value={complement}
+                            onChange={(e) => setComplement(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                            placeholder="Sala 1"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Bairro</label>
+                          <input
+                            type="text"
+                            value={neighborhood}
+                            onChange={(e) => setNeighborhood(e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                            placeholder="Centro"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Cidade</label>
+                            <input
+                              type="text"
+                              value={city}
+                              onChange={(e) => setCity(e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                              placeholder="Sao Paulo"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">UF</label>
+                            <input
+                              type="text"
+                              maxLength={2}
+                              value={state}
+                              onChange={(e) => setState(e.target.value.toUpperCase())}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                              placeholder="SP"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Classificacao e Geolocalizacao */}
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Classificacao do Ponto</h4>
+                      <div className="mb-4">
+                        <LabelWithTooltip
+                          label="Tier do terminal"
+                          tooltip="Classificacao do ponto para precificacao. GOLD: locais premium (2x preco), SILVER: intermediarios (1.5x), BRONZE: basicos (1x)."
+                        />
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {([
+                            { value: 'GOLD' as TerminalTier, label: 'Gold', color: 'bg-yellow-500', emoji: '🥇' },
+                            { value: 'SILVER' as TerminalTier, label: 'Silver', color: 'bg-gray-400', emoji: '🥈' },
+                            { value: 'BRONZE' as TerminalTier, label: 'Bronze', color: 'bg-orange-600', emoji: '🥉' },
+                          ]).map((t) => (
+                            <button
+                              key={t.value}
+                              type="button"
+                              onClick={() => setTier(tier === t.value ? '' : t.value)}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
+                                tier === t.value
+                                  ? `${t.color} text-white`
+                                  : 'bg-white border border-gray-300 text-gray-600 hover:border-indigo-500'
+                              }`}
+                            >
+                              <span>{t.emoji}</span> {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <LabelWithTooltip
+                            label="Latitude"
+                            tooltip="Coordenada geografica. Usada para filtrar terminais por raio no simulador de campanhas."
+                            htmlFor="latitude"
+                          />
+                          <input
+                            id="latitude"
+                            type="number"
+                            step="0.000001"
+                            value={latitude}
+                            onChange={(e) => setLatitude(e.target.value ? parseFloat(e.target.value) : '')}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                            placeholder="-23.550520"
+                          />
+                        </div>
+                        <div>
+                          <LabelWithTooltip
+                            label="Longitude"
+                            tooltip="Coordenada geografica. Usada para filtrar terminais por raio no simulador de campanhas."
+                            htmlFor="longitude"
+                          />
+                          <input
+                            id="longitude"
+                            type="number"
+                            step="0.000001"
+                            value={longitude}
+                            onChange={(e) => setLongitude(e.target.value ? parseFloat(e.target.value) : '')}
+                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                            placeholder="-46.633309"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Metricas de Audiencia */}
                     <div>
                       <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -846,20 +1095,86 @@ export default function MonitorsTab({ condominiums }: MonitorsTabProps) {
                         </label>
                       </div>
                       {footerEnabled && (
-                        <div>
-                          <LabelWithTooltip
-                            label="Texto do rodape"
-                            tooltip="Texto que aparecera rolando na parte inferior da tela. Use para avisos, informacoes do local, etc."
-                            htmlFor="footerText"
-                          />
-                          <textarea
-                            id="footerText"
-                            value={footerText}
-                            onChange={(e) => setFooterText(e.target.value)}
-                            rows={2}
-                            className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white resize-none"
-                            placeholder="Ex: Bem-vindo ao Condominio! WiFi: condominio123 | Proibido fumar nas areas comuns"
-                          />
+                        <div className="space-y-4">
+                          <div>
+                            <LabelWithTooltip
+                              label="Texto do rodape"
+                              tooltip="Texto que aparecera rolando na parte inferior da tela. Use para avisos, informacoes do local, etc."
+                              htmlFor="footerText"
+                            />
+                            <textarea
+                              id="footerText"
+                              value={footerText}
+                              onChange={(e) => setFooterText(e.target.value)}
+                              rows={2}
+                              className="mt-1 w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white resize-none"
+                              placeholder="Ex: Bem-vindo ao Condominio! WiFi: condominio123 | Proibido fumar nas areas comuns"
+                            />
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Cor do fundo</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="color"
+                                  value={footerBgColor}
+                                  onChange={(e) => setFooterBgColor(e.target.value)}
+                                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                                />
+                                <input
+                                  type="text"
+                                  value={footerBgColor}
+                                  onChange={(e) => setFooterBgColor(e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                  placeholder="#000000"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Cor do texto</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="color"
+                                  value={footerTextColor}
+                                  onChange={(e) => setFooterTextColor(e.target.value)}
+                                  className="w-10 h-10 rounded border border-gray-300 cursor-pointer"
+                                />
+                                <input
+                                  type="text"
+                                  value={footerTextColor}
+                                  onChange={(e) => setFooterTextColor(e.target.value)}
+                                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white"
+                                  placeholder="#F59E0B"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">Velocidade</label>
+                              <select
+                                value={footerSpeed}
+                                onChange={(e) => setFooterSpeed(e.target.value as 'slow' | 'normal' | 'fast')}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
+                              >
+                                <option value="slow">Lenta</option>
+                                <option value="normal">Normal</option>
+                                <option value="fast">Rapida</option>
+                              </select>
+                            </div>
+                          </div>
+                          {/* Preview do ticker */}
+                          {footerText && (
+                            <div
+                              className="rounded-lg overflow-hidden h-10 flex items-center relative"
+                              style={{ backgroundColor: footerBgColor }}
+                            >
+                              <span
+                                className="whitespace-nowrap text-sm font-medium px-4 animate-pulse"
+                                style={{ color: footerTextColor }}
+                              >
+                                {footerText}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
